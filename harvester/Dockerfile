@@ -1,5 +1,5 @@
 # Use the official Python 3.10 image as the base image
-FROM python:3.10.11
+FROM python:3.11.8-slim
 
 # Set the working directory in the container to /app
 WORKDIR /app
@@ -13,4 +13,4 @@ COPY . .
 RUN pip install -r requirements.txt --no-cache-dir
 
 # Command to run the script when the container starts
-CMD ["python", "./download.py"]
+CMD ["python", "./harvester/download.py"]

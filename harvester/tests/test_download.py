@@ -62,7 +62,6 @@ if __name__ == '__main__':
     unittest.main()
 
 import os
-from unittest import mock
 from unittest.mock import patch
 from harvester.download import Sentinel2Request
 
@@ -123,7 +122,7 @@ class TestSentinel2Request(unittest.TestCase):
         self.assertIsNone(results)
 
 
-    @mock.patch.dict(os.environ, {"outDir": "./mockedDownload"})
+    @patch.dict(os.environ, {"outDir": "mockedDownload"})
     @patch('requests.get')
     def test_download(self, mock_get):
         mock_response = mock_get.return_value
