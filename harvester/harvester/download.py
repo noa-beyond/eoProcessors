@@ -269,7 +269,7 @@ class Sentinel2Request(SatelliteSensorRequest):
             block_size = 8192  # 8 Kilobytes
 
             progress_bar = tqdm(
-                total=total_size_in_bytes, unit="iB", unit_scale=True, desc=filename
+                total=total_size_in_bytes, unit="iB", unit_scale=True, desc=filename, position=4, leave=True
             )
             with open(filename, "wb") as file:
                 for chunk in response.iter_content(chunk_size=block_size):
