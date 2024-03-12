@@ -44,6 +44,7 @@ class SatelliteSensorRequest:
             self.bbox = None
             self.tile = tile
 
+    # TODO: is this check correct? (when "forming" a bbox, is the < relation between min and max correct?)
     def check_bbox_validity(self):
         """
         Checks if the bounding box coordinates are valid.
@@ -107,6 +108,11 @@ class SatelliteSensorRequest:
             # Print the access token
             if access_token and refresh_token:
                 return access_token, refresh_token
+        else:
+            logging.error(
+                f"Failed to retrieve data from the server. Status code: {response.status_code} \n"
+                f"Message: {response.reason}"
+            )
         return None
 
     def getAccessTokenViaRefreshToken(self, refresh_token):
@@ -159,17 +165,17 @@ class Sentinel2Request(SatelliteSensorRequest):
         """
         if self.bbox:
             xmin, ymin, xmax, ymax = self.split_bbox()
-            return f"https://catalogue.dataspace.copernicus.eu/resto/api/collections/Sentinel2/search.json?\
-                startDate={self.startDate}T00:00:00Z&\
-                    completionDate={self.endDate}T23:59:59Z&\
-                        maxRecords=1000&box={xmin},{ymin},{xmax},{ymax}&\
-                            cloudCover=[0,{self.cloud_cover}]"
+            return f"https://catalogue.dataspace.copernicus.eu/resto/api/collections/Sentinel2/search.json?"\
+                f"startDate={self.startDate}T00:00:00Z&"\
+                f"completionDate={self.endDate}T23:59:59Z&"\
+                f"maxRecords=1000&box={xmin},{ymin},{xmax},{ymax}&"\
+                f"cloudCover=[0,{self.cloud_cover}]"
         else:
-            return f"https://catalogue.dataspace.copernicus.eu/resto/api/collections/Sentinel2/search.json?\
-                startDate={self.startDate}T00:00:00Z&\
-                    completionDate={self.endDate}T23:59:59Z&\
-                        maxRecords=1000&\
-                            cloudCover=[0,{self.cloud_cover}]"
+            return f"https://catalogue.dataspace.copernicus.eu/resto/api/collections/Sentinel2/search.json?"\
+                f"startDate={self.startDate}T00:00:00Z&"\
+                f"completionDate={self.endDate}T23:59:59Z&"\
+                f"maxRecords=1000&"\
+                f"cloudCover=[0,{self.cloud_cover}]"
 
     def search(self):
         """
@@ -181,10 +187,14 @@ class Sentinel2Request(SatelliteSensorRequest):
         """
         session = requests.Session()
         session.stream = True
+
+        # print(self.query)
+
         response = session.get(self.query)
         if not response.status_code == 200:
             logging.error(
-                f"Failed to retrieve data from the server. Status code: {response.status_code}"
+                f"Failed to retrieve data from the server. Status code: {response.status_code} \n"
+                f"Message: {response.reason}"
             )
             return None
         results = {}
@@ -275,7 +285,7 @@ class Sentinel2Request(SatelliteSensorRequest):
         session = requests.Session()
         session.headers.update(headers)
 
-        with ThreadPoolExecutor(max_workers=5) as executor:
+        with ThreadPoolExecutor(max_workers=4) as executor:
             futures = []
             for identifier, values in results.items():
                 filename = os.path.join(output_dir, f"{identifier}.zip")
@@ -381,17 +391,18 @@ if __name__ == "__main__":
     if str(level) not in ["1", "2", "12"]:
         raise Exception("Incorrect level parameter. It must be 1, 2 or 12")
 
+    # TODO introduce the level. It was introduced but the constructor cannot receive it
     s2 = Sentinel2Request(
-        username, password, startDate, endDate, bbox, tile, cloudCover, level
+        username, password, startDate, endDate, bbox, tile, cloudCover
     )
     s2_results = s2.search()
     print(f"# of products found:{len(s2_results)}")
 
     authentication_access_tokens, refresh_token = s2.getAccessToken()
     access_token = s2.getAccessTokenViaRefreshToken(refresh_token)
-
     output_dir = os.getenv("outDir", "/app/data/")
     if not os.path.exists(output_dir):
         os.makedirs(output_dir, exist_ok=True)
 
-    s2.download_files_concurrently(s2_results, os.path.join(os.getcwd(), access_token))
+    # TODO check what to do here with downloaded data (where to store them locally)
+    s2.download_files_concurrently(s2_results, output_dir, access_token)
