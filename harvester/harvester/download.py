@@ -8,10 +8,13 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
 
 
+# TODO this class might have a wrong design: it is only for Copernicus
+# It's fine, but a decision has to be made if we will have a generic one
+# for all kind of "harvesting" sources in order to generalize it
 class SatelliteSensorRequest:
 
     def __init__(
-        self, username, password, start_date, end_date, bbox, tile=None
+        self, username, password, start_date, end_date, bbox, tile=None, level=None
     ) -> None:
         """
         Initialize the Download class.
@@ -43,6 +46,8 @@ class SatelliteSensorRequest:
         else:
             self.bbox = None
             self.tile = tile
+
+        self.level = level
 
     # TODO: is this check correct? (when "forming" a bbox, is the < relation between min and max correct?)
     def check_bbox_validity(self):
@@ -147,9 +152,11 @@ class SatelliteSensorRequest:
 
 class Sentinel2Request(SatelliteSensorRequest):
     def __init__(
-        self, username, password, start_date, end_date, bbox, tile, cloud_cover=100
+        self, username, password, start_date, end_date, bbox, tile, cloud_cover=100, level=2
     ) -> None:
-        super().__init__(username, password, start_date, end_date, bbox, tile)
+
+        super().__init__(username, password, start_date, end_date, bbox, tile, level)
+
         cloud_cover = int(cloud_cover)
         if cloud_cover < 0 or cloud_cover > 100:
             raise Exception
@@ -191,7 +198,7 @@ class Sentinel2Request(SatelliteSensorRequest):
         # print(self.query)
 
         response = session.get(self.query)
-        if not response.status_code == 200:
+        if response.status_code != 200:
             logging.error(
                 f"Failed to retrieve data from the server. Status code: {response.status_code} \n"
                 f"Message: {response.reason}"
@@ -203,11 +210,14 @@ class Sentinel2Request(SatelliteSensorRequest):
             try:
                 quicklook = feature["properties"]["thumbnail"]
                 identifier = feature["properties"]["title"]
-                if level == "1" and "L2A" in identifier.split("_")[1]:
+                if self.level == "1" and "L2A" in identifier.split("_")[1]:
                     continue
-                if "L2A" in identifier.split("_")[1] and level == "1":
-                    continue
-                selected_tile = feature["properties"]["title"].split("_")[5][1:]
+                # TODO WHat's the meaning of the following? Only one caracter is selected
+                # if "L2A" in identifier.split("_")[1] and level == "1":
+                #     continue
+                # TODO: why do you remove the T here?
+                # selected_tile = feature["properties"]["title"].split("_")[5][1:]
+                selected_tile = feature["properties"]["title"].split("_")[5]
                 beginDate = feature["properties"]["startDate"]
                 cloud_coverage = feature["properties"]["cloudCover"]
                 download_url = feature["properties"]["services"]["download"]["url"]
@@ -221,7 +231,8 @@ class Sentinel2Request(SatelliteSensorRequest):
                     id,
                 ]
                 # TODO: Should we handle this exception, even log-wise?
-            except Exception:
+            except Exception as e:
+                logging.error(f"Error while parsing server response : {e}")
                 continue
         return results
 
@@ -287,6 +298,7 @@ class Sentinel2Request(SatelliteSensorRequest):
 
         with ThreadPoolExecutor(max_workers=4) as executor:
             futures = []
+            # TODO: here, only the values[-1] is used from results. Why do we need the rest of results?
             for identifier, values in results.items():
                 filename = os.path.join(output_dir, f"{identifier}.zip")
                 url = f"https://zipper.dataspace.copernicus.eu/odata/v1/Products({values[-1]})/$value"
@@ -380,6 +392,7 @@ def checkParameters(satellite, parameters):
     return False
 
 
+# TODO: FIX This "main", checks for S2 only. And the parameters are satellite specific (like level)
 if __name__ == "__main__":
     if not checkParameters("Sentinel2", getParametersFromDockerEnv()):
         SystemError("Incorrect or/and insufficient parameters")
@@ -393,7 +406,7 @@ if __name__ == "__main__":
 
     # TODO introduce the level. It was introduced but the constructor cannot receive it
     s2 = Sentinel2Request(
-        username, password, startDate, endDate, bbox, tile, cloudCover
+        username, password, startDate, endDate, bbox, tile, cloudCover, level
     )
     s2_results = s2.search()
     print(f"# of products found:{len(s2_results)}")
