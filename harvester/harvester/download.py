@@ -30,8 +30,8 @@ class SatelliteSensorRequest:
         """
         self.username = username
         self.password = password
-        self.startDate = start_date
-        self.endDate = end_date
+        self.start_date = start_date
+        self.end_date = end_date
         if bbox:
             self.bbox = string_bbox_to_list(bbox)
             if not self.check_bbox_length() or not self.check_bbox_validity():
@@ -173,14 +173,14 @@ class Sentinel2Request(SatelliteSensorRequest):
         if self.bbox:
             xmin, ymin, xmax, ymax = self.split_bbox()
             return f"https://catalogue.dataspace.copernicus.eu/resto/api/collections/Sentinel2/search.json?"\
-                f"startDate={self.startDate}T00:00:00Z&"\
-                f"completionDate={self.endDate}T23:59:59Z&"\
+                f"startDate={self.start_date}T00:00:00Z&"\
+                f"completionDate={self.end_date}T23:59:59Z&"\
                 f"maxRecords=1000&box={xmin},{ymin},{xmax},{ymax}&"\
                 f"cloudCover=[0,{self.cloud_cover}]"
         else:
             return f"https://catalogue.dataspace.copernicus.eu/resto/api/collections/Sentinel2/search.json?"\
-                f"startDate={self.startDate}T00:00:00Z&"\
-                f"completionDate={self.endDate}T23:59:59Z&"\
+                f"startDate={self.start_date}T00:00:00Z&"\
+                f"completionDate={self.end_date}T23:59:59Z&"\
                 f"maxRecords=1000&"\
                 f"cloudCover=[0,{self.cloud_cover}]"
 
@@ -194,8 +194,6 @@ class Sentinel2Request(SatelliteSensorRequest):
         """
         session = requests.Session()
         session.stream = True
-
-        # print(self.query)
 
         response = session.get(self.query)
         if response.status_code != 200:
@@ -218,13 +216,13 @@ class Sentinel2Request(SatelliteSensorRequest):
                 # TODO: why do you remove the T here?
                 # selected_tile = feature["properties"]["title"].split("_")[5][1:]
                 selected_tile = feature["properties"]["title"].split("_")[5]
-                beginDate = feature["properties"]["startDate"]
+                begin_date = feature["properties"]["startDate"]
                 cloud_coverage = feature["properties"]["cloudCover"]
                 download_url = feature["properties"]["services"]["download"]["url"]
                 id = feature["id"]
                 results[identifier] = [
                     selected_tile,
-                    beginDate,
+                    begin_date,
                     cloud_coverage,
                     quicklook,
                     download_url,
@@ -336,10 +334,10 @@ def getParametersFromDockerEnv():
         parameters["username"] = os.environ["username"]
     if "password" in os.environ:
         parameters["password"] = os.environ["password"]
-    if "startDate" in os.environ:
-        parameters["startDate"] = os.environ["startDate"]
-    if "endDate" in os.environ:
-        parameters["endDate"] = os.environ["endDate"]
+    if "start_date" in os.environ:
+        parameters["start_date"] = os.environ["start_date"]
+    if "end_date" in os.environ:
+        parameters["end_date"] = os.environ["end_date"]
     if "bbox" in os.environ:
         parameters["bbox"] = os.environ["bbox"]
     else:
@@ -349,7 +347,7 @@ def getParametersFromDockerEnv():
     else:
         parameters["tile"] = None
     if "cloudCover" in os.environ:
-        parameters["cloudCover"] = os.environ["cloudCover"]
+        parameters["cloud_cover"] = os.environ["cloud_cover"]
     if "level" in os.environ:
         parameters["level"] = os.environ["level"]
     return parameters
@@ -383,21 +381,22 @@ def checkParameters(satellite, parameters):
             "level" in parameters
             and "username" in parameters
             and "password" in parameters
-            and "startDate" in parameters
-            and "endDate" in parameters
+            and "start_date" in parameters
+            and "end_date" in parameters
             and ("bbox" in parameters or "tile" in parameters)
-            and "cloudCover" in parameters
+            and "cloud_cover" in parameters
         ):
             return True
     return False
 
 
 # TODO: FIX This "main", checks for S2 only. And the parameters are satellite specific (like level)
+# TODO: main should only call constructors or start a "pipeline"
 if __name__ == "__main__":
     if not checkParameters("Sentinel2", getParametersFromDockerEnv()):
         SystemError("Incorrect or/and insufficient parameters")
 
-    username, password, startDate, endDate, bbox, tile, cloudCover, level = (
+    username, password, start_date, end_date, bbox, tile, cloud_cover, level = (
         getParametersFromDockerEnv().values()
     )
 
@@ -406,7 +405,7 @@ if __name__ == "__main__":
 
     # TODO introduce the level. It was introduced but the constructor cannot receive it
     s2 = Sentinel2Request(
-        username, password, startDate, endDate, bbox, tile, cloudCover, level
+        username, password, start_date, end_date, bbox, tile, cloud_cover, level
     )
     s2_results = s2.search()
     print(f"# of products found:{len(s2_results)}")

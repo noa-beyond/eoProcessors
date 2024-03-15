@@ -77,7 +77,7 @@ class TestSentinel2Request(unittest.TestCase):
             self.cloud_cover,
         )
         results = request.search()
-        print(results)
+
         expected_results = {
             "S2A_MSIL1C_20240103T092401_N0510_R093_T35SKC_20240103T101121.SAFE": [
                 "T35SKC",
@@ -94,6 +94,7 @@ class TestSentinel2Request(unittest.TestCase):
     def test_search_failure(self, mock_get):
         mock_response = mock_get.return_value
         mock_response.status_code = 500
+        mock_response.reason = "Mocked reasons"
         request = Sentinel2Request(
             self.username,
             self.password,
@@ -103,7 +104,15 @@ class TestSentinel2Request(unittest.TestCase):
             self.tile,
             self.cloud_cover,
         )
-        results = request.search()
+
+        expected_message = (
+            f"Failed to retrieve data from the server. Status code: {mock_response.status_code} \n"
+            f"Message: {mock_response.reason}"
+        )
+
+        with self.assertLogs(level='ERROR') as cm:
+            results = request.search()
+        self.assertEqual(cm.output, [f'ERROR:root:{expected_message}'])
         self.assertIsNone(results)
 
     # TODO this is an integration test and it is not correct to be with unit tests
