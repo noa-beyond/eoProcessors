@@ -112,7 +112,7 @@ class TestSentinel2Request(unittest.TestCase):
 
         with self.assertLogs(level='ERROR') as cm:
             results = request.search()
-        self.assertEqual(cm.output, [f'ERROR:root:{expected_message}'])
+        self.assertEqual(cm.output, [f'ERROR:harvester:{expected_message}'])
         self.assertIsNone(results)
 
     # TODO this is an integration test and it is not correct to be with unit tests

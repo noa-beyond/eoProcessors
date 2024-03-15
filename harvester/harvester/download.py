@@ -7,6 +7,8 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
 
+log = logging.getLogger("harvester")
+
 
 # TODO this class might have a wrong design: it is only for Copernicus
 # It's fine, but a decision has to be made if we will have a generic one
@@ -33,14 +35,14 @@ class SatelliteSensorRequest:
         self.start_date = start_date
         self.end_date = end_date
         if bbox:
-            self.bbox = string_bbox_to_list(bbox)
-            if not self.check_bbox_length() or not self.check_bbox_validity():
-                raise Exception(
-                    """
-                        Spatial Parameters are non-correct: Bounding box coordinates are not valid.
-                        [min_lon, min_lat, max_lon, max_lat] are required.
-                    """
-                )
+            try:
+                self.bbox = [float(x) for x in bbox.split(",")]
+                self.check_bbox_validity()
+            except Exception:
+                message = "Spatial Parameters are non-correct: "\
+                    "Bounding box coordinates are not valid. min_lon, min_lat, max_lon, max_lat] are required."
+                # log.error(message)
+                raise Exception(message)
         elif tile is None:
             raise Exception("Spatial Parameters must be provided!")
         else:
@@ -49,7 +51,6 @@ class SatelliteSensorRequest:
 
         self.level = level
 
-    # TODO: is this check correct? (when "forming" a bbox, is the < relation between min and max correct?)
     def check_bbox_validity(self):
         """
         Checks if the bounding box coordinates are valid.
@@ -57,32 +58,10 @@ class SatelliteSensorRequest:
         Returns:
             bool: True if the bounding box coordinates are valid, False otherwise.
         """
-        if self.bbox:
+        if len(self.bbox) == 4:
             if self.bbox[0] < self.bbox[2] and self.bbox[1] < self.bbox[3]:
                 return True
-        return False
-
-    def check_bbox_length(self):
-        """
-        Checks if the bounding box coordinates are valid.
-
-        Returns:
-            bool: True if the bounding box coordinates are valid, False otherwise.
-        """
-        if self.bbox:
-            if len(self.bbox) == 4:
-                return True
-        return False
-
-    def split_bbox(self):
-        """
-        Splits the bounding box coordinates into individual variables.
-
-        Returns:
-            Tuple: A tuple containing the xmin, ymin, xmax, and ymax values of the bounding box.
-        """
-        xmin, ymin, xmax, ymax = self.bbox[0], self.bbox[1], self.bbox[2], self.bbox[3]
-        return xmin, ymin, xmax, ymax
+        raise Exception
 
     def getAccessToken(self):
         url = "https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token"
@@ -114,7 +93,7 @@ class SatelliteSensorRequest:
             if access_token and refresh_token:
                 return access_token, refresh_token
         else:
-            logging.error(
+            log.error(
                 f"Failed to retrieve data from the server. Status code: {response.status_code} \n"
                 f"Message: {response.reason}"
             )
@@ -171,11 +150,15 @@ class Sentinel2Request(SatelliteSensorRequest):
             str: The query URL.
         """
         if self.bbox:
-            xmin, ymin, xmax, ymax = self.split_bbox()
+            # box - a region of interest, defined as the rectangle with given (west, south, east, north) values.
+            # It should be defined this way: &box=west,south,east,north
+            # Like so, it is gets the values of minLongitude, minLatitude, maxLongitude, maxLatitude
+            xmin, ymin, xmax, ymax = self.bbox
             return f"https://catalogue.dataspace.copernicus.eu/resto/api/collections/Sentinel2/search.json?"\
                 f"startDate={self.start_date}T00:00:00Z&"\
                 f"completionDate={self.end_date}T23:59:59Z&"\
-                f"maxRecords=1000&box={xmin},{ymin},{xmax},{ymax}&"\
+                f"maxRecords=1000&" \
+                f"box={xmin},{ymin},{xmax},{ymax}&"\
                 f"cloudCover=[0,{self.cloud_cover}]"
         else:
             return f"https://catalogue.dataspace.copernicus.eu/resto/api/collections/Sentinel2/search.json?"\
@@ -197,7 +180,7 @@ class Sentinel2Request(SatelliteSensorRequest):
 
         response = session.get(self.query)
         if response.status_code != 200:
-            logging.error(
+            log.error(
                 f"Failed to retrieve data from the server. Status code: {response.status_code} \n"
                 f"Message: {response.reason}"
             )
@@ -230,15 +213,15 @@ class Sentinel2Request(SatelliteSensorRequest):
                 ]
                 # TODO: Should we handle this exception, even log-wise?
             except Exception as e:
-                logging.error(f"Error while parsing server response : {e}")
+                log.error(f"Error while parsing server response : {e}")
                 continue
         return results
 
     def download(self, results):
         # showResultsAsTable(results)
-        logging.info("Searching results:")
+        log.info("Searching results:")
         time.sleep(10)
-        logging.info("Downloading results:")
+        log.info("Downloading results:")
 
         # Retrieve the output directory path from the environment variable
         output_dir = os.getenv("outDir", "/app/data/")
@@ -269,7 +252,7 @@ class Sentinel2Request(SatelliteSensorRequest):
                     if chunk:
                         file.write(chunk)
 
-            logging.info(f"Downloaded {filename}")
+            log.info(f"Downloaded {filename}")
 
     def download_file(self, session, url, filename):
         with session.get(url, stream=True) as response:
@@ -278,7 +261,7 @@ class Sentinel2Request(SatelliteSensorRequest):
             block_size = 8192  # 8 Kilobytes
 
             progress_bar = tqdm(
-                total=total_size_in_bytes, unit="iB", unit_scale=True, desc=filename, position=4, leave=True
+                total=total_size_in_bytes, unit="iB", unit_scale=True, desc=filename, leave=True
             )
             with open(filename, "wb") as file:
                 for chunk in response.iter_content(chunk_size=block_size):
@@ -287,7 +270,7 @@ class Sentinel2Request(SatelliteSensorRequest):
             progress_bar.close()
 
             if total_size_in_bytes != 0 and progress_bar.n != total_size_in_bytes:
-                logging.error(f"ERROR, something went wrong downloading {filename}")
+                log.error(f"ERROR, something went wrong downloading {filename}")
 
     def download_files_concurrently(self, results, output_dir, access_token):
         headers = {"Authorization": f"Bearer {access_token}"}
@@ -310,18 +293,7 @@ class Sentinel2Request(SatelliteSensorRequest):
 
 
 # Additional functions
-def string_bbox_to_list(bbox):
-    """
-    Converts the bounding box coordinates from string to list.
-
-    Returns:
-        list: The bounding box coordinates in list format.
-    """
-    if bbox:
-        return [float(x) for x in bbox.split(",")]
-    return None
-
-
+# TODO test that and notify of missing parameters
 def getParametersFromDockerEnv():
     """
     Get the parameters from the Docker environment variables.
@@ -346,7 +318,7 @@ def getParametersFromDockerEnv():
         parameters["tile"] = os.environ["tile"]
     else:
         parameters["tile"] = None
-    if "cloudCover" in os.environ:
+    if "cloud_cover" in os.environ:
         parameters["cloud_cover"] = os.environ["cloud_cover"]
     if "level" in os.environ:
         parameters["level"] = os.environ["level"]
@@ -409,7 +381,10 @@ if __name__ == "__main__":
     )
     s2_results = s2.search()
     print(f"# of products found:{len(s2_results)}")
-
+    # the number of results (not sure if this is the correct way)
+    # also defines the number of pages which will return
+    # check here https://documentation.dataspace.copernicus.eu/APIs/OpenSearch.html
+    # actually, you might want to return pages of 20 results each and navigate
     authentication_access_tokens, refresh_token = s2.getAccessToken()
     access_token = s2.getAccessTokenViaRefreshToken(refresh_token)
     output_dir = os.getenv("outDir", "/app/data/")
