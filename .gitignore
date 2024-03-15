@@ -1,1 +1,11 @@
+# packages
 __pycache__
+.coverage
+
+# tools
+.vscode
+
+# project specific files
+.env.list.local
+output
+data
