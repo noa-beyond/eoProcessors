@@ -1,9 +1,9 @@
-import logging
 import os
-# from pathlib import Path
+import logging
+
 import requests
 import time
-# from requests.auth import HTTPBasicAuth
+
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
 
@@ -16,7 +16,14 @@ log = logging.getLogger("harvester")
 class SatelliteSensorRequest:
 
     def __init__(
-        self, username, password, start_date, end_date, bbox, tile=None, level=None
+        self,
+        username: str,
+        password: str,
+        start_date: str,
+        end_date: str,
+        bbox: str,
+        tile: str | None = None,
+        level: str | None = None,
     ) -> None:
         """
         Initialize the Download class.
@@ -24,44 +31,28 @@ class SatelliteSensorRequest:
         Parameters:
         start_date (str): The start date of the data to be downloaded.
         end_date (str): The end date of the data to be downloaded.
-        bbox (list): The bounding box coordinates in the format [min_lon, min_lat, max_lon, max_lat].
+        bbox (str): The bounding box coordinates in the format "[min_lon, min_lat, max_lon, max_lat]".
         tile (str, optional): The tile identifier. Defaults to None.
+        level (str, optional): Raster level product. 1, 2 or both (12)
 
         Raises:
-        Exception: If spatial parameters are incorrect. Bounding box must have 4 coordinates or tile must be provided.
+        Exception: At least one of bbox or Tile must be provided
         """
         self.username = username
         self.password = password
         self.start_date = start_date
         self.end_date = end_date
         if bbox:
-            try:
-                self.bbox = [float(x) for x in bbox.split(",")]
-                self.check_bbox_validity()
-            except Exception:
-                message = "Spatial Parameters are non-correct: "\
-                    "Bounding box coordinates are not valid. min_lon, min_lat, max_lon, max_lat] are required."
-                # log.error(message)
-                raise Exception(message)
+            self.bbox = parse_and_validate_bbox(bbox)
         elif tile is None:
-            raise Exception("Spatial Parameters must be provided!")
+            raise KeyError(
+                "At least one of [bbox, tile] spatial parameter must be provided!"
+            )
         else:
             self.bbox = None
             self.tile = tile
 
         self.level = level
-
-    def check_bbox_validity(self):
-        """
-        Checks if the bounding box coordinates are valid.
-
-        Returns:
-            bool: True if the bounding box coordinates are valid, False otherwise.
-        """
-        if len(self.bbox) == 4:
-            if self.bbox[0] < self.bbox[2] and self.bbox[1] < self.bbox[3]:
-                return True
-        raise Exception
 
     def getAccessToken(self):
         url = "https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token"
@@ -97,9 +88,9 @@ class SatelliteSensorRequest:
                 f"Failed to retrieve data from the server. Status code: {response.status_code} \n"
                 f"Message: {response.reason}"
             )
-        return None
 
-    def getAccessTokenViaRefreshToken(self, refresh_token):
+    def getAccessTokenViaRefreshToken(self, refresh_token: str) -> str | None:
+
         url = "https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token"
 
         # Headers
@@ -121,28 +112,37 @@ class SatelliteSensorRequest:
         if response.status_code == 200:
             json_response = response.json()
             # Extract the access token
-            access_token = json_response.get("access_token", None)
+            return json_response.get("access_token", None)
         else:
             print(
                 f"Failed to retrieve the access token. Status code: {response.status_code}"
             )
-        return access_token
 
 
 class Sentinel2Request(SatelliteSensorRequest):
     def __init__(
-        self, username, password, start_date, end_date, bbox, tile, cloud_cover=100, level=2
+        self,
+        username: str,
+        password: str,
+        start_date: str,
+        end_date: str,
+        bbox: str,
+        tile: str,
+        cloud_cover: int = 100,
+        level: int = 2,
     ) -> None:
 
         super().__init__(username, password, start_date, end_date, bbox, tile, level)
 
         cloud_cover = int(cloud_cover)
         if cloud_cover < 0 or cloud_cover > 100:
-            raise Exception
+            raise ValueError("Cloud coverage value must be between 0 and 100")
         self.cloud_cover = cloud_cover
         self.query = self.queryData()  # Fix: Added 'self.' before 'queryData()'
 
-    def queryData(self):
+    # TODO is this the place where we construct the query, depending on the parameters?
+    # If so, then the construction of the the url should be more elaborate
+    def queryData(self) -> str:
         """
         Constructs and returns the query URL based on the provided parameters.
 
@@ -154,20 +154,24 @@ class Sentinel2Request(SatelliteSensorRequest):
             # It should be defined this way: &box=west,south,east,north
             # Like so, it is gets the values of minLongitude, minLatitude, maxLongitude, maxLatitude
             xmin, ymin, xmax, ymax = self.bbox
-            return f"https://catalogue.dataspace.copernicus.eu/resto/api/collections/Sentinel2/search.json?"\
-                f"startDate={self.start_date}T00:00:00Z&"\
-                f"completionDate={self.end_date}T23:59:59Z&"\
-                f"maxRecords=1000&" \
-                f"box={xmin},{ymin},{xmax},{ymax}&"\
+            return (
+                f"https://catalogue.dataspace.copernicus.eu/resto/api/collections/Sentinel2/search.json?"
+                f"startDate={self.start_date}T00:00:00Z&"
+                f"completionDate={self.end_date}T23:59:59Z&"
+                f"maxRecords=1000&"
+                f"box={xmin},{ymin},{xmax},{ymax}&"
                 f"cloudCover=[0,{self.cloud_cover}]"
+            )
         else:
-            return f"https://catalogue.dataspace.copernicus.eu/resto/api/collections/Sentinel2/search.json?"\
-                f"startDate={self.start_date}T00:00:00Z&"\
-                f"completionDate={self.end_date}T23:59:59Z&"\
-                f"maxRecords=1000&"\
+            return (
+                f"https://catalogue.dataspace.copernicus.eu/resto/api/collections/Sentinel2/search.json?"
+                f"startDate={self.start_date}T00:00:00Z&"
+                f"completionDate={self.end_date}T23:59:59Z&"
+                f"maxRecords=1000&"
                 f"cloudCover=[0,{self.cloud_cover}]"
+            )
 
-    def search(self):
+    def search(self) -> dict:
         """
         Searches for data based on the provided query.
 
@@ -217,7 +221,7 @@ class Sentinel2Request(SatelliteSensorRequest):
                 continue
         return results
 
-    def download(self, results):
+    def download(self, results: dict) -> None:
         # showResultsAsTable(results)
         log.info("Searching results:")
         time.sleep(10)
@@ -254,14 +258,18 @@ class Sentinel2Request(SatelliteSensorRequest):
 
             log.info(f"Downloaded {filename}")
 
-    def download_file(self, session, url, filename):
+    def download_file(self, session: requests.Session, url: str, filename: str) -> None:
         with session.get(url, stream=True) as response:
-            response.raise_for_status()  # This will raise an error for non-200 responses
+            response.raise_for_status()  # This will raise an error for non-200 response
             total_size_in_bytes = int(response.headers.get("content-length", 0))
             block_size = 8192  # 8 Kilobytes
 
             progress_bar = tqdm(
-                total=total_size_in_bytes, unit="iB", unit_scale=True, desc=filename, leave=True
+                total=total_size_in_bytes,
+                unit="iB",
+                unit_scale=True,
+                desc=filename,
+                leave=True,
             )
             with open(filename, "wb") as file:
                 for chunk in response.iter_content(chunk_size=block_size):
@@ -272,7 +280,9 @@ class Sentinel2Request(SatelliteSensorRequest):
             if total_size_in_bytes != 0 and progress_bar.n != total_size_in_bytes:
                 log.error(f"ERROR, something went wrong downloading {filename}")
 
-    def download_files_concurrently(self, results, output_dir, access_token):
+    def download_files_concurrently(
+        self, results: dict, output_dir: str, access_token: str
+    ) -> None:
         headers = {"Authorization": f"Bearer {access_token}"}
         session = requests.Session()
         session.headers.update(headers)
@@ -293,6 +303,31 @@ class Sentinel2Request(SatelliteSensorRequest):
 
 
 # Additional functions
+def parse_and_validate_bbox(bbox: str) -> list:
+    """
+    Checks if the bounding box coordinates(string) are valid and returns the bbox list of these coordinates
+
+    Returns:
+        list: The bbox coordinates (west, south, east, north) as a List
+    Raises:
+        AttributeException: if bbox is not a comma separated string or 4 coordinates are not correct.
+    """
+
+    message = (
+        "Spatial Parameters are non-correct: "
+        "Bounding box coordinates are not valid."
+        "[min_lon, min_lat, max_lon, max_lat] are required."
+    )
+
+    try:
+        bbox_list = [float(x) for x in bbox.split(",")]
+        if len(bbox_list) == 4:
+            if bbox_list[0] < bbox_list[2] and bbox_list[1] < bbox_list[3]:
+                return bbox_list
+    except Exception:
+        raise AttributeError(message)
+
+
 # TODO test that and notify of missing parameters
 def getParametersFromDockerEnv():
     """
@@ -325,7 +360,7 @@ def getParametersFromDockerEnv():
     return parameters
 
 
-def showResultsAsTable(results):
+def showResultsAsTable(results: dict):
     """
     Show the results as a table.
 
@@ -337,7 +372,7 @@ def showResultsAsTable(results):
         print(f"{values[0]}\t{values[1]}\t{values[2]}\t{values[-1]}")
 
 
-def checkParameters(satellite, parameters):
+def checkParameters(satellite: str, parameters: dict):
     """
     Check if the parameters are correct.
 
@@ -373,7 +408,7 @@ if __name__ == "__main__":
     )
 
     if str(level) not in ["1", "2", "12"]:
-        raise Exception("Incorrect level parameter. It must be 1, 2 or 12")
+        raise ValueError("Incorrect level parameter. It must be 1, 2 or 12")
 
     # TODO introduce the level. It was introduced but the constructor cannot receive it
     s2 = Sentinel2Request(
