@@ -9,3 +9,34 @@ __pycache__
 .env.list.local
 output
 data
+
+# Distribution / packaging
+build/
+dist/
+pip-wheel-metadata/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Environments
+.env
+.envrc
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.cenv
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+test-output.xml
+coverage.xml
+*.cover
+
+.pytest_cache/
