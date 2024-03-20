@@ -54,70 +54,6 @@ class SatelliteSensorRequest:
 
         self.level = level
 
-    def getAccessToken(self):
-        url = "https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token"
-
-        # Headers
-        headers = {
-            "Content-Type": "application/x-www-form-urlencoded",
-        }
-
-        # Data payload
-        data = {
-            "grant_type": "password",
-            "username": self.username,  # Replace <LOGIN> with your actual login username
-            "password": self.password,  # Replace <PASSWORD> with your actual password
-            "client_id": "cdse-public",
-        }
-
-        # Make the POST request
-        response = requests.post(url, headers=headers, data=data)
-        # Check if the request was successful
-        if response.status_code == 200:
-            # Parse the JSON response
-            json_response = response.json()
-
-            # Extract the access token
-            access_token = json_response.get("access_token", None)
-            refresh_token = json_response.get("refresh_token", None)
-            # Print the access token
-            if access_token and refresh_token:
-                return access_token, refresh_token
-        else:
-            log.error(
-                f"Failed to retrieve data from the server. Status code: {response.status_code} \n"
-                f"Message: {response.reason}"
-            )
-
-    def getAccessTokenViaRefreshToken(self, refresh_token: str) -> str | None:
-
-        url = "https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token"
-
-        # Headers
-        headers = {
-            "Content-Type": "application/x-www-form-urlencoded",
-        }
-
-        # Data payload
-        data = {
-            "grant_type": "refresh_token",
-            "refresh_token": refresh_token,  # Replace <REFRESH_TOKEN> with your actual refresh token
-            "client_id": "cdse-public",
-        }
-
-        # Make the POST request
-        response = requests.post(url, headers=headers, data=data)
-
-        # Check the response
-        if response.status_code == 200:
-            json_response = response.json()
-            # Extract the access token
-            return json_response.get("access_token", None)
-        else:
-            print(
-                f"Failed to retrieve the access token. Status code: {response.status_code}"
-            )
-
 
 class Sentinel2Request(SatelliteSensorRequest):
     def __init__(
@@ -176,8 +112,9 @@ class Sentinel2Request(SatelliteSensorRequest):
         Searches for data based on the provided query.
 
         Returns:
-            dict: A dictionary containing the search results, where the keys are identifiers and the values are lists
-                  containing the selected tile, begin date, cloud coverage, and quicklook URL.
+            dict: A dictionary containing the search results, where the keys are
+                  identifiers and the values are lists containing the selected tile,
+                  begin date, cloud coverage, and quicklook URL.
         """
         session = requests.Session()
         session.stream = True
@@ -232,12 +169,12 @@ class Sentinel2Request(SatelliteSensorRequest):
         if not os.path.exists(output_dir):
             os.makedirs(output_dir, exist_ok=True)
 
-        access_token, refresh_token = self.getAccessToken()
+        access_token, refresh_token = getAccessToken(self.username, self.password)
 
         if access_token is None:
             raise Exception("Failed to retrieve the access token.")
 
-        access_token = self.getAccessTokenViaRefreshToken(refresh_token)
+        access_token = getAccessTokenViaRefreshToken(refresh_token)
 
         print(f"Access Token: {access_token}")
         for identifier, values in results.items():
@@ -397,6 +334,73 @@ def checkParameters(satellite: str, parameters: dict):
     return False
 
 
+# TODO move token functions in utils or credentials module. No need to be in self
+def getAccessToken(username, password):
+    url = "https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token"
+
+    # Headers
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded",
+    }
+
+    # Data payload
+    data = {
+        "grant_type": "password",
+        "username": username,  # Replace <LOGIN> with your actual login username
+        "password": password,  # Replace <PASSWORD> with your actual password
+        "client_id": "cdse-public",
+    }
+
+    # Make the POST request
+    response = requests.post(url, headers=headers, data=data)
+    # Check if the request was successful
+    if response.status_code == 200:
+        # Parse the JSON response
+        json_response = response.json()
+
+        # Extract the access token
+        access_token = json_response.get("access_token", None)
+        refresh_token = json_response.get("refresh_token", None)
+        # Print the access token
+        if access_token and refresh_token:
+            return access_token, refresh_token
+    else:
+        log.error(
+            f"Failed to retrieve data from the server. Status code: {response.status_code} \n"
+            f"Message: {response.reason}"
+        )
+
+
+def getAccessTokenViaRefreshToken(refresh_token: str) -> str | None:
+
+    url = "https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token"
+
+    # Headers
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded",
+    }
+
+    # Data payload
+    data = {
+        "grant_type": "refresh_token",
+        "refresh_token": refresh_token,  # Replace <REFRESH_TOKEN> with your actual refresh token
+        "client_id": "cdse-public",
+    }
+
+    # Make the POST request
+    response = requests.post(url, headers=headers, data=data)
+
+    # Check the response
+    if response.status_code == 200:
+        json_response = response.json()
+        # Extract the access token
+        return json_response.get("access_token", None)
+    else:
+        print(
+            f"Failed to retrieve the access token. Status code: {response.status_code}"
+        )
+
+
 # TODO: FIX This "main", checks for S2 only. And the parameters are satellite specific (like level)
 # TODO: main should only call constructors or start a "pipeline"
 if __name__ == "__main__":
@@ -420,8 +424,10 @@ if __name__ == "__main__":
     # also defines the number of pages which will return
     # check here https://documentation.dataspace.copernicus.eu/APIs/OpenSearch.html
     # actually, you might want to return pages of 20 results each and navigate
-    authentication_access_tokens, refresh_token = s2.getAccessToken()
-    access_token = s2.getAccessTokenViaRefreshToken(refresh_token)
+    authentication_access_tokens, refresh_token = getAccessToken(
+        s2.username, s2.password
+    )
+    access_token = getAccessTokenViaRefreshToken(refresh_token)
     output_dir = os.getenv("outDir", "/app/data/")
     if not os.path.exists(output_dir):
         os.makedirs(output_dir, exist_ok=True)

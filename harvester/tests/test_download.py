@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import patch
 
-from harvester.download import Sentinel2Request
+from harvester.download import Sentinel2Request, getAccessToken, getAccessTokenViaRefreshToken
 
 
 class TestSentinel2Request(unittest.TestCase):
@@ -14,6 +14,30 @@ class TestSentinel2Request(unittest.TestCase):
         self.bbox = "10,20,30,40"
         self.tile = "T35SKC"
         self.cloud_cover = 50
+
+    @patch("requests.post")
+    def test_get_access_token_with_mock_post_request(self, mocked_post):
+        mock_response = mocked_post.return_value
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "access_token": "mocked_access_token",
+            "refresh_token": "mocked_refresh_token"
+        }
+
+        response = getAccessToken(self.username, self.password)
+        self.assertEqual(response[0], "mocked_access_token")
+        self.assertEqual(response[1], "mocked_refresh_token")
+
+    @patch("requests.post")
+    def test_get_access_refresh_token_with_mock_post_request(self, mocked_post):
+        mock_response = mocked_post.return_value
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "access_token": "mocked_access_token"
+        }
+
+        response = getAccessTokenViaRefreshToken("mocked_refresh_token")
+        self.assertEqual(response, "mocked_access_token")
 
     def test_queryData_with_bbox(self):
         request = Sentinel2Request(
