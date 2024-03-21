@@ -195,49 +195,6 @@ class Sentinel2Request(SatelliteSensorRequest):
 
             log.info(f"Downloaded {filename}")
 
-    def download_file(self, session: requests.Session, url: str, filename: str) -> None:
-        with session.get(url, stream=True) as response:
-            response.raise_for_status()  # This will raise an error for non-200 response
-            total_size_in_bytes = int(response.headers.get("content-length", 0))
-            block_size = 8192  # 8 Kilobytes
-
-            progress_bar = tqdm(
-                total=total_size_in_bytes,
-                unit="iB",
-                unit_scale=True,
-                desc=filename,
-                leave=True,
-            )
-            with open(filename, "wb") as file:
-                for chunk in response.iter_content(chunk_size=block_size):
-                    progress_bar.update(len(chunk))
-                    file.write(chunk)
-            progress_bar.close()
-
-            if total_size_in_bytes != 0 and progress_bar.n != total_size_in_bytes:
-                log.error(f"ERROR, something went wrong downloading {filename}")
-
-    def download_files_concurrently(
-        self, results: dict, output_dir: str, access_token: str
-    ) -> None:
-        headers = {"Authorization": f"Bearer {access_token}"}
-        session = requests.Session()
-        session.headers.update(headers)
-
-        with ThreadPoolExecutor(max_workers=4) as executor:
-            futures = []
-            # TODO: here, only the values[-1] is used from results. Why do we need the rest of results?
-            for identifier, values in results.items():
-                filename = os.path.join(output_dir, f"{identifier}.zip")
-                url = f"https://zipper.dataspace.copernicus.eu/odata/v1/Products({values[-1]})/$value"
-                futures.append(
-                    executor.submit(self.download_file, session, url, filename)
-                )
-
-            # Wait for all futures to complete
-            for future in as_completed(futures):
-                future.result()  # This will re-raise any exceptions caught during the download process
-
 
 # Additional functions
 def parse_and_validate_bbox(bbox: str) -> list:
@@ -332,6 +289,52 @@ def checkParameters(satellite: str, parameters: dict):
         ):
             return True
     return False
+
+
+def download_file(session: requests.Session, url: str, filename: str) -> None:
+    with session.get(url, stream=True) as response:
+        response.raise_for_status()  # This will raise an error for non-200 response
+        total_size_in_bytes = int(response.headers.get("content-length", 0))
+        block_size = 8192  # 8 Kilobytes
+        print(response)
+        print(response.headers["content-length"])
+        progress_bar = tqdm(
+            total=total_size_in_bytes,
+            unit="iB",
+            unit_scale=True,
+            desc=filename,
+            leave=True,
+        )
+        with open(filename, "wb") as file:
+            for chunk in response.iter_content(chunk_size=block_size):
+                progress_bar.update(len(chunk))
+                file.write(chunk)
+        progress_bar.close()
+
+        if total_size_in_bytes != 0 and progress_bar.n != total_size_in_bytes:
+            log.error(
+                f"ERROR, something went wrong downloading {filename}. {total_size_in_bytes}/{progress_bar.n}"
+            )
+
+
+def download_files_concurrently(
+    results: dict, output_dir: str, access_token: str
+) -> None:
+    headers = {"Authorization": f"Bearer {access_token}"}
+    session = requests.Session()
+    session.headers.update(headers)
+
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        futures = []
+        # TODO: here, only the values[-1] is used from results. Why do we need the rest of results?
+        for identifier, values in results.items():
+            filename = os.path.join(output_dir, f"{identifier}.zip")
+            url = f"https://zipper.dataspace.copernicus.eu/odata/v1/Products({values[-1]})/$value"
+            futures.append(executor.submit(download_file, session, url, filename))
+
+        # Wait for all futures to complete
+        for future in as_completed(futures):
+            future.result()  # This will re-raise any exceptions caught during the download process
 
 
 # TODO move token functions in utils or credentials module. No need to be in self
@@ -433,4 +436,4 @@ if __name__ == "__main__":
         os.makedirs(output_dir, exist_ok=True)
 
     # TODO check what to do here with downloaded data (where to store them locally)
-    s2.download_files_concurrently(s2_results, output_dir, access_token)
+    download_files_concurrently(s2_results, output_dir, access_token)

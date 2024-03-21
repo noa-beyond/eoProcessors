@@ -1,8 +1,13 @@
-
 import unittest
-from unittest.mock import patch
+import tempfile
+from unittest.mock import patch, MagicMock
 
-from harvester.download import Sentinel2Request, getAccessToken, getAccessTokenViaRefreshToken
+from harvester.download import (
+    Sentinel2Request,
+    getAccessToken,
+    getAccessTokenViaRefreshToken,
+    download_file,
+)
 
 
 class TestSentinel2Request(unittest.TestCase):
@@ -21,7 +26,7 @@ class TestSentinel2Request(unittest.TestCase):
         mock_response.status_code = 200
         mock_response.json.return_value = {
             "access_token": "mocked_access_token",
-            "refresh_token": "mocked_refresh_token"
+            "refresh_token": "mocked_refresh_token",
         }
 
         response = getAccessToken(self.username, self.password)
@@ -32,9 +37,7 @@ class TestSentinel2Request(unittest.TestCase):
     def test_get_access_refresh_token_with_mock_post_request(self, mocked_post):
         mock_response = mocked_post.return_value
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "access_token": "mocked_access_token"
-        }
+        mock_response.json.return_value = {"access_token": "mocked_access_token"}
 
         response = getAccessTokenViaRefreshToken("mocked_refresh_token")
         self.assertEqual(response, "mocked_access_token")
@@ -49,10 +52,12 @@ class TestSentinel2Request(unittest.TestCase):
             self.tile,
             self.cloud_cover,
         )
-        expected_query = "https://catalogue.dataspace.copernicus.eu/resto/api/collections/Sentinel2/search.json?"\
-            "startDate=2022-01-01T00:00:00Z&"\
-            "completionDate=2022-01-31T23:59:59Z&"\
+        expected_query = (
+            "https://catalogue.dataspace.copernicus.eu/resto/api/collections/Sentinel2/search.json?"
+            "startDate=2022-01-01T00:00:00Z&"
+            "completionDate=2022-01-31T23:59:59Z&"
             "maxRecords=1000&box=10.0,20.0,30.0,40.0&cloudCover=[0,50]"
+        )
         self.assertEqual(request.queryData(), expected_query)
 
     def test_queryData_without_bbox(self):
@@ -65,10 +70,12 @@ class TestSentinel2Request(unittest.TestCase):
             self.tile,
             self.cloud_cover,
         )
-        expected_query = "https://catalogue.dataspace.copernicus.eu/resto/api/collections/Sentinel2/search.json?"\
-            "startDate=2022-01-01T00:00:00Z&"\
-            "completionDate=2022-01-31T23:59:59Z&"\
+        expected_query = (
+            "https://catalogue.dataspace.copernicus.eu/resto/api/collections/Sentinel2/search.json?"
+            "startDate=2022-01-01T00:00:00Z&"
+            "completionDate=2022-01-31T23:59:59Z&"
             "maxRecords=1000&cloudCover=[0,50]"
+        )
         self.assertEqual(request.queryData(), expected_query)
 
     @patch("requests.Session.get")
@@ -87,7 +94,7 @@ class TestSentinel2Request(unittest.TestCase):
                         "services": {
                             "download": {"url": "https://example.com/download.zip"}
                         },
-                    }
+                    },
                 }
             ]
         }
@@ -109,7 +116,7 @@ class TestSentinel2Request(unittest.TestCase):
                 30,
                 "https://example.com/quicklook.jpg",
                 "https://example.com/download.zip",
-                "94faaa59-f4a3-4415-b490-6e75309872f2"
+                "94faaa59-f4a3-4415-b490-6e75309872f2",
             ]
         }
         self.assertEqual(results, expected_results)
@@ -134,10 +141,53 @@ class TestSentinel2Request(unittest.TestCase):
             f"Message: {mock_response.reason}"
         )
 
-        with self.assertLogs(level='ERROR') as cm:
+        with self.assertLogs(level="ERROR") as cm:
             results = request.search()
-        self.assertEqual(cm.output, [f'ERROR:harvester:{expected_message}'])
+        self.assertEqual(cm.output, [f"ERROR:harvester:{expected_message}"])
         self.assertIsNone(results)
+
+    def test_download_file_fails_and_error_is_logged(self):
+
+        # Given
+        content_length = 8  # Magic Number
+        mocked_session = MagicMock()
+        mocked_response = MagicMock()
+
+        mocked_response.headers = {"content-length": content_length}
+
+        # Creating a list total length of 6
+        mocked_response.iter_content.return_value = [
+            bytearray("500", encoding="utf-8"),
+            bytearray("500", encoding="utf-8"),
+        ]
+        mocked_session.get.return_value.__enter__.return_value = mocked_response
+
+        with tempfile.NamedTemporaryFile() as tmp_file:
+            expected_message = f"ERROR, something went wrong downloading {tmp_file.name}. {content_length}/6"
+
+            with self.assertLogs(level="ERROR") as cm:
+                download_file(mocked_session, "mocked_url", tmp_file.name)
+            self.assertEqual(cm.output, [f"ERROR:harvester:{expected_message}"])
+
+    def test_download_file_succeeds(self):
+
+        # Given
+        content_length = 6  # Magic Number
+        mocked_session = MagicMock()
+        mocked_response = MagicMock()
+
+        mocked_response.headers = {"content-length": content_length}
+        mocked_response.iter_content.return_value = [
+            bytearray("500", encoding="utf-8"),
+            bytearray("500", encoding="utf-8"),
+        ]
+        mocked_session.get.return_value.__enter__.return_value = mocked_response
+
+        with tempfile.NamedTemporaryFile() as tmp_file:
+
+            download_file(mocked_session, "mocked_url", tmp_file.name)
+            tmp_file.seek(0, 2)
+            self.assertEqual(tmp_file.tell(), content_length)
 
     # TODO this is an integration test and it is not correct to be with unit tests
     # Commented in order to be corrected included in another place
