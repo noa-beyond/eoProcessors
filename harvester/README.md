@@ -11,7 +11,7 @@
 
 ### Windows
 * Docker: Docker must be installed on your machine. (include links)
-* Git
+* Git (and a shell environment): https://git-scm.com/download/win
 
 ### Linux
 * Docker:
@@ -75,6 +75,19 @@ noaeoharvester
 * bbox **or** tile: Bounding Box for the search area (format: MIN_LON,MIN_LAT,MAX_LON,MAX_LAT) and tile for the tile name of the product e.g. 34uFG
 * cloud_cover: Maximum acceptable cloud cover percentage for the images (0-100).
 * level: Processing level of the Sentinel-2 data (1 for Level1C, 2 for Level2A, or 12 for both).
+
+## Copernicus collections (eodata)
+As described here
+
+the following collections can be retrieved:
+
+    Sentinel1 
+    Sentinel2 
+    Sentinel3 
+    Sentinel5P
+    Sentinel6
+    Sentinel1RTC (Sentinel-1 Radiometric Terrain Corrected)
+
 
 ## Tests
 
