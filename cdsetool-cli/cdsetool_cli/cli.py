@@ -29,12 +29,14 @@ from cdsetool_cli.utils import download_data, available_parameters
 @click.argument("config_file", required=True)
 def cli(download, parameters, config_file, verbose):
     if parameters:
+        click.echo("Available parameters per data source list:\n")
         available_parameters(config_file)
     elif download:
+        click.echo("Downloading:\n")
         download_data(config_file, verbose)
     else:
         click.echo("Please select at least one option (-d, -p)")
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     cli()

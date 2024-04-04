@@ -10,7 +10,11 @@ from cdsetool.credentials import Credentials
 from cdsetool.monitor import StatusMonitor
 
 
-def available_parameters(config_file):
+def available_parameters(config_file) -> None:
+    """
+        Checks the input file for top level keys, which have the satellite collection names.
+        For each of these keys the Copernicus service is queried for available query terms.
+    """
 
     with open(f"config/{config_file}") as f:
         config = json.load(f)
@@ -19,23 +23,23 @@ def available_parameters(config_file):
         click.echo(f"{satellite} available search terms: \n {search_terms}\n")
 
 
+# TODO Logging
+# TODO typing
 def download_data(config_file, verbose):
+    """
+        Downloads using the query terms of config_file. Verbose is used for detailed
+        progress bar indicators. Download is using a concurrency setting of 4 threads.
+    """
 
-    # TODO: check if login password are in env (container), else check .netrc
-    # in different function
-    if os.environ.get("login") is None and os.environ.get("password") is None:
-        credentials = Credentials()
-    else:
-        credentials = Credentials(os.environ["login"], os.environ["password"])
+    # TODO: check check .netrc in different function or generic credentials check
+    credentials = Credentials(
+        os.environ.get("login", None),
+        os.environ.get("password", None)
+    )
     monitor = StatusMonitor() if verbose else False
 
     with open(f"config/{config_file}") as f:
         config = json.load(f)
-
-    for satellite, search_terms in config.items():
-        # wait for all batch requests to complete, returning list
-        features = list(query_features(satellite, search_terms))
-        print(f"Available items for {satellite}: {len(features)} \n")
 
     for satellite, search_terms in config.items():
 
@@ -43,6 +47,7 @@ def download_data(config_file, verbose):
         download_path.mkdir(parents=True, exist_ok=True)
 
         features = list(query_features(satellite, search_terms))
+        click.echo(f"Available items for {satellite}: {len(features)} \n")
 
         list(
             download_features(

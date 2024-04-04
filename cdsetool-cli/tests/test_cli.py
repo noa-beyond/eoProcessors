@@ -1,33 +1,23 @@
-import pytest
 from click.testing import CliRunner
 
-# from cli import available_parameters  # , download_data
 from cdsetool_cli.cli import cli as main_cli
 
 runner = CliRunner()
 
-CONTENT = "{'Sentinel2': 'None'}"
 
-
-@pytest.fixture
-def config_file(tmp_path):
-
-    dir_path = tmp_path / "config"
-    dir_path.mkdir()
-    config_file = dir_path / "config.json"
-    config_file.write_text(CONTENT)
-
-    assert config_file.read_text() == CONTENT
-    return config_file
-
-
+# config_file is a pytest fixture in conftest.py
 def test_cli_parameters(config_file, mocker):
 
-    mock_func = mocker.patch("cdsetool_cli.utils.describe_collection")
-    mock_func.keys.return_value = "Sentinel2"
+    mocker.patch("cdsetool_cli.cli.available_parameters")
     response = runner.invoke(main_cli, ["-p", config_file.name])
-    assert "Sentinel2" in response.output
-    print(response.output)
+    assert "Available parameters per data source" in response.output
+
+
+def test_cli_download(config_file, mocker):
+
+    mocker.patch("cdsetool_cli.cli.download_data")
+    response = runner.invoke(main_cli, ["-d", config_file.name])
+    assert "Downloading" in response.output
 
 
 # TODO assert all options in this test, so if someone adds a new option, will have
