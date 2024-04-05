@@ -1,5 +1,5 @@
 # Using the CDSETOOL cli processor
-The cdsetool processor can be executed as a standalone cli application or inside a container. The following instructions are container specific. If you want to execute the cli in your local environment, skip all docker commands and just execute `python cli.py -d -v config.json`. Please note that in that case, the Copernicus credentials must be present in the environment variables (`login`, `password`) or in the `~/.netrc` file in Linux.
+The cdsetool processor can be executed as a standalone cli application or inside a container. The following instructions are container specific. If you want to execute the cli in your local environment, skip all docker commands and just execute `python cdsetool_cli/cli.py -d -v config.json`. Please note that in that case, the Copernicus credentials must be present in the environment variables (`login`, `password`) or in the `~/.netrc` file in Linux.
 
 
 ## Prerequisites

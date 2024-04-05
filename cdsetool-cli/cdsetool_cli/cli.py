@@ -1,5 +1,11 @@
+import sys
+from pathlib import Path
 import click
-from cdsetool_cli.utils import download_data, available_parameters
+
+# Appending the module path in order to have a kind of cli "dry execution"
+sys.path.append(str(Path(__file__).parent / ".."))
+
+from cdsetool_cli.utils import download_data, available_parameters # noqa:402
 
 
 @click.command(

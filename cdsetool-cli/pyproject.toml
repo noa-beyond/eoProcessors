@@ -37,6 +37,9 @@ test = [
     "pytest-mock>=3.12.0",
 ]
 
+[project.scripts]
+cdsetool-cli = "cdsetool_cli:cli"
+
 [tool.setuptools.packages.find]
 include = ["cdsetool*"]
 
