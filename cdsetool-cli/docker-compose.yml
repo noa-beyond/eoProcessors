@@ -1,0 +1,12 @@
+services:
+  app:
+    image: cdsetool-cli:latest
+    build: .
+    env_file:
+      - path: ./.env.list
+        required: true # default
+    working_dir: /app
+    volumes:
+      - ./config:/app/config
+      - ./data:/app/data
+    command: -p config.json
