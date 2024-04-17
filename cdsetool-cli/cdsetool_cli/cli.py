@@ -2,78 +2,57 @@ import sys
 from pathlib import Path
 import click
 
+
 # Appending the module path in order to have a kind of cli "dry execution"
 sys.path.append(str(Path(__file__).parent / ".."))
 
-
-from cdsetool_cli.utils import (  # noqa:402
-    download_data_copernicus,
-    available_parameters,
-    query_items,
-    query_data_modis
- )
+from cdsetool_cli import harvester # noqa:402
 
 
-@click.group()
+@click.group(
+    help=(
+        "Queries and/or Downloads data according to parameters as defined in the [CONFIG_FILE]."
+    )
+)
 def cli():
     pass
 
 
-@cli.command(
-    help=(
-        "Downloads Copernicus data according to parameters as defined in the [CONFIG_FILE],"
-        " or shows available query parameters for Satellites present in the [CONFIG_FILE]"
-    )
-)
-@click.option(
-    "--download",
-    "-d",
-    is_flag=True,
-    help="Downloads available Copernicus data according to CONFIG_FILE",
-)
-@click.option(
-    "--verbose",
-    "-v",
-    is_flag=True,
-    help="Shows the progress indicator (for download option only)",
-)
-@click.option(
-    "--parameters",
-    "-p",
-    is_flag=True,
-    help="Show available query Parameters for Satellites present in CONFIG_FILE",
-)
-@click.option(
-    "--query",
-    "-q",
-    is_flag=True,
-    help="Show multitude of available items for query in CONFIG_FILE",
-)
+@cli.command()
 @click.argument("config_file", required=True)
-def copernicus(download, parameters, query, config_file, verbose):
-    if parameters:
-        click.echo("Available parameters per data source list:\n")
-        available_parameters(config_file)
-    elif download:
-        click.echo("Downloading:\n")
-        download_data_copernicus(config_file, verbose)
-    elif query:
-        click.echo("Querying:\n")
-        query_items(config_file)
+def query(config_file):
+    if config_file:
+        harvest = harvester.Harvester(config_file)
+        harvest.query_data()
     else:
-        click.echo("Please select at least one option (-d, -p)")
+        click.echo("Please provide the [config file] argument")
 
 
 @cli.command()
 @click.option(
-    "--query",
-    "-q",
+    "--verbose",
+    "-v",
     is_flag=True,
-    help="Show multitude of available items for query in CONFIG_FILE",
+    help="Shows the progress indicator (for download command only)",
 )
 @click.argument("config_file", required=True)
-def modis(query, config_file):
-    query_data_modis(config_file)
+def download(config_file, verbose):
+    if config_file:
+        harvest = harvester.Harvester(config_file, verbose)
+        harvest.download_data()
+        click.echo("done")
+    else:
+        click.echo("Please provide the [config file] argument")
+
+
+@cli.command()
+@click.argument("config_file", required=True)
+def describe(config_file):
+    if config_file:
+        harvest = harvester.Harvester(config_file)
+        harvest.describe()
+    else:
+        click.echo("Please provide the [config file] argument")
 
 
 if __name__ == "__main__":  # pragma: no cover

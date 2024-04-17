@@ -1,0 +1,14 @@
+[
+    {
+        "provider": "earthdata",
+        "collection": "MODIS",
+        "search_terms":
+        {
+            "maxRecords": "100",
+            "startDate": "2019-01-01",
+            "completionDate": "2024-01-01",
+            "box": "20.9997634359999985,38.7359481650000035,23.4804610929999988,40.6508565150000010",
+            "short_name": "MOD17A3HGF"
+        }
+    }
+]
