@@ -11,6 +11,10 @@ RUN apt-get install -y libgdal-dev g++
 ENV CPLUS_INCLUDE_PATH=/usr/include/gdal
 ENV C_INCLUDE_PATH=/usr/include/gdal
 
+# Mounting local netrc to image netrc without exposing the secrets
+# TODO?
+# RUN --mount=type=secret,id=providers_netrc,target=/root/.netrc
+RUN touch ~/.netrc
 
 # Set the working directory in the container to /app
 WORKDIR /app
@@ -24,4 +28,4 @@ COPY . .
 RUN pip install -r requirements.txt --no-cache-dir
 
 # Command to run the script when the container starts
-ENTRYPOINT ["python", "cdsetool_cli/cli.py"]
+ENTRYPOINT ["python", "cdsetool_cli/cli.py --help"]

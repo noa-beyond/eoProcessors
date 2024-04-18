@@ -2,11 +2,16 @@ services:
   app:
     image: cdsetool-cli:latest
     build: .
+    # Since we introduced the generate_netrc method,
+    # we might not use env variables
     env_file:
       - path: ./.env.list
         required: true # default
     working_dir: /app
     volumes:
+      - type: bind
+        source: ${HOME}${USERPROFILE}/.netrc
+        target: /root/.netrc
       - ./config:/app/config
       - ./data:/app/data
-    command: -p config.json
+    command: python cdsetool_cli/cli.py --help

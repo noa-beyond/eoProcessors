@@ -1,4 +1,3 @@
-import os
 import sys
 import click
 
@@ -14,11 +13,8 @@ class Copernicus(DataProvider):
     def __init__(self, verbose=False):
         super().__init__()
 
-        # TODO: check check .netrc in different function or generic credentials check
-        self._credentials = Credentials(
-            os.environ.get("login", None),
-            os.environ.get("password", None)
-        )
+        # From .netrc (or _netrc for Windows)
+        self._credentials = Credentials()
 
         self._monitor = StatusMonitor() if verbose else False
 
