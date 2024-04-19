@@ -1,4 +1,12 @@
-# Using the NOA Harvester processor
+# NOA Harvester processor
+This processor facilitates the query and download functions from EO data providers like Copernicus (ESA) and Earthdata (NASA).
+
+It is a simple cli wrapper of the following (to be expanded) libraries:
+- CDSETool (https://github.com/SDFIdk/CDSETool)
+- earthaccess (https://github.com/nsidc/earthaccess)
+
+It can be used as a standalone cli application or be built in a Docker container.
+# Using the processor
 The noaharvester processor can be executed as a standalone cli application or inside a container. 
 In either case, a user must have credentials for accessing one or more data hubs:
 - [Copernicus]
@@ -157,12 +165,11 @@ noaharvester describe config.json
 ```
 
 
-## Tests
+## Tests **TODO:**
 
-**TODO:**
 
 ```
-docker run --env-file .env.list cdsetool sh -c "python -m unittest -v ./tests/test*"
+docker run noaharvester sh -c "python -m unittest -v ./tests/test*"
 ```
 
 [Copernicus]: https://dataspace.copernicus.eu/
