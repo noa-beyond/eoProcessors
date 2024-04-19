@@ -5,7 +5,7 @@
         "search_terms":
         {
             "maxRecords": "100",
-            "startDate": "2024-01-06",
+            "startDate": "2024-01-01",
             "completionDate": "2024-01-10",
             "box": "24.15943,38.50005,24.24733,38.55608"
         }
@@ -20,18 +20,6 @@
             "completionDate": "2024-01-10",
             "box": "24.15943,38.50005,24.24733,38.55608",
             "productType": "S2MSI2A"
-        }
-    },
-    {
-        "provider": "earthdata",
-        "collection": "MODIS",
-        "search_terms":
-        {
-            "maxRecords": "100",
-            "startDate": "2019-01-01",
-            "completionDate": "2024-01-01",
-            "box": "20.9997634359999985,38.7359481650000035,23.4804610929999988,40.6508565150000010",
-            "short_name": "MOD17A3HGF"
         }
     }
 ]

@@ -1,6 +1,23 @@
 # Use the official Python 3.10 image as the base image
 FROM python:3.11.8-slim
 
+RUN pip install --upgrade pip setuptools
+RUN apt-get update
+
+# Install GDAL dependencies
+RUN apt-get install -y libgdal-dev g++
+
+# Update C env vars so compiler can find gdal
+ENV CPLUS_INCLUDE_PATH=/usr/include/gdal
+ENV C_INCLUDE_PATH=/usr/include/gdal
+
+COPY generate_netrc.sh .
+RUN --mount=type=secret,id=COPERNICUS_LOGIN \
+    --mount=type=secret,id=COPERNICUS_PASSWORD \
+    --mount=type=secret,id=EARTHDATA_LOGIN \
+    --mount=type=secret,id=EARTHDATA_PASSWORD \
+    /bin/bash generate_netrc.sh
+
 # Set the working directory in the container to /app
 WORKDIR /app
 
