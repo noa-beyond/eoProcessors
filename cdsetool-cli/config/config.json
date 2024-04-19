@@ -19,8 +19,7 @@
             "startDate": "2024-01-01",
             "completionDate": "2024-01-10",
             "box": "24.15943,38.50005,24.24733,38.55608",
-            "productType": "S2MSI2A",
-            "collection": "sentinel-s2-l2a-cogs"
+            "productType": "S2MSI2A"
         }
     },
     {

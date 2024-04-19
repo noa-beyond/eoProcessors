@@ -1,6 +1,17 @@
 [
     {   
         "provider": "copernicus",
+        "collection": "Sentinel1",
+        "search_terms":
+        {
+            "maxRecords": "100",
+            "startDate": "2024-01-01",
+            "completionDate": "2024-01-10",
+            "box": "24.15943,38.50005,24.24733,38.55608"
+        }
+    },
+    {   
+        "provider": "copernicus",
         "collection": "Sentinel2",
         "search_terms":
         {
