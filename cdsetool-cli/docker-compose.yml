@@ -1,17 +1,26 @@
+name: noaharvester
 services:
   app:
-    image: cdsetool-cli:latest
-    build: .
-    # Since we introduced the generate_netrc method,
-    # we might not use env variables
-    env_file:
-      - path: ./.env.list
-        required: true # default
-    working_dir: /app
+    image: noaharvester:latest
+    build:
+      context: .
+      secrets:
+        - COPERNICUS_LOGIN
+        - COPERNICUS_PASSWORD
+        - EARTHDATA_LOGIN
+        - EARTHDATA_PASSWORD
+    working_dir: /app    
     volumes:
-      - type: bind
-        source: ${HOME}${USERPROFILE}/.netrc
-        target: /root/.netrc
       - ./config:/app/config
       - ./data:/app/data
-    command: python cdsetool_cli/cli.py --help
+    command: python /app/cdsetool_cli/cli.py --help
+
+secrets:
+  COPERNICUS_LOGIN:
+    environment: COPERNICUS_LOGIN
+  COPERNICUS_PASSWORD:
+    environment: COPERNICUS_PASSWORD
+  EARTHDATA_LOGIN:
+    environment: EARTHDATA_LOGIN
+  EARTHDATA_PASSWORD:
+    environment: EARTHDATA_PASSWORD

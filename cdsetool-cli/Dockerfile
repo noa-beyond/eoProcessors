@@ -11,10 +11,12 @@ RUN apt-get install -y libgdal-dev g++
 ENV CPLUS_INCLUDE_PATH=/usr/include/gdal
 ENV C_INCLUDE_PATH=/usr/include/gdal
 
-# Mounting local netrc to image netrc without exposing the secrets
-# TODO?
-# RUN --mount=type=secret,id=providers_netrc,target=/root/.netrc
-RUN touch ~/.netrc
+COPY generate_netrc.sh .
+RUN --mount=type=secret,id=COPERNICUS_LOGIN \
+    --mount=type=secret,id=COPERNICUS_PASSWORD \
+    --mount=type=secret,id=EARTHDATA_LOGIN \
+    --mount=type=secret,id=EARTHDATA_PASSWORD \
+    /bin/bash generate_netrc.sh
 
 # Set the working directory in the container to /app
 WORKDIR /app
