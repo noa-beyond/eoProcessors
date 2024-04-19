@@ -11,16 +11,25 @@ from cdsetool_cli import harvester # noqa:402
 
 @click.group(
     help=(
-        "Queries and/or Downloads data according to parameters as defined in the [CONFIG_FILE]."
+        "Queries and/or Downloads data from Copernicus and EarthData services "
+        "according to parameters as defined in the [CONFIG_FILE]."
     )
 )
 def cli():
     pass
 
 
-@cli.command()
+@cli.command(
+    help=(
+        "Queries for available products according to the config file"
+    )
+)
 @click.argument("config_file", required=True)
-def query(config_file):
+def query(config_file) -> None:
+    """
+        Instantiates the Harvester class and calls query function
+        in order to search for available products for the selected collections.
+    """
     if config_file:
         harvest = harvester.Harvester(config_file)
         harvest.query_data()
@@ -28,15 +37,23 @@ def query(config_file):
         click.echo("Please provide the [config file] argument")
 
 
-@cli.command()
+@cli.command(
+        help=(
+            "Downloads data from the selected providers and query terms"
+        )
+)
 @click.option(
     "--verbose",
     "-v",
     is_flag=True,
-    help="Shows the progress indicator (for download command only)",
+    help="Shows the progress indicator (for Copernicus only)",
 )
 @click.argument("config_file", required=True)
-def download(config_file, verbose):
+def download(config_file, verbose) -> None:
+    """
+        Instantiates the Harvester class and calls download function.
+        Downloads all relevant data as defined in the config file.
+    """
     if config_file:
         harvest = harvester.Harvester(config_file, verbose)
         harvest.download_data()
@@ -45,9 +62,18 @@ def download(config_file, verbose):
         click.echo("Please provide the [config file] argument")
 
 
-@cli.command()
+@cli.command(
+    help=(
+        "Describe collection query fields (Copernicus only)"
+    )
+)
 @click.argument("config_file", required=True)
-def describe(config_file):
+def describe(config_file) -> None:
+    """
+        Instantiates the Harvester class and calls describe for
+        available query terms of the selected collections.
+        This function is currently only available for Copernicus providers
+    """
     if config_file:
         harvest = harvester.Harvester(config_file)
         harvest.describe()
