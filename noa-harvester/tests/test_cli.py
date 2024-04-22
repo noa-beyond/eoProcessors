@@ -6,17 +6,17 @@ runner = CliRunner()
 
 
 # config_file is a pytest fixture in conftest.py
-def test_cli_parameters(config_file, mocker):
+def test_cli_describe(config_file, mocker):
 
-    mocker.patch("noaharvester.cli.available_parameters")
-    response = runner.invoke(main_cli, ["-p", config_file.name])
-    assert "Available parameters per data source" in response.output
+    mocker.patch("noaharvester.harvester.Harvester")
+    response = runner.invoke(main_cli, ["describe", config_file.name])
+    assert "Available parameters for selected collections" in response.output
 
 
 def test_cli_download(config_file, mocker):
 
-    mocker.patch("noaharvester.cli.download_data")
-    response = runner.invoke(main_cli, ["-d", config_file.name])
+    mocker.patch("noaharvester.harvester.Harvester")
+    response = runner.invoke(main_cli, ["download", config_file.name])
     assert "Downloading" in response.output
 
 
@@ -26,5 +26,5 @@ def test_cli_download(config_file, mocker):
 def test_cli_no_option_selected(config_file):
 
     response = runner.invoke(main_cli, [""])
-    assert "Please select at least one option" in response.output
+    assert "No such command" in response.output
     print(response.output)

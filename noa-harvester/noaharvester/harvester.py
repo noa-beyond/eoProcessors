@@ -1,6 +1,6 @@
 import json
 
-from providers import DataProvider, copernicus, earthdata
+from noaharvester.providers import DataProvider, copernicus, earthdata
 
 
 class Harvester():

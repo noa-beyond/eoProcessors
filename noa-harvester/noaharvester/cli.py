@@ -55,9 +55,10 @@ def download(config_file, verbose) -> None:
         Downloads all relevant data as defined in the config file.
     """
     if config_file:
+        click.echo("Downloading...\n")
         harvest = harvester.Harvester(config_file, verbose)
         harvest.download_data()
-        click.echo("done")
+        click.echo("Done.\n")
     else:
         click.echo("Please provide the [config file] argument")
 
@@ -76,6 +77,7 @@ def describe(config_file) -> None:
     """
     if config_file:
         harvest = harvester.Harvester(config_file)
+        click.echo("Available parameters for selected collections:\n")
         harvest.describe()
     else:
         click.echo("Please provide the [config file] argument")
