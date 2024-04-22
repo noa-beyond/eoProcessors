@@ -1,6 +1,6 @@
 from click.testing import CliRunner
 
-from cdsetool_cli.cli import cli as main_cli
+from noaharvester.cli import cli as main_cli
 
 runner = CliRunner()
 
@@ -8,14 +8,14 @@ runner = CliRunner()
 # config_file is a pytest fixture in conftest.py
 def test_cli_parameters(config_file, mocker):
 
-    mocker.patch("cdsetool_cli.cli.available_parameters")
+    mocker.patch("noaharvester.cli.available_parameters")
     response = runner.invoke(main_cli, ["-p", config_file.name])
     assert "Available parameters per data source" in response.output
 
 
 def test_cli_download(config_file, mocker):
 
-    mocker.patch("cdsetool_cli.cli.download_data")
+    mocker.patch("noaharvester.cli.download_data")
     response = runner.invoke(main_cli, ["-d", config_file.name])
     assert "Downloading" in response.output
 

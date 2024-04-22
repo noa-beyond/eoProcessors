@@ -1,4 +1,6 @@
-from cdsetool_cli.utils import available_parameters, download_data
+# TODO move these functions. Utils does not exist
+
+from noaharvester.utils import available_parameters, download_data
 
 
 # config_file is a pytest fixture in conftest.py

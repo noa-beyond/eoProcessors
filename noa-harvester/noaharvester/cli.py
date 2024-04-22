@@ -6,7 +6,7 @@ import click
 # Appending the module path in order to have a kind of cli "dry execution"
 sys.path.append(str(Path(__file__).parent / ".."))
 
-from cdsetool_cli import harvester # noqa:402
+from noaharvester import harvester # noqa:402
 
 
 @click.group(

@@ -13,7 +13,7 @@ services:
     volumes:
       - ./config:/app/config
       - ./data:/app/data
-    command: python /app/cdsetool_cli/cli.py --help
+    command: python /app/noaharvester/cli.py --help
 
 secrets:
   COPERNICUS_LOGIN:

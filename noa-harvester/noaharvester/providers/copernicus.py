@@ -6,7 +6,7 @@ from cdsetool.monitor import StatusMonitor
 from cdsetool.query import query_features, describe_collection
 from cdsetool.download import download_features
 
-from cdsetool_cli.providers import DataProvider
+from noaharvester.providers import DataProvider
 
 
 class Copernicus(DataProvider):

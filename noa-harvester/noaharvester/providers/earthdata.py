@@ -1,7 +1,7 @@
 # import sys
 import click
 
-from cdsetool_cli.providers import DataProvider
+from noaharvester.providers import DataProvider
 
 import earthaccess
 
