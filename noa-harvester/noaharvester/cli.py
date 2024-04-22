@@ -31,10 +31,9 @@ def query(config_file) -> None:
         in order to search for available products for the selected collections.
     """
     if config_file:
+        click.echo("Querying providers for products:\n")
         harvest = harvester.Harvester(config_file)
         harvest.query_data()
-    else:
-        click.echo("Please provide the [config file] argument")
 
 
 @cli.command(
@@ -59,8 +58,6 @@ def download(config_file, verbose) -> None:
         harvest = harvester.Harvester(config_file, verbose)
         harvest.download_data()
         click.echo("Done.\n")
-    else:
-        click.echo("Please provide the [config file] argument")
 
 
 @cli.command(
@@ -79,8 +76,6 @@ def describe(config_file) -> None:
         harvest = harvester.Harvester(config_file)
         click.echo("Available parameters for selected collections:\n")
         harvest.describe()
-    else:
-        click.echo("Please provide the [config file] argument")
 
 
 if __name__ == "__main__":  # pragma: no cover
