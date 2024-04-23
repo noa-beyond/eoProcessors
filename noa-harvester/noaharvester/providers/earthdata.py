@@ -24,10 +24,10 @@ class Earthdata(DataProvider):
             short_name=search_terms["short_name"],
             cloud_hosted=True,
             bounding_box=bbox,
-            temporal=(start_date, end_date)
+            temporal=(start_date, end_date),
         )
         click.echo(f"Available items for {item['collection']}: {len(results)}")
-        return item['collection'], len(results)
+        return item["collection"], len(results)
 
     def download(self, item):
         # TODO Logging
@@ -44,11 +44,11 @@ class Earthdata(DataProvider):
             short_name=search_terms["short_name"],
             cloud_hosted=True,
             bounding_box=bbox,
-            temporal=(start_date, end_date)
+            temporal=(start_date, end_date),
         )
 
         earthaccess.download(results, self._download_path)
-        return item['collection'], len(results)
+        return item["collection"], len(results)
 
     def describe(self):
         raise NotImplementedError(

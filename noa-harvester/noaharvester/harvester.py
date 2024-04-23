@@ -3,7 +3,7 @@ import json
 from noaharvester.providers import DataProvider, copernicus, earthdata
 
 
-class Harvester():
+class Harvester:
 
     def __init__(self, config_file, verbose=False) -> None:
 

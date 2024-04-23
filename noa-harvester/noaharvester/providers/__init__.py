@@ -4,8 +4,9 @@ from pathlib import Path
 
 class DataProvider(ABC):
     """
-        Abstract class to differentiate query and download functions for each provider
+    Abstract class to differentiate query and download functions for each provider
     """
+
     def __init__(self):
         self._download_path = Path("./data").absolute()
 
@@ -16,17 +17,17 @@ class DataProvider(ABC):
     @abstractmethod
     def query(self):
         """
-            Abstract method to query data provider for collection items
+        Abstract method to query data provider for collection items
         """
 
     @abstractmethod
     def download(self):
         """
-            Abstract method to download data for collection items
+        Abstract method to download data for collection items
         """
 
     @abstractmethod
     def describe(self):
         """
-            Abstract method to describe available collection query parameters
+        Abstract method to describe available collection query parameters
         """

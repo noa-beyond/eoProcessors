@@ -17,8 +17,8 @@ class Test_providers(unittest.TestCase):
                 "box": "1.1, 2.2, 3.3, 4.4",
                 "startDate": "mocked_start_date",
                 "completionDate": "mocked_end_date",
-                "short_name": "mocked_short_product_name"
-            }
+                "short_name": "mocked_short_product_name",
+            },
         }
 
     def test_data_provider(self):
@@ -50,7 +50,7 @@ class Test_providers(unittest.TestCase):
         earthdata = Earthdata()
         result = earthdata.query(self.mocked_collection_item)
 
-        assert result[0] == self.mocked_collection_item['collection']
+        assert result[0] == self.mocked_collection_item["collection"]
         assert result[1] == len(mocked_query_results)
 
     @patch("earthaccess.download")
@@ -63,7 +63,7 @@ class Test_providers(unittest.TestCase):
         earthdata = Earthdata()
         result = earthdata.download(self.mocked_collection_item)
 
-        assert result[0] == self.mocked_collection_item['collection']
+        assert result[0] == self.mocked_collection_item["collection"]
         assert result[1] == len(mocked_query_results)
 
     @patch("earthaccess.login")
@@ -84,17 +84,14 @@ class Test_providers(unittest.TestCase):
         result = copernicus.query(self.mocked_collection_item)
 
         assert copernicus.credentials == "a mocked class"
-        assert result[0] == self.mocked_collection_item['collection']
+        assert result[0] == self.mocked_collection_item["collection"]
         assert result[1] == len(mocked_query_results)
 
     @patch("noaharvester.providers.copernicus.download_features")
     @patch("noaharvester.providers.copernicus.query_features")
     @patch("noaharvester.providers.copernicus.Credentials")
     def test_copernicus_download(
-        self,
-        mock_credentials_constructor,
-        mocked_search,
-        mocked_download
+        self, mock_credentials_constructor, mocked_search, mocked_download
     ):
 
         mock_credentials_constructor.return_value = "a mocked class"
@@ -106,7 +103,7 @@ class Test_providers(unittest.TestCase):
         result = copernicus.download(self.mocked_collection_item)
 
         assert copernicus.credentials == "a mocked class"
-        assert result[0] == self.mocked_collection_item['collection']
+        assert result[0] == self.mocked_collection_item["collection"]
         assert result[1] == len(mocked_query_results)
 
     @patch("noaharvester.providers.copernicus.describe_collection")

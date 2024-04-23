@@ -26,7 +26,7 @@ class Copernicus(DataProvider):
 
         features = list(query_features(item["collection"], item["search_terms"]))
         click.echo(f"Available items for {item['collection']}: {len(features)} \n")
-        return item['collection'], len(features)
+        return item["collection"], len(features)
 
     def describe(self, collection):
 
@@ -37,8 +37,8 @@ class Copernicus(DataProvider):
 
     def download(self, item):
         """
-            Downloads using the query terms of config_file. Verbose is used for detailed
-            progress bar indicators. Download is using a concurrency setting of 4 threads.
+        Downloads using the query terms of config_file. Verbose is used for detailed
+        progress bar indicators. Download is using a concurrency setting of 4 threads.
         """
 
         self._download_path.mkdir(parents=True, exist_ok=True)
@@ -52,8 +52,12 @@ class Copernicus(DataProvider):
             download_features(
                 features,
                 self._download_path,
-                {"concurrency": 4, "monitor": self._monitor, "credentials": self.credentials},
+                {
+                    "concurrency": 4,
+                    "monitor": self._monitor,
+                    "credentials": self.credentials,
+                },
             )
         )
 
-        return item['collection'], len(downloaded_files)
+        return item["collection"], len(downloaded_files)
