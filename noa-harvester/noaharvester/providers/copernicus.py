@@ -26,10 +26,14 @@ class Copernicus(DataProvider):
 
         features = list(query_features(item["collection"], item["search_terms"]))
         click.echo(f"Available items for {item['collection']}: {len(features)} \n")
+        return item['collection'], len(features)
 
     def describe(self, collection):
+
         search_terms = describe_collection(collection).keys()
         click.echo(f"{collection} available search terms: \n {search_terms}\n")
+
+        return collection, list(search_terms)
 
     def download(self, item):
         """
@@ -44,10 +48,12 @@ class Copernicus(DataProvider):
 
         sys.stdout.flush()
 
-        list(
+        downloaded_files = list(
             download_features(
                 features,
                 self._download_path,
                 {"concurrency": 4, "monitor": self._monitor, "credentials": self.credentials},
             )
         )
+
+        return item['collection'], len(downloaded_files)

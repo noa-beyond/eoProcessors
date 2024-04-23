@@ -18,12 +18,15 @@ class DataProvider(ABC):
         """
             Abstract method to query data provider for collection items
         """
-        pass
 
     @abstractmethod
     def download(self):
-        pass
+        """
+            Abstract method to download data for collection items
+        """
 
     @abstractmethod
     def describe(self):
-        pass
+        """
+            Abstract method to describe available collection query parameters
+        """

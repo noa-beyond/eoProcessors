@@ -27,6 +27,7 @@ class Earthdata(DataProvider):
             temporal=(start_date, end_date)
         )
         click.echo(f"Available items for {item['collection']}: {len(results)}")
+        return item['collection'], len(results)
 
     def download(self, item):
         # TODO Logging
@@ -47,8 +48,9 @@ class Earthdata(DataProvider):
         )
 
         earthaccess.download(results, self._download_path)
+        return item['collection'], len(results)
 
-    def describe(self, collection):
+    def describe(self):
         raise NotImplementedError(
             "Earthdata (earthaccess) does not have a describe collection function"
         )
