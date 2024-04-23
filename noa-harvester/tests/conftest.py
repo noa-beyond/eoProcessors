@@ -4,7 +4,7 @@ import pytest
 from unittest import mock
 
 
-CONTENT = "{'Sentinel2':{'productId':'mockedId'} }"
+CONTENT = "[{'provider':'copernicus','collection':'Sentinel1','search_terms':{}}]"
 
 
 @pytest.fixture(scope="function", autouse=True)

@@ -39,10 +39,10 @@ test = [
 ]
 
 [project.scripts]
-cdsetool-cli = "cdsetool_cli:cli"
+noaharvester = "noaharvester:cli"
 
 [tool.setuptools.packages.find]
-include = ["cdsetool*"]
+include = ["noaharvester*"]
 
 [tool.setuptools.dynamic]
 readme = {file = "README.md", content-type = "text/markdown"}
@@ -54,7 +54,7 @@ addopts="""
 --cov-config pyproject.toml \
 --cov-report xml:coverage.xml \
 --cov-report term-missing \
---cov cdsetool_cli \
+--cov noaharvester \
 --cov tests \
 --no-cov-on-fail \
 -ra \

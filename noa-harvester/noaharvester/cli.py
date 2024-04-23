@@ -6,7 +6,7 @@ import click
 # Appending the module path in order to have a kind of cli "dry execution"
 sys.path.append(str(Path(__file__).parent / ".."))
 
-from cdsetool_cli import harvester # noqa:402
+from noaharvester import harvester # noqa:402
 
 
 @click.group(
@@ -31,10 +31,9 @@ def query(config_file) -> None:
         in order to search for available products for the selected collections.
     """
     if config_file:
+        click.echo("Querying providers for products:\n")
         harvest = harvester.Harvester(config_file)
         harvest.query_data()
-    else:
-        click.echo("Please provide the [config file] argument")
 
 
 @cli.command(
@@ -55,11 +54,10 @@ def download(config_file, verbose) -> None:
         Downloads all relevant data as defined in the config file.
     """
     if config_file:
+        click.echo("Downloading...\n")
         harvest = harvester.Harvester(config_file, verbose)
         harvest.download_data()
-        click.echo("done")
-    else:
-        click.echo("Please provide the [config file] argument")
+        click.echo("Done.\n")
 
 
 @cli.command(
@@ -76,9 +74,8 @@ def describe(config_file) -> None:
     """
     if config_file:
         harvest = harvester.Harvester(config_file)
+        click.echo("Available parameters for selected collections:\n")
         harvest.describe()
-    else:
-        click.echo("Please provide the [config file] argument")
 
 
 if __name__ == "__main__":  # pragma: no cover

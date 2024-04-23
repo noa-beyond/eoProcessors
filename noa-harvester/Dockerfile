@@ -30,4 +30,4 @@ COPY . .
 RUN pip install -r requirements.txt --no-cache-dir
 
 # Command to run the script when the container starts
-ENTRYPOINT ["python", "cdsetool_cli/cli.py"]
+ENTRYPOINT ["python", "noaharvester/cli.py"]

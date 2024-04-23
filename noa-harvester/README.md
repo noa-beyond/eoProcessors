@@ -6,6 +6,7 @@ It is a simple cli wrapper of the following (to be expanded) libraries:
 - earthaccess (https://github.com/nsidc/earthaccess)
 
 It can be used as a standalone cli application or be built in a Docker container.
+
 # Using the processor
 The noaharvester processor can be executed as a standalone cli application or inside a container. 
 In either case, a user must have credentials for accessing one or more data hubs:
@@ -38,14 +39,14 @@ You can also download the repo directly from github.
 - Navigate to the folder and execute:
 
 ```
-    cd eoProcessors/cdsetool-cli
+    cd eoProcessors/noaharvester
     generate_netrc_local.sh
 ```
   in order for the `netrc` file to be created in your local environment. This file will take care of credential information based on the environmental variables you have set up before.
 
 -  Execute
 ```
-python cdsetool_cli/cli.py [command] config.json
+python noaharvester/cli.py [command] config.json
 ```
 
 Available commands are:
@@ -65,7 +66,7 @@ Moreover, a `-v` parameter is available to print verbose download progress bar f
 * Navigate to the folder:
 
 ```
-    cd eoProcessors/cdsetool-cli
+    cd eoProcessors/noaharvester
 ```
 
 - Then:
@@ -96,7 +97,7 @@ noaharvester
 ```
 
 to enter into the container and execute the cli application from there:
-`python cdsetool_cli/cli.py download -v config.json`
+`python noaharvester/cli.py download -v config.json`
 
 * Or execute the command leaving the container when the command is completed:
 
@@ -116,7 +117,7 @@ Please note that in the aforementioned commands you can replace:
 Take a look at the sample config.json. 
 ```
 [
-    {   
+    {
         "provider": "copernicus",
         "collection": "Sentinel1",
         "search_terms":        
@@ -125,6 +126,7 @@ Take a look at the sample config.json.
             "startDate": "2024-01-06",
         .....
         }
+    }
     {
         "provider": "earthdata",
         "collection": "MODIS",
