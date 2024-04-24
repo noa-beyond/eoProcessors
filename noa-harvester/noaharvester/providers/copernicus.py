@@ -13,28 +13,32 @@ from noaharvester.providers import DataProvider
 
 class Copernicus(DataProvider):
     """
-    The Copernicus service data provider, implementing query, download and describe collection
+    The Copernicus service provider, implementing query, download and describe collection
     functions. It uses (wraps) the cdsetool Python package.
 
     Properties:
         credentials: returns the Credentials (cdsetool) instance
+
+    Methods:
+        query (item): Query a collection based on search terms in [item].
+                    Item also includes the collection name.
+        download (item): Download a collection [item].
+        describe (collection): Output available search terms of [collection].
     """
+
     def __init__(self, verbose: bool = False) -> Copernicus:
         """
-        Copernicus data provider.
+        Copernicus provider. Constructor also perfoms the login operation based
+        on credentials present in the .netrc file.
 
         Parameters:
             verbose (bool): If True, download progress indicator will be visible
-
-        Methods:
-        query (item): Query a collection based on search terms in [item].
-                      Item also includes the collection name.
-        download (item): Download a collection [item].
-        describe (collection): Output available search terms of [collection].
         """
         super().__init__()
 
         # From .netrc (or _netrc for Windows)
+        # TODO introduce checking of netrc for borh copernicus and earth data
+        # netrc.netrc().authenticators("urs.earthdata.nasa.gov")
         self._credentials = Credentials()
 
         self._monitor = StatusMonitor() if verbose else False
