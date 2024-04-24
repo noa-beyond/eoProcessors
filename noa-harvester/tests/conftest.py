@@ -4,27 +4,44 @@ import pytest
 from unittest import mock
 
 
-CONTENT = "[{'provider':'copernicus','collection':'Sentinel1','search_terms':{}}]"
+CONTENT = (
+    '[{"provider":"copernicus","collection":"Sentinel1","search_terms":{}},'
+    '{"provider":"earthdata","collection":"MODIS","search_terms":{}}]'
+)
+
+
+@pytest.fixture(scope="function", autouse=True)
+def mocked_collection_item(monkeypatch):
+    yield {
+        "collection": "mocked_collection",
+        "search_terms": {
+            "box": "1.1, 2.2, 3.3, 4.4",
+            "startDate": "mocked_start_date",
+            "completionDate": "mocked_end_date",
+            "short_name": "mocked_short_product_name",
+        },
+    }
 
 
 @pytest.fixture(scope="function", autouse=True)
 def config_file(tmp_path):
 
-    dir_path = tmp_path / "config"
-    dir_path.mkdir()
+    dir_path = tmp_path
     config_filename = dir_path / "config.json"
     config_filename.write_text(CONTENT)
 
     assert config_filename.read_text() == CONTENT
-    return config_filename
+    yield config_filename
 
 
 @pytest.fixture(scope="function", autouse=True)
 def setenvvar(monkeypatch):
     with mock.patch.dict(os.environ, clear=True):
         envvars = {
-            "login": "mocked_username",
-            "password": "mocked_password",
+            "COPERNICUS_LOGIN": "mocked_username",
+            "COPERNICUS_PASSWORD": "mocked_password",
+            "EARTHDATA_LOGIN": "mocked_username",
+            "EARTHDATA_PASSWORD": "mocked_password",
         }
         for k, v in envvars.items():
             monkeypatch.setenv(k, v)

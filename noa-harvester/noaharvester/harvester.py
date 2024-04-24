@@ -12,7 +12,7 @@ class Harvester:
 
         self._search_items: list = []
         self._providers = {}
-        with open(f"config/{config_file}") as f:
+        with open(config_file) as f:
             self._config = json.load(f)
 
         for item in self._config:
