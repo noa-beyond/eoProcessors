@@ -1,12 +1,26 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from pathlib import Path
 
 
 class DataProvider(ABC):
     """
-        Abstract class to differentiate query and download functions for each provider
+    Abstract Data Provider.
+
+    Methods:
+        query: Query for specific search terms.
+        download: Download items based on search terms.
+        describe(optional): Describe collection.
     """
-    def __init__(self):
+
+    def __init__(self) -> DataProvider:
+        """
+        Instantiates a new Data Provider class.
+
+        Attributes:
+            _download_path: Data are stored under /data of local execution folder.
+        """
         self._download_path = Path("./data").absolute()
 
     # @property
@@ -16,17 +30,17 @@ class DataProvider(ABC):
     @abstractmethod
     def query(self):
         """
-            Abstract method to query data provider for collection items
+        Query data provider for collection items.
         """
 
     @abstractmethod
     def download(self):
         """
-            Abstract method to download data for collection items
+        Download data for collection items.
         """
 
     @abstractmethod
     def describe(self):
         """
-            Abstract method to describe available collection query parameters
+        Describe available collection query parameters.
         """

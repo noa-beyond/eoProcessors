@@ -46,7 +46,7 @@ You can also download the repo directly from github.
 
 -  Execute
 ```
-python noaharvester/cli.py [command] config.json
+python noaharvester/cli.py [command] config/config.json
 ```
 
 Available commands are:
@@ -54,7 +54,7 @@ Available commands are:
 - download - Downloads data
 - describe (Copernicus only) - Describe collection's available query fields
 
-The config file must be placed inside `eoProcessors/noaharvester/config`.
+The config file *should* be placed inside `eoProcessors/noaharvester/config`, but of course you could use any path.
 Please check the [Config](#Config-file-parameters) section regarding config file specification.
 
 Moreover, a `-v` parameter is available to print verbose download progress bar for Copernicus.
@@ -84,7 +84,7 @@ Please note that you **should not** replace the above command with your already 
 You now have a local container named noaharvester.
 
 
-* Edit `config.json` found in the config folder (or create a new one)
+* Edit `config/config.json` (or create a new one)
 
 * Execute either:
 
@@ -97,7 +97,7 @@ noaharvester
 ```
 
 to enter into the container and execute the cli application from there:
-`python noaharvester/cli.py download -v config.json`
+`python noaharvester/cli.py download -v config/config.json`
 
 * Or execute the command leaving the container when the command is completed:
 
@@ -105,7 +105,7 @@ to enter into the container and execute the cli application from there:
 docker run -it \
 -v [./data]:/app/data \
 -v [./config/config.json]:/app/config/config.json \
-noaharvester download -v config.json
+noaharvester download -v config/config.json
 ```
 
 Please note that in the aforementioned commands you can replace:
@@ -153,7 +153,8 @@ Cli can be executed with the following:
     * `query` - Queries the collection(s) for products according to the parameters present in the config file.
     * `describe` (Copernicus only) - Describes the available query parameters for the collections as defined in the config file.
 - Options
-    * `-v`, `--verbose` Shows the progress indicator when downloading (Copernicus)
+    * `-v`, `--verbose` Shows the progress indicator when downloading (Copernicus - only for download command)
+    * `--log LEVEL (INFO, DEBUG, WARNING, ERROR)` Shows the logs depending on the selected `LEVEL`
 - Arguments
     * `config_file` - Necessary argument for the commands, indicating which config file will be used.
 
@@ -163,16 +164,25 @@ Examples:
 ```
 docker run -it \
 -v ./config/config_test_copernicus.json:/app/config/config.json \
-noaharvester describe config.json
+noaharvester describe config/config.json
 ```
 
+## Tests
 
-## Tests **TODO:**
 
+Execute 
+```
+pytest .
+```
+on  `eoProcessors/noa-harvester`  folder
+
+or
 
 ```
-docker run noaharvester sh -c "python -m unittest -v ./tests/test*"
+docker run -it --entrypoint pytest noaharvester
 ```
+
+for the container
 
 [Copernicus]: https://dataspace.copernicus.eu/
 [OData API]: https://documentation.dataspace.copernicus.eu/APIs/OData.html
