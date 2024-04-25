@@ -153,7 +153,8 @@ Cli can be executed with the following:
     * `query` - Queries the collection(s) for products according to the parameters present in the config file.
     * `describe` (Copernicus only) - Describes the available query parameters for the collections as defined in the config file.
 - Options
-    * `-v`, `--verbose` Shows the progress indicator when downloading (Copernicus)
+    * `-v`, `--verbose` Shows the progress indicator when downloading (Copernicus - only for download command)
+    * `--log LEVEL (INFO, DEBUG, WARNING, ERROR)` Shows the logs depending on the selected `LEVEL`
 - Arguments
     * `config_file` - Necessary argument for the commands, indicating which config file will be used.
 

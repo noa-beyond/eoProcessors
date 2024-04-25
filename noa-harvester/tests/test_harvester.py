@@ -38,3 +38,21 @@ class TestHarvester:
 
         harvester = Harvester(config_file)
         harvester.describe()
+
+    @patch("noaharvester.harvester.copernicus.Copernicus")
+    @patch("noaharvester.harvester.earthdata.Earthdata")
+    def test_resolve_instances(self, mocked_earthdata, mocked_copernicus, config_file):
+
+        mocked_cp_class = Mock()
+        mocked_cp_class.__class__.__name__ = "Copernicus"
+
+        mocked_copernicus.return_value = mocked_cp_class
+
+        harvester = Harvester(config_file)
+        harvester._resolve_provider_instance("earthdata")
+        harvester._resolve_provider_instance("copernicus")
+        # adding it again to check the else clause
+        harvester._resolve_provider_instance("copernicus")
+
+        assert "earthdata" in harvester._providers
+        assert "copernicus" in harvester._providers

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import logging
 import click
 
 from cdsetool.credentials import Credentials
@@ -9,6 +10,8 @@ from cdsetool.query import query_features, describe_collection
 from cdsetool.download import download_features
 
 from noaharvester.providers import DataProvider
+
+logger = logging.getLogger(__name__)
 
 
 class Copernicus(DataProvider):
@@ -39,6 +42,7 @@ class Copernicus(DataProvider):
         # From .netrc (or _netrc for Windows)
         # TODO introduce checking of netrc for borh copernicus and earth data
         # netrc.netrc().authenticators("urs.earthdata.nasa.gov")
+        logger.debug("Checking Copernicus credentials - trying to aquire token")
         self._credentials = Credentials()
 
         self._monitor = StatusMonitor() if verbose else False
@@ -58,8 +62,12 @@ class Copernicus(DataProvider):
         Returns:
             tuple (str, int):  Collection name, sum of available items.
         """
+        logger.debug(f"Search terms: {item['search_terms']}")
+
         features = list(query_features(item["collection"], item["search_terms"]))
-        click.echo(f"Available items for {item['collection']}: {len(features)} \n")
+        click.echo(
+            f"Total available items for {item['collection']}: {len(features)} \n"
+        )
         return item["collection"], len(features)
 
     def describe(self, collection: str) -> tuple[str, list]:
@@ -73,7 +81,7 @@ class Copernicus(DataProvider):
             tuple (string, list):  Collection name, list of available search terms.
         """
         search_terms = describe_collection(collection).keys()
-        click.echo(f"{collection} available search terms: \n {search_terms}\n")
+        click.echo(f"{collection}:\n {search_terms}\n")
 
         return collection, list(search_terms)
 
@@ -90,10 +98,13 @@ class Copernicus(DataProvider):
             tuple (string, int):  Collection name, sum of downloaded files.
         """
 
+        logger.debug(f"Download search terms: {item['search_terms']}")
         self._download_path.mkdir(parents=True, exist_ok=True)
 
         features = list(query_features(item["collection"], item["search_terms"]))
-        click.echo(f"Available items for {item['collection']}: {len(features)} \n")
+        click.echo(
+            f"Total items to be downloaded for {item['collection']}: {len(features)} \n"
+        )
 
         sys.stdout.flush()
 

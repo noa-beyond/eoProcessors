@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import logging
 import json
 
 from noaharvester.providers import DataProvider, copernicus, earthdata
+
+logger = logging.getLogger(__name__)
 
 
 class Harvester:
@@ -40,6 +43,10 @@ class Harvester:
         the provider instance and query for available collection items.
         """
         for item in self._search_items:
+            logger.debug(
+                f"Querying {item.get('provider')} collection {item.get('collection')}"
+            )
+
             provider = self._resolve_provider_instance(item.get("provider"))
             provider.query(item)
 
@@ -50,6 +57,10 @@ class Harvester:
         search terms for that item.
         """
         for item in self._search_items:
+            logger.debug(
+                f"Download from {item.get('provider')} and collection: {item.get('collection')}"
+            )
+
             provider = self._resolve_provider_instance(item.get("provider"))
             provider.download(item)
 
@@ -60,14 +71,22 @@ class Harvester:
         terms).
         """
         for item in self._search_items:
-            provider = self._resolve_provider_instance(item.get("provider"))
-            if provider.__class__.__name__ == "Copernicus":
+            if item.get("provider") == "copernicus":
+                logger.debug(
+                    f"Describing from: {item.get('provider')}, collection: {item.get('collection')}"
+                )
+                provider = self._resolve_provider_instance(item.get("provider"))
                 provider.describe(item.get("collection"))
 
     def _resolve_provider_instance(self, provider) -> DataProvider:
         if provider not in self._providers:
+            logger.debug(
+                f"Provider: {provider} DataProvider instance not found. Creating new."
+            )
             if provider == "copernicus":
                 self._providers[provider] = copernicus.Copernicus(self._verbose)
             elif provider == "earthdata":
                 self._providers[provider] = earthdata.Earthdata()
+        else:
+            logger.info(f"Provider: {provider} DataProvider instance found.")
         return self._providers[provider]

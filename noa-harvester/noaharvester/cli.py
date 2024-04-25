@@ -1,6 +1,6 @@
 from __future__ import annotations
-
 import sys
+import logging
 from pathlib import Path
 
 import click
@@ -11,6 +11,8 @@ sys.path.append(str(Path(__file__).parent / ".."))
 
 from noaharvester import harvester  # noqa:402
 
+logger = logging.getLogger(__name__)
+
 
 @click.group(
     help=(
@@ -18,9 +20,16 @@ from noaharvester import harvester  # noqa:402
         "according to parameters as defined in the [CONFIG_FILE]."
     )
 )
-def cli():
+@click.option(
+    "--log",
+    default="warning",
+    help="Log level (optional, e.g. DEBUG. Default is WARNING)",
+)
+def cli(log):
     """Click cli group for query, download, describe cli commands"""
-    pass
+    numeric_level = getattr(logging, log.upper(), "WARNING")
+    logging.basicConfig(level=numeric_level, format="%(asctime)s %(message)s")
+    # pass
 
 
 @cli.command(help=("Queries for available products according to the config file"))
@@ -35,6 +44,8 @@ def query(config_file: Argument | str) -> None:
             providers, collections and search terms
     """
     if config_file:
+        logger.debug(f"Cli query for config file: {config_file}")
+
         click.echo("Querying providers for products:\n")
         harvest = harvester.Harvester(config_file)
         harvest.query_data()
@@ -59,6 +70,8 @@ def download(config_file: Argument | str, verbose: Option | bool) -> None:
         verbose (click.Option | bool): to show download progress indicator or not.
     """
     if config_file:
+        logger.debug(f"Cli download for config file: {config_file}")
+
         click.echo("Downloading...\n")
         harvest = harvester.Harvester(config_file, verbose)
         harvest.download_data()
@@ -77,6 +90,8 @@ def describe(config_file: Argument | str) -> None:
             providers, collections and search terms
     """
     if config_file:
+        logger.debug(f"Cli describing for config file: {config_file}")
+
         harvest = harvester.Harvester(config_file)
         click.echo("Available parameters for selected collections:\n")
         harvest.describe()

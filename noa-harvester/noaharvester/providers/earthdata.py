@@ -1,9 +1,13 @@
 from __future__ import annotations
+import logging
 import click
+
+import earthaccess
 
 from noaharvester.providers import DataProvider
 
-import earthaccess
+
+logger = logging.getLogger(__name__)
 
 
 class Earthdata(DataProvider):
@@ -27,6 +31,7 @@ class Earthdata(DataProvider):
 
         # TODO introduce checking of netrc for borh copernicus and earth data
         # netrc.netrc().authenticators("urs.earthdata.nasa.gov")
+        logger.debug("Checking Earthdata credentials - trying to aquire token")
         earthaccess.login()
 
     def query(self, item: dict) -> tuple[str, int]:
@@ -39,6 +44,8 @@ class Earthdata(DataProvider):
         Returns:
             tuple (str, int):  Collection name, sum of available items.
         """
+        logger.debug(f"Search terms: {item['search_terms']}")
+
         search_terms = item["search_terms"]
         bbox = tuple(float(i) for i in search_terms["box"].split(","))
         start_date = search_terms["startDate"]
@@ -65,6 +72,8 @@ class Earthdata(DataProvider):
         Returns:
             tuple (string, int):  Collection name, sum of downloaded files.
         """
+        logger.debug(f"Download search terms: {item['search_terms']}")
+
         self._download_path.mkdir(parents=True, exist_ok=True)
         search_terms = item["search_terms"]
 
@@ -79,11 +88,16 @@ class Earthdata(DataProvider):
             temporal=(start_date, end_date),
         )
 
+        click.echo(
+            f"Total items to be downloaded for {item['collection']}: {len(results)} \n"
+        )
+
         earthaccess.download(results, self._download_path)
         return item["collection"], len(results)
 
     def describe(self):
         """Not implemented for Earthdata. Service is not provided."""
+        logger.error("Describe is not available for Earthdata.")
         raise NotImplementedError(
             "Earthdata (earthaccess) does not have a describe collection function"
         )
