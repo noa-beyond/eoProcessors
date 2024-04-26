@@ -45,7 +45,7 @@ class Copernicus(DataProvider):
         logger.debug("Checking Copernicus credentials - trying to aquire token")
         self._credentials = Credentials()
 
-        self._monitor = StatusMonitor() if verbose else False
+        self.verbose = verbose
 
     @property
     def credentials(self) -> Credentials:
@@ -114,7 +114,7 @@ class Copernicus(DataProvider):
                 self._download_path,
                 {
                     "concurrency": 4,
-                    "monitor": self._monitor,
+                    "monitor": StatusMonitor() if self.verbose else False,
                     "credentials": self.credentials,
                 },
             )

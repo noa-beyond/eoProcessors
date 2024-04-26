@@ -46,7 +46,7 @@ include = ["noaharvester*"]
 
 [tool.setuptools.dynamic]
 readme = {file = "README.md", content-type = "text/markdown"}
-version = {attr = "cdsetool_cli.__version__"}
+version = {attr = "noaharvester.__version__"}
 
 [tool.pytest.ini_options]
 addopts="""
