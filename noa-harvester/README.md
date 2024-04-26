@@ -25,7 +25,9 @@ EARTHDATA_LOGIN=
 EARTHDATA_PASSWORD=
 ```
 
-Open a terminal window, navigate to your prefered working directory and download the source code:
+- For Windows: execute **git bash** and execute the rest of the operations on the git bash terminal.
+
+Open a terminal window (or git bash...), navigate to your prefered working directory and download the source code:
 
 ```
 git clone https://github.com/Agri-Hub/eoProcessors.git
@@ -33,18 +35,36 @@ git clone https://github.com/Agri-Hub/eoProcessors.git
 
 You can also download the repo directly from github.
 
+You can now either execute the processor as a [standalone cli application](#standalone-cli-execution) or [build a container and run it](#docker-execution).
+
 ## Standalone CLI execution
 
-- You must have a Python version greater than 3.11
-- Navigate to the folder and execute:
+- You must have a Python version greater than 3.11.
+- Navigate to where you cloned the repo.
+- You should perform the following operations in a virtual environment:
+    - Windows:
+        - Install miniconda (https://docs.anaconda.com/free/miniconda/miniconda-install/)
+    - Linux:
+        - Install conda (https://docs.conda.io/projects/conda/en/latest/user-guide/install/linux.html)
+    - Common:
+        - Create the environment:
+            - Execute `conda create -n noaharvester_env python==3.11`
+            - Execute `conda activate noaharvester_env`
+- Then:
 
 ```
-    cd eoProcessors/noaharvester
+    cd eoProcessors/noa-harvester
     generate_netrc_local.sh
 ```
-  in order for the `netrc` file to be created in your local environment. This file will take care of credential information based on the environmental variables you have set up before.
+  in order for the `.netrc` file to be created in your local environment. This file will take care of credential information based on the environmental variables you have set up before.
 
--  Execute
+- Finally, install necesarry requirements inside your virtual environment:
+```
+pip install -r requirements.txt
+```
+
+You are ready to execute the cli scripts:
+
 ```
 python noaharvester/cli.py [command] config/config.json
 ```
@@ -54,7 +74,7 @@ Available commands are:
 - download - Downloads data
 - describe (Copernicus only) - Describe collection's available query fields
 
-The config file *should* be placed inside `eoProcessors/noaharvester/config`, but of course you could use any path.
+The config file *should* be placed inside `eoProcessors/noa-harvester/config`, but of course you could use any path.
 Please check the [Config](#Config-file-parameters) section regarding config file specification.
 
 Moreover, a `-v` parameter is available to print verbose download progress bar for Copernicus.
@@ -63,10 +83,10 @@ Moreover, a `-v` parameter is available to print verbose download progress bar f
 
 * Install Docker: https://docs.docker.com/get-docker/
 
-* Navigate to the folder:
+* Navigate to the folder (remeber, from git bash in Windows - use *winpty* in case git bash complains before every command):
 
 ```
-    cd eoProcessors/noaharvester
+    cd eoProcessors/noa-harvester
 ```
 
 - Then:
