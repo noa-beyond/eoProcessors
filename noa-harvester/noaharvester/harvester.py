@@ -19,7 +19,9 @@ class Harvester:
         describe: Describe available search terms of collections (Copernicus only)
     """
 
-    def __init__(self, config_file: str, shape_file: str = None, verbose: bool = False) -> Harvester:
+    def __init__(
+        self, config_file: str, shape_file: str = None, verbose: bool = False
+    ) -> Harvester:
         """
         Harvester class. Constructor reads and loads the search items json file.
 
@@ -37,7 +39,9 @@ class Harvester:
 
         if shape_file:
             logger.debug(f"Using shapefile from path: {shape_file}")
-            self._shape_file_bbox = str(utils.get_bbox_from_shp(shape_file)).strip()[1:-1]
+            self._shape_file_bbox = str(utils.get_bbox_from_shp(shape_file)).strip()[
+                1:-1
+            ]
 
         with open(config_file) as f:
             self._config = json.load(f)

@@ -33,11 +33,13 @@ def cli(log):
     logging.basicConfig(level=numeric_level, format="%(asctime)s %(message)s")
 
 
-@cli.command(help=(
+@cli.command(
+    help=(
         "Queries for available products according to the config file."
         "You can also provide (optional) a [SHAPE_FILE] path in order to define "
         "the bounding box there instead of the config file."
-        ))
+    )
+)
 @click.argument("config_file", required=True)
 @click.argument("shape_file", required=False)
 def query(config_file: Argument | str, shape_file: Argument | str) -> None:
@@ -57,11 +59,13 @@ def query(config_file: Argument | str, shape_file: Argument | str) -> None:
         harvest.query_data()
 
 
-@cli.command(help=(
+@cli.command(
+    help=(
         "Downloads data from the selected providers and query terms"
         "You can also provide (optional) a [SHAPE_FILE] path in order to define "
         "the bounding box there instead of the config file."
-    ))
+    )
+)
 @click.option(
     "--verbose",
     "-v",
@@ -70,7 +74,9 @@ def query(config_file: Argument | str, shape_file: Argument | str) -> None:
 )
 @click.argument("config_file", required=True)
 @click.argument("shape_file", required=False)
-def download(config_file: Argument | str, shape_file: Argument | str, verbose: Option | bool) -> None:
+def download(
+    config_file: Argument | str, shape_file: Argument | str, verbose: Option | bool
+) -> None:
     """
     Instantiate Harvester class and call download function.
     Downloads all relevant data as defined in the config file.

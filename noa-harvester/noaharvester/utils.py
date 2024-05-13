@@ -42,6 +42,8 @@ def get_bbox_from_shp(shp_path: str) -> list:
     east = maxy
     north = maxx
 
-    logger.debug(f"Transformed coordinates: \n west: {west}, south: {south}, east: {east}, north: {north}")
+    logger.debug(
+        f"Transformed coordinates: \n west: {west}, south: {south}, east: {east}, north: {north}"
+    )
 
     return [west, south, east, north]
