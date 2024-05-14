@@ -1,6 +1,7 @@
 """Testing Harvester module"""
 from unittest.mock import patch
 from unittest.mock import Mock
+from pathlib import Path
 from noaharvester.harvester import Harvester
 
 
@@ -13,6 +14,15 @@ class TestHarvester:
 
         assert harvester._search_items[0]["provider"] == "copernicus"  # pylint:disable=protected-access
         assert harvester._search_items[0]["collection"] == "Sentinel1"  # pylint:disable=protected-access
+
+        # Test constructor with shapefile:
+        test_shape = "/test_data/foo_shape"
+        test_shape_uri = Path(__file__).parent.name + test_shape
+        harvester = Harvester(config_file, test_shape_uri)
+
+        # Asserting that the extracted and transformed coordinates have succesfully
+        # entered in place of bbox of search terms
+        assert "22.657162" in harvester._search_items[0]["search_terms"]["box"]  # pylint:disable=protected-access
 
     # The following tests are really dummy
     @patch("noaharvester.harvester.copernicus.Copernicus")
