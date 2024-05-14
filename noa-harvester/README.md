@@ -77,7 +77,7 @@ Available commands are:
 - describe (Copernicus only) - Describe collection's available query fields
 
 The config file *should* be placed inside `eoProcessors/noa-harvester/config`, but of course you could use any path.
-The optional shapefile argument can be used in the end, to draw the bounding box from shapefile information (`.shp` for the shape and `.prj` for the projection information). Please note that you should use the common file root for both files as the argument. E.g. for `weird_area.shp` and `weird_area.prj`, use `weird_area` as the argument)
+The optional shapefile argument can be used in the end, to draw the bounding box from shapefile information (`.shp` for the shape and `.prj` for the projection information). Please note that you should use the common file base name for both files as the argument. E.g. for `weird_area.shp` and `weird_area.prj`, use `weird_area` as the argument)
 
 Please check the [Config](#Config-file-parameters) section regarding config file specification.
 
@@ -183,7 +183,7 @@ Cli can be executed with the following:
     * `--log LEVEL (INFO, DEBUG, WARNING, ERROR)` Shows the logs depending on the selected `LEVEL`
 - Arguments
     * `config_file` - Necessary argument for the commands, indicating which config file will be used.
-    * `shape_file` - Optional. Create the query/donwload bounding box from a shapefile instead of the config file. Please note that this argument receives the root name of `.shp` and `.prj` files (e.g. argument should be `Thessalia` for `Thessalia.shp` and `Thessalia.prj` files)
+    * `shape_file` - Optional. Create the query/donwload bounding box from a shapefile instead of the config file. Please note that this argument receives the base name of `.shp` and `.prj` files (e.g. argument should be `Thessalia` for `Thessalia.shp` and `Thessalia.prj` files)
 
 ## Examples
 
