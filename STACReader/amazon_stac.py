@@ -1,17 +1,15 @@
 import pyproj
 import pystac_client
-import stackstac
 import xarray as xr
 from shapely.geometry import box
 from shapely.ops import transform
-import dask.diagnostics
 import matplotlib.pyplot as plt
 import pandas as pd
 from dask.distributed import Client
 import odc.stac
+from odc.geo.geobox import GeoBox
 import matplotlib.pyplot as plt
 import pandas as pd
-from datetime import datetime
 import numpy as np
 import os
 
@@ -60,7 +58,6 @@ stac_items = catalog.search(
 )#.item_collection()
 
 # using Open Data Cube stac component
-from odc.geo.geobox import GeoBox
 dx = 3/3600  # ~90m resolution
 
 epsg = 4326
@@ -75,9 +72,7 @@ ds_odc = odc.stac.load(
     groupby="solar_day" # delete duplicates due to satellite overlap
 )
 
-ds_odc_res = ds_odc.resample(time='QS-DEC').median("time")
-
-data = ds_odc_res
+data = ds_odc.resample(time='QS-DEC').median("time")
 
 numb_days= data[["B04"]].time.size
 
