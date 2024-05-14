@@ -1,4 +1,5 @@
 # NOA Harvester processor
+
 This processor facilitates the query and download functions from EO data providers like Copernicus (ESA) and Earthdata (NASA).
 
 It is a simple cli wrapper of the following (to be expanded) libraries:
@@ -8,6 +9,7 @@ It is a simple cli wrapper of the following (to be expanded) libraries:
 It can be used as a standalone cli application or be built in a Docker container.
 
 # Using the processor
+
 The noaharvester processor can be executed as a standalone cli application or inside a container. 
 In either case, a user must have credentials for accessing one or more data hubs:
 - [Copernicus]
@@ -17,7 +19,7 @@ In either case, a user must have credentials for accessing one or more data hubs
 
 - Install Git:  https://git-scm.com/book/en/v2/Getting-Started-Installing-Git
 
-- The respective data hub credentials must be introduced as environmental variables:
+- Introduce hub credentials as environmental variables:
 ```
 COPERNICUS_LOGIN=
 COPERNICUS_PASSWORD=
@@ -66,7 +68,7 @@ pip install -r requirements.txt
 You are ready to execute the cli scripts:
 
 ```
-python noaharvester/cli.py [command] config/config.json
+python noaharvester/cli.py [command] config/config.json [shape_file]
 ```
 
 Available commands are:
@@ -75,6 +77,8 @@ Available commands are:
 - describe (Copernicus only) - Describe collection's available query fields
 
 The config file *should* be placed inside `eoProcessors/noa-harvester/config`, but of course you could use any path.
+The optional shapefile argument can be used in the end, to draw the bounding box from shapefile information (`.shp` for the shape and `.prj` for the projection information). Please note that you should use the common file base name for both files as the argument. E.g. for `weird_area.shp` and `weird_area.prj`, use `weird_area` as the argument)
+
 Please check the [Config](#Config-file-parameters) section regarding config file specification.
 
 Moreover, a `-v` parameter is available to print verbose download progress bar for Copernicus.
@@ -134,6 +138,7 @@ Please note that in the aforementioned commands you can replace:
 
 
 ## Config file parameters
+
 Take a look at the sample config.json. 
 ```
 [
@@ -166,6 +171,7 @@ Please refer to
 - Earthdata and [earthaccess] python library for available EarthData collections, product type short names and query terms.
 
 ## Cli options
+
 Cli can be executed with the following:
 
 - Commands
@@ -177,8 +183,10 @@ Cli can be executed with the following:
     * `--log LEVEL (INFO, DEBUG, WARNING, ERROR)` Shows the logs depending on the selected `LEVEL`
 - Arguments
     * `config_file` - Necessary argument for the commands, indicating which config file will be used.
+    * `shape_file` - Optional. Create the query/donwload bounding box from a shapefile instead of the config file. Please note that this argument receives the base name of `.shp` and `.prj` files (e.g. argument should be `Thessalia` for `Thessalia.shp` and `Thessalia.prj` files)
 
-Examples:
+## Examples
+
 * Show available query parameters for Copernicus Collections as defined in the config file:
 
 ```
@@ -187,8 +195,16 @@ docker run -it \
 noaharvester describe config/config.json
 ```
 
-## Tests
+* Download (with download indicator) from Copernicus and Earthdata as defined in the config file, for an area provided by the shapefile files (`area.shp` and `area.prj`) located in folder `/home/user/project/strange_area`:
 
+```
+docker run -it \
+-v ./config/config.json:/app/config/config.json \
+-v /home/user/project/strange_area:/app/shapes/strange_area/ \
+noaharvester download -v config/config.json shapes/strange_area/area
+```
+
+## Tests
 
 Execute 
 ```

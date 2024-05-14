@@ -1,3 +1,4 @@
+"""Abstract Data Provider class."""
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -28,19 +29,19 @@ class DataProvider(ABC):
     #     return self._config
 
     @abstractmethod
-    def query(self):
+    def query(self, item):
         """
         Query data provider for collection items.
         """
 
     @abstractmethod
-    def download(self):
+    def download(self, item):
         """
         Download data for collection items.
         """
 
     @abstractmethod
-    def describe(self):
+    def describe(self, collection):
         """
         Describe available collection query parameters.
         """
