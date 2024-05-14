@@ -1,4 +1,6 @@
+"""Utility functions"""
 import logging
+
 from pyproj import Transformer, CRS
 import shapefile
 
@@ -25,17 +27,17 @@ def get_bbox_from_shp(shp_path: str) -> list:
     sf = shapefile.Reader(shp_path_shape)
     minx, miny, maxx, maxy = sf.bbox
 
-    logger.debug(f"Shapefile (.shp) bounging box coordinates: {sf.bbox}")
+    logger.debug("Shapefile (.shp) bounging box coordinates: %s", sf.bbox)
 
-    with open(shp_path_projection, "r") as f:
+    with open(shp_path_projection, "r", encoding="utf-8") as f:
         wkt = f.read()
         prj_crs = CRS.from_wkt(wkt)
 
-    logger.debug(f"Source CRS: {prj_crs}")
+    logger.debug("Source CRS: %s", prj_crs)
 
     transformer = Transformer.from_crs(prj_crs, target_crs)
-    minx, miny = transformer.transform(minx, miny)
-    maxx, maxy = transformer.transform(maxx, maxy)
+    minx, miny = transformer.transform(minx, miny)  # pylint:disable=unpacking-non-sequence
+    maxx, maxy = transformer.transform(maxx, maxy)  # pylint:disable=unpacking-non-sequence
 
     west = miny
     south = minx
@@ -43,7 +45,8 @@ def get_bbox_from_shp(shp_path: str) -> list:
     north = maxx
 
     logger.debug(
-        f"Transformed coordinates: \n west: {west}, south: {south}, east: {east}, north: {north}"
+        "Transformed coordinates: \n west: %s, south: %s, east: %s, north: %s",
+        west, south, east, north
     )
 
     return [west, south, east, north]

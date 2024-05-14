@@ -1,3 +1,4 @@
+"""Main Harvester module, calling abstract provider functions."""
 from __future__ import annotations
 
 import logging
@@ -38,18 +39,18 @@ class Harvester:
         self._shape_file_bbox = None
 
         if shape_file:
-            logger.debug(f"Using shapefile from path: {shape_file}")
+            logger.debug("Using shapefile from path: %s", shape_file)
             self._shape_file_bbox = str(utils.get_bbox_from_shp(shape_file)).strip()[
                 1:-1
             ]
 
-        with open(config_file) as f:
+        with open(config_file, encoding="utf8") as f:
             self._config = json.load(f)
 
         for item in self._config:
             if self._shape_file_bbox:
                 item["search_terms"]["box"] = self._shape_file_bbox
-            logger.debug(f"Appending search item: {item}")
+            logger.debug("Appending search item: %s", item)
             self._search_items.append(item)
 
     def query_data(self) -> None:
@@ -59,7 +60,9 @@ class Harvester:
         """
         for item in self._search_items:
             logger.debug(
-                f"Querying {item.get('provider')} collection {item.get('collection')}"
+                "Querying %s collection %s",
+                item.get("provider"),
+                item.get("collection")
             )
 
             provider = self._resolve_provider_instance(item.get("provider"))
@@ -73,7 +76,9 @@ class Harvester:
         """
         for item in self._search_items:
             logger.debug(
-                f"Download from {item.get('provider')} and collection: {item.get('collection')}"
+                "Download from %s and collection: %s",
+                item.get("provider"),
+                item.get("collection")
             )
 
             provider = self._resolve_provider_instance(item.get("provider"))
@@ -88,7 +93,9 @@ class Harvester:
         for item in self._search_items:
             if item.get("provider") == "copernicus":
                 logger.debug(
-                    f"Describing from: {item.get('provider')}, collection: {item.get('collection')}"
+                    "Describing from: %s, collection: %s",
+                    item.get("provider"),
+                    item.get("collection")
                 )
                 provider = self._resolve_provider_instance(item.get("provider"))
                 provider.describe(item.get("collection"))
@@ -96,12 +103,13 @@ class Harvester:
     def _resolve_provider_instance(self, provider) -> DataProvider:
         if provider not in self._providers:
             logger.debug(
-                f"Provider: {provider} DataProvider instance not found. Creating new."
+                "Provider: %s DataProvider instance not found. Creating new.",
+                provider
             )
             if provider == "copernicus":
                 self._providers[provider] = copernicus.Copernicus(self._verbose)
             elif provider == "earthdata":
                 self._providers[provider] = earthdata.Earthdata()
         else:
-            logger.info(f"Provider: {provider} DataProvider instance found.")
+            logger.info("Provider: %s DataProvider instance found.", provider)
         return self._providers[provider]

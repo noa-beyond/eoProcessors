@@ -1,3 +1,8 @@
+"""Cli for NOA-Beyond Harvester processor.
+
+This interface and processor are used to query and download EO data
+from various data providers: Copernicus and Earthdata.
+"""
 from __future__ import annotations
 import sys
 import logging
@@ -9,7 +14,7 @@ from click import Argument, Option
 # Appending the module path in order to have a kind of cli "dry execution"
 sys.path.append(str(Path(__file__).parent / ".."))
 
-from noaharvester import harvester  # noqa:402
+from noaharvester import harvester  # noqa:402 pylint:disable=wrong-import-position
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +57,7 @@ def query(config_file: Argument | str, shape_file: Argument | str) -> None:
             providers, collections and search terms
     """
     if config_file:
-        logger.debug(f"Cli query for config file: {config_file}")
+        logger.debug("Cli query for config file: %s", config_file)
 
         click.echo("Querying providers for products:\n")
         harvest = harvester.Harvester(config_file, shape_file)
@@ -87,7 +92,7 @@ def download(
         verbose (click.Option | bool): to show download progress indicator or not.
     """
     if config_file:
-        logger.debug(f"Cli download for config file: {config_file}")
+        logger.debug("Cli download for config file: %s", config_file)
 
         click.echo("Downloading...\n")
         harvest = harvester.Harvester(config_file, shape_file, verbose)
@@ -95,7 +100,7 @@ def download(
         click.echo("Done.\n")
 
 
-@cli.command(help=("Describe collection query fields (Copernicus only)"))
+@cli.command(help="Describe collection query fields (Copernicus only)")
 @click.argument("config_file", required=True)
 def describe(config_file: Argument | str) -> None:
     """
@@ -107,7 +112,7 @@ def describe(config_file: Argument | str) -> None:
             providers, collections and search terms
     """
     if config_file:
-        logger.debug(f"Cli describing for config file: {config_file}")
+        logger.debug("Cli describing for config file: %s", config_file)
 
         harvest = harvester.Harvester(config_file)
         click.echo("Available parameters for selected collections:\n")
@@ -115,4 +120,5 @@ def describe(config_file: Argument | str) -> None:
 
 
 if __name__ == "__main__":  # pragma: no cover
-    cli()
+    LOG_LEVEL = "WARNING"
+    cli(LOG_LEVEL)
