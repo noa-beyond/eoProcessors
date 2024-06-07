@@ -3,6 +3,7 @@
 This interface and processor are used to query and download EO data
 from various data providers: Copernicus and Earthdata.
 """
+
 from __future__ import annotations
 import sys
 import logging
