@@ -120,5 +120,4 @@ def describe(config_file: Argument | str) -> None:
 
 
 if __name__ == "__main__":  # pragma: no cover
-    LOG_LEVEL = "WARNING"
-    cli(LOG_LEVEL)
+    cli()
