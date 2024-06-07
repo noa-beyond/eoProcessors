@@ -1,4 +1,5 @@
 """Pytest configuration module."""
+
 import os
 from unittest import mock
 import pytest

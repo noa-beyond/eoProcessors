@@ -1,4 +1,5 @@
 """Testing providers"""
+
 from unittest.mock import patch
 from pathlib import Path
 import pytest
@@ -13,8 +14,10 @@ class TestProviders:
 
     def test_data_provider(self):
         """Testing ABC class"""
+
         class AProvider(DataProvider):
             """Mocked Instance"""
+
             def download(self, item):
                 pass
 
@@ -30,7 +33,9 @@ class TestProviders:
         mocked_data_provider.query(None)
         mocked_data_provider.describe(None)
 
-        assert mocked_data_provider._download_path == Path("./data").absolute()  # pylint:disable=protected-access
+        assert (
+            mocked_data_provider._download_path == Path("./data").absolute()
+        )  # pylint:disable=protected-access
 
     @patch("noaharvester.providers.earthdata.earthaccess.login")
     @patch("noaharvester.providers.earthdata.earthaccess.search_data")
@@ -52,7 +57,7 @@ class TestProviders:
     @patch("noaharvester.providers.earthdata.earthaccess.search_data")
     def test_earthdata_download(
         self, mocked_search, mocked_download, mocked_login, mocked_collection_item
-    ):   # pylint:disable=unused-argument
+    ):  # pylint:disable=unused-argument
         """Testing earthdata download"""
         mocked_query_results = ["a result", "a second result"]
         mocked_search.return_value = mocked_query_results
@@ -64,7 +69,9 @@ class TestProviders:
         assert result[1] == len(mocked_query_results)
 
     @patch("noaharvester.providers.earthdata.earthaccess.login")
-    def test_earthdata_describe_raises_not_implemented(self, mocked_earthaccess):  # pylint:disable=unused-argument
+    def test_earthdata_describe_raises_not_implemented(
+        self, mocked_earthaccess
+    ):  # pylint:disable=unused-argument
         """Testing not implemented error raise"""
         earthdata = Earthdata()
         with pytest.raises(NotImplementedError):

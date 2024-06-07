@@ -1,4 +1,5 @@
 """Copernicus data provider class. Implements Provider ABC."""
+
 from __future__ import annotations
 
 import sys

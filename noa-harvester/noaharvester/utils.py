@@ -1,4 +1,5 @@
 """Utility functions"""
+
 import logging
 
 from pyproj import Transformer, CRS
@@ -36,8 +37,12 @@ def get_bbox_from_shp(shp_path: str) -> list:
     logger.debug("Source CRS: %s", prj_crs)
 
     transformer = Transformer.from_crs(prj_crs, target_crs)
-    minx, miny = transformer.transform(minx, miny)  # pylint:disable=unpacking-non-sequence
-    maxx, maxy = transformer.transform(maxx, maxy)  # pylint:disable=unpacking-non-sequence
+    minx, miny = transformer.transform(
+        minx, miny
+    )  # pylint:disable=unpacking-non-sequence
+    maxx, maxy = transformer.transform(
+        maxx, maxy
+    )  # pylint:disable=unpacking-non-sequence
 
     west = miny
     south = minx
@@ -46,7 +51,10 @@ def get_bbox_from_shp(shp_path: str) -> list:
 
     logger.debug(
         "Transformed coordinates: \n west: %s, south: %s, east: %s, north: %s",
-        west, south, east, north
+        west,
+        south,
+        east,
+        north,
     )
 
     return [west, south, east, north]
