@@ -48,8 +48,6 @@ class Earthsearch(DataProvider):
         logger.debug("Search terms: %s", item["search_terms"])
 
         search_terms = item["search_terms"]
-        start_date = search_terms["startDate"]
-        end_date = search_terms["completionDate"]
 
         catalog = pystac_client.Client.open(self._STAC_URL)
         catalog.add_conforms_to("ITEM_SEARCH")
@@ -57,8 +55,8 @@ class Earthsearch(DataProvider):
         results = catalog.search(
             collections=[item["collection"]],
             bbox=str(search_terms["box"]),
-            datetime=[start_date, end_date],
-            query={"eo:cloud_cover": {"lt": 10}},
+            datetime=[search_terms["startDate"], search_terms["completionDate"]],
+            query={"eo:cloud_cover": {"lt": search_terms["cloud_cover_lt"]}},
         ).item_collection()
 
         click.echo(f"Available items for {item['collection']}: {len(results.items)}")
@@ -80,8 +78,6 @@ class Earthsearch(DataProvider):
 
         file_items = []
         search_terms = item["search_terms"]
-        start_date = search_terms["startDate"]
-        end_date = search_terms["completionDate"]
 
         catalog = pystac_client.Client.open(self._STAC_URL)
         catalog.add_conforms_to("ITEM_SEARCH")
@@ -89,8 +85,8 @@ class Earthsearch(DataProvider):
         results = catalog.search(
             collections=[item["collection"]],
             bbox=str(search_terms["box"]),
-            datetime=[start_date, end_date],
-            query={"eo:cloud_cover": {"lt": 80}},
+            datetime=[search_terms["startDate"], search_terms["completionDate"]],
+            query={"eo:cloud_cover": {"lt": search_terms["cloud_cover_lt"]}},
         ).item_collection()
 
         for result in results.items:
@@ -101,14 +97,16 @@ class Earthsearch(DataProvider):
             f"Total items to be downloaded for {item['collection']}: {len(results.items)} \n"
         )
 
-        # Create a ThreadPoolExecutor with a maximum number of worker threads
-        executor = ThreadPoolExecutor(max_workers=100)
+        executor = ThreadPoolExecutor(max_workers=24)
+
         # Use a list to store the download tasks
         download_tasks = []
+
         # Submit the download tasks
         for file_item in file_items:
             download_task = executor.submit(self._download_file, file_item)
             download_tasks.append(download_task)
+
         # Process the completed tasks
         for completed_task in as_completed(download_tasks):
             result = completed_task.result()
@@ -130,6 +128,6 @@ class Earthsearch(DataProvider):
         if response.status_code == 200:
             with open(filename, "wb") as file:
                 file.write(response.content)
-                print("File downloaded successfully!")
+                print(f"File {filename} downloaded successfully!")
         else:
             print("Failed to download the file.")
