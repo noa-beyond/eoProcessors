@@ -80,6 +80,9 @@ class TestHarvester:
             "earthdata"
         )  # pylint:disable=protected-access
         harvester._resolve_provider_instance(
+            "earthsearch"
+        )  # pylint:disable=protected-access
+        harvester._resolve_provider_instance(
             "copernicus"
         )  # pylint:disable=protected-access
         # adding it again to check the else clause
@@ -88,4 +91,5 @@ class TestHarvester:
         )  # pylint:disable=protected-access
 
         assert "earthdata" in harvester._providers  # pylint:disable=protected-access
+        assert "earthsearch" in harvester._providers  # pylint:disable=protected-access
         assert "copernicus" in harvester._providers  # pylint:disable=protected-access

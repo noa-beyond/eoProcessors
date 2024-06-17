@@ -1,14 +1,28 @@
 [
     {
         "provider": "earthsearch",
+        "version": "v0",
         "collection": "sentinel-s2-l2a-cogs",
         "search_terms":
         {
             "maxRecords": "100",
             "startDate": "2023-05-01",
-            "completionDate": "2023-09-01",
+            "completionDate": "2023-05-01",
             "box": "20.9997634359999985,38.7359481650000035,23.4804610929999988,40.6508565150000010",
-            "cloud_cover_lt": 90 
+            "cloud_cover_lt": 90
+        }
+    },
+    {
+        "provider": "earthsearch",
+        "version": "v1",
+        "collection": "sentinel-2-l2a",
+        "search_terms":
+        {
+            "maxRecords": "100",
+            "startDate": "2023-05-01",
+            "completionDate": "2023-05-01",
+            "box": "20.9997634359999985,38.7359481650000035,23.4804610929999988,40.6508565150000010",
+            "cloud_cover_lt": 90
         }
     }
 ]
