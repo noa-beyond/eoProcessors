@@ -3,6 +3,7 @@
 This interface and processor are used to query and download EO data
 from various data providers: Copernicus and Earthdata.
 """
+
 from __future__ import annotations
 import sys
 import logging
@@ -120,5 +121,4 @@ def describe(config_file: Argument | str) -> None:
 
 
 if __name__ == "__main__":  # pragma: no cover
-    LOG_LEVEL = "WARNING"
-    cli(LOG_LEVEL)
+    cli()

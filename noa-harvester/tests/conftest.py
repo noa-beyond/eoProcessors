@@ -1,4 +1,5 @@
 """Pytest configuration module."""
+
 import os
 from unittest import mock
 import pytest
@@ -15,11 +16,13 @@ def mocked_collection_item():
     """Mocking an abstract collection item"""
     yield {
         "collection": "mocked_collection",
+        "version": "v0",
         "search_terms": {
             "box": "1.1, 2.2, 3.3, 4.4",
             "startDate": "mocked_start_date",
             "completionDate": "mocked_end_date",
             "short_name": "mocked_short_product_name",
+            "cloud_cover_lt": 90,
         },
     }
 
