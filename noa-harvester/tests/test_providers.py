@@ -1,8 +1,10 @@
 """Testing providers"""
 
-from unittest.mock import patch, Mock
-from pathlib import Path
 import pytest
+import logging
+from unittest.mock import patch, Mock, mock_open
+from pathlib import Path
+
 
 from noaharvester.providers import DataProvider
 from noaharvester.providers.earthdata import Earthdata
@@ -168,7 +170,7 @@ class TestProviders:
     @patch("noaharvester.providers.earthsearch.shutil")
     @patch("noaharvester.providers.earthsearch.requests")
     def test_earthsearch_download(
-        self, mock_requests, mock_shutil, mocked_pystac_client, mocked_collection_item
+        self, mock_requests, mock_shutil, mocked_pystac_client, mocked_collection_item, caplog
     ):  # pylint:disable=unused-argument
 
         class MockedAsset(Mock):
@@ -188,6 +190,14 @@ class TestProviders:
                 a_result = MockedResult()
                 self.items = [a_result]
 
+        class MockedRequestResponse(Mock):
+            def __init__(self, status):
+                super().__init__()
+                self.status_code = status
+
+        mock_requests.get.return_value = MockedRequestResponse(200)
+        mock_shutil.copyfileobj.return_value = True
+
         # When mocking STAC catalog "Open", "Search" and "results"
         mocked_catalog_open = Mock()
         mocked_catalog_search = Mock()
@@ -202,10 +212,18 @@ class TestProviders:
         mocked_pystac_client.open.return_value = mocked_catalog_open
 
         earthsearch = Earthsearch()
-        result = earthsearch.download(mocked_collection_item)
+
+        with patch("builtins.open", mock_open()) as _:
+            result = earthsearch.download(mocked_collection_item)
 
         assert result[0] == mocked_collection_item["collection"]
         assert result[1] == 1
+
+        mock_requests.get.return_value = MockedRequestResponse(404)
+        with caplog.at_level(logging.ERROR):
+            earthsearch.download(mocked_collection_item)
+
+        assert "Failed" in caplog.text
 
     def test_earthsearch_describe_raises_not_implemented(
         self

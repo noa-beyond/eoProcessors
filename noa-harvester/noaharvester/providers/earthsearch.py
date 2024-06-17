@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import requests
 import shutil
+from pathlib import Path
 from pqdm.threads import pqdm
 
 import click
@@ -126,19 +127,19 @@ class Earthsearch(DataProvider):
         return results
 
     # TODO put this in utils
-    # TODO check if file exists
     def _download_file(self, file_item, download_path):
 
-        # self._download_path.mkdir(parents=True, exist_ok=True)
         filename = str(download_path) + "/" + file_item[0] + ".tif"
         response = requests.get(file_item[1], stream=True)
         if response.status_code == 200:
-            with open(filename, "wb") as f:
-                # This is to cap memory usage for large files at 1MB per write to disk per thread
-                # https://docs.python-requests.org/en/latest/user/quickstart/#raw-response-content
-                # TODO check if this is response.raw or response.content
-                shutil.copyfileobj(response.raw, f, length=1024 * 1024)
-
-                logger.info("File %s downloaded successfully!", filename)
+            if not Path(filename).is_file():
+                with open(filename, "wb") as f:
+                    # This is to cap memory usage for large files at 1MB per write to disk per thread
+                    # https://docs.python-requests.org/en/latest/user/quickstart/#raw-response-content
+                    # TODO check if this is response.raw or response.content
+                    logger.debug("Downloading %s", filename)
+                    shutil.copyfileobj(response.raw, f, length=1024 * 1024)
+            else:
+                logger.debug("File %s already exists", filename)
         else:
-            print("Failed to download the file.")
+            logger.error("Failed to download file: %s", filename)
