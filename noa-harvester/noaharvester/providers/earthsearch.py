@@ -48,27 +48,13 @@ class Earthsearch(DataProvider):
         """
         logger.debug("Search terms: %s", item["search_terms"])
 
-        search_terms = item["search_terms"]
-
-        # INFO: adding the version number of this provider (v0 or v1). It seems
-        # that v1 has more products but lets TODO check that in the
-        # near future
-        catalog = pystac_client.Client.open(self._STAC_URL + item["version"])
-        catalog.add_conforms_to("ITEM_SEARCH")
-
-        results = catalog.search(
-            collections=[item["collection"]],
-            bbox=str(search_terms["box"]),
-            datetime=[search_terms["startDate"], search_terms["completionDate"]],
-            query={"eo:cloud_cover": {"lt": search_terms["cloud_cover_lt"]}},
-        ).item_collection()
+        results = self._search_stac_collection(item)
 
         click.echo(f"Available items for {item['collection']}: {len(results.items)}")
         return item["collection"], len(results.items)
 
     def download(self, item: dict) -> tuple[str, int]:
         """
-        Download from Earthsearch from S2 L2A COGs collection the item["search_terms"]] items.
         Download is using a concurrent http connections setting of 8 threads and stored in local execution
         folder, under /data.
 
@@ -81,20 +67,8 @@ class Earthsearch(DataProvider):
         logger.debug("Download search terms: %s", item["search_terms"])
 
         file_items = []
-        search_terms = item["search_terms"]
 
-        # INFO: adding the version number of this provider (v0 or v1). It seems
-        # that v1 has more products but lets TODO check that in the
-        # near future
-        catalog = pystac_client.Client.open(self._STAC_URL + item["version"])
-        catalog.add_conforms_to("ITEM_SEARCH")
-
-        results = catalog.search(
-            collections=[item["collection"]],
-            bbox=str(search_terms["box"]),
-            datetime=[search_terms["startDate"], search_terms["completionDate"]],
-            query={"eo:cloud_cover": {"lt": search_terms["cloud_cover_lt"]}},
-        ).item_collection()
+        results = self._search_stac_collection(item)
 
         for result in results.items:
             click.echo(f"Data: {(result.assets['visual'].href)}")
@@ -121,6 +95,35 @@ class Earthsearch(DataProvider):
         raise NotImplementedError(
             "Earthdata (earthaccess) does not have a describe collection function"
         )
+
+    def _search_stac_collection(self, item: dict) -> tuple[str, int]:
+        """
+        Search from Earthsearch item[collection] and item[version] for item["search_terms"]] items.
+
+        Parameters:
+            item (dict): Dictionary as per config file structure.
+
+        Returns:
+            tuple (string, int):  Collection name, sum of downloaded files.
+        """
+        logger.debug("Searching. Arguments: %s", item["search_terms"])
+
+        search_terms = item["search_terms"]
+
+        # INFO: adding the version number of this provider (v0 or v1). It seems
+        # that v1 has more products but lets TODO check that in the
+        # near future
+        catalog = pystac_client.Client.open(self._STAC_URL + item["version"])
+        catalog.add_conforms_to("ITEM_SEARCH")
+
+        results = catalog.search(
+            collections=[item["collection"]],
+            bbox=str(search_terms["box"]),
+            datetime=[search_terms["startDate"], search_terms["completionDate"]],
+            query={"eo:cloud_cover": {"lt": search_terms["cloud_cover_lt"]}},
+        ).item_collection()
+
+        return results
 
     # TODO put this in utils
     # TODO check if file exists

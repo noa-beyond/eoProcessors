@@ -138,8 +138,9 @@ class TestProviders:
     ):  # pylint:disable=unused-argument
         """Testing earthsearch query"""
 
+        # TODO the same "fixture" exists in download. Put it in conftest
+        # or in this test class
         class MockedResults(Mock):
-
             def __init__(self):
                 super().__init__()
                 self.items = ["a result", "a second result"]
@@ -163,18 +164,48 @@ class TestProviders:
         assert result[0] == mocked_collection_item["collection"]
         assert result[1] == len(results.items)
 
-    """     @patch("noaharvester.providers.earthsearch.pystac_client")
+    @patch("noaharvester.providers.earthsearch.pystac_client.Client")
+    @patch("noaharvester.providers.earthsearch.shutil")
+    @patch("noaharvester.providers.earthsearch.requests")
     def test_earthsearch_download(
-        self, mocked_pystac_client, mocked_collection_item
+        self, mock_requests, mock_shutil, mocked_pystac_client, mocked_collection_item
     ):  # pylint:disable=unused-argument
-        mocked_query_results = ["a result", "a second result"]
-        mocked_pystac_client.Client.open.search.item_collection.return_value = mocked_query_results
+
+        class MockedAsset(Mock):
+            def __init__(self):
+                super().__init__()
+                self.href = "Mocked URI"
+
+        class MockedResult(Mock):
+            def __init__(self):
+                super().__init__()
+                self.id = "Mocked Id"
+                self.assets = {"visual": MockedAsset()}
+
+        class MockedResults(Mock):
+            def __init__(self):
+                super().__init__()
+                a_result = MockedResult()
+                self.items = [a_result]
+
+        # When mocking STAC catalog "Open", "Search" and "results"
+        mocked_catalog_open = Mock()
+        mocked_catalog_search = Mock()
+        results = MockedResults()
+
+        # We go backwards to mock each step:
+        # 1) when the return of our mocked item collection results...
+        mocked_catalog_search.item_collection.return_value = results
+        # 2) is part of the collection which we searched for...
+        mocked_catalog_open.search.return_value = mocked_catalog_search
+        # 3) we have started by opening the Catalog:
+        mocked_pystac_client.open.return_value = mocked_catalog_open
 
         earthsearch = Earthsearch()
         result = earthsearch.download(mocked_collection_item)
 
         assert result[0] == mocked_collection_item["collection"]
-        assert result[1] == len(mocked_query_results) """
+        assert result[1] == 1
 
     def test_earthsearch_describe_raises_not_implemented(
         self
