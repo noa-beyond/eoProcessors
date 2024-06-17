@@ -170,7 +170,12 @@ class TestProviders:
     @patch("noaharvester.providers.earthsearch.shutil")
     @patch("noaharvester.providers.earthsearch.requests")
     def test_earthsearch_download(
-        self, mock_requests, mock_shutil, mocked_pystac_client, mocked_collection_item, caplog
+        self,
+        mock_requests,
+        mock_shutil,
+        mocked_pystac_client,
+        mocked_collection_item,
+        caplog,
     ):  # pylint:disable=unused-argument
 
         class MockedAsset(Mock):

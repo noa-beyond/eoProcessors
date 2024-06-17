@@ -22,7 +22,7 @@ def mocked_collection_item():
             "startDate": "mocked_start_date",
             "completionDate": "mocked_end_date",
             "short_name": "mocked_short_product_name",
-            "cloud_cover_lt": 90
+            "cloud_cover_lt": 90,
         },
     }
 
