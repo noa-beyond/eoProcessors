@@ -1,7 +1,7 @@
+"""Pytest configuration module."""
 import os
-import pytest
-
 from unittest import mock
+import pytest
 
 
 CONTENT = (
@@ -11,7 +11,8 @@ CONTENT = (
 
 
 @pytest.fixture(scope="function", autouse=True)
-def mocked_collection_item(monkeypatch):
+def mocked_collection_item():
+    """Mocking an abstract collection item"""
     yield {
         "collection": "mocked_collection",
         "search_terms": {
@@ -25,6 +26,7 @@ def mocked_collection_item(monkeypatch):
 
 @pytest.fixture(scope="function", autouse=True)
 def config_file(tmp_path):
+    """Mocked config file"""
 
     dir_path = tmp_path
     config_filename = dir_path / "config.json"
@@ -36,6 +38,7 @@ def config_file(tmp_path):
 
 @pytest.fixture(scope="function", autouse=True)
 def setenvvar(monkeypatch):
+    """Fixture to mock the necessary environmental variables"""
     with mock.patch.dict(os.environ, clear=True):
         envvars = {
             "COPERNICUS_LOGIN": "mocked_username",

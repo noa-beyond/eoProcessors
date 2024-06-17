@@ -1,3 +1,4 @@
+"""Copernicus data provider class. Implements Provider ABC."""
 from __future__ import annotations
 
 import sys
@@ -39,9 +40,7 @@ class Copernicus(DataProvider):
         """
         super().__init__()
 
-        # From .netrc (or _netrc for Windows)
-        # TODO introduce checking of netrc for borh copernicus and earth data
-        # netrc.netrc().authenticators("urs.earthdata.nasa.gov")
+        # From .netrc
         logger.debug("Checking Copernicus credentials - trying to aquire token")
         self._credentials = Credentials()
 
@@ -62,7 +61,7 @@ class Copernicus(DataProvider):
         Returns:
             tuple (str, int):  Collection name, sum of available items.
         """
-        logger.debug(f"Search terms: {item['search_terms']}")
+        logger.debug("Search terms: %s", item["search_terms"])
 
         features = list(query_features(item["collection"], item["search_terms"]))
         click.echo(
@@ -98,7 +97,7 @@ class Copernicus(DataProvider):
             tuple (string, int):  Collection name, sum of downloaded files.
         """
 
-        logger.debug(f"Download search terms: {item['search_terms']}")
+        logger.debug("Download search terms: %s", item["search_terms"])
         self._download_path.mkdir(parents=True, exist_ok=True)
 
         features = list(query_features(item["collection"], item["search_terms"]))
