@@ -73,16 +73,22 @@ class Earthsearch(DataProvider):
 
         for result in results.items:
             click.echo(f"Data: {(result.assets['visual'].href)}")
-            file_items.append([result.id, result.assets["visual"].href])
+            file_to_store = Path(
+                self._download_path,
+                Path(
+                    result.id + "_" + Path(result.assets["visual"].href).stem + ".tif"
+                ),
+            )
+
+            file_items.append([file_to_store, result.assets["visual"].href])
 
         click.echo(
             f"Total items to be downloaded for {item['collection']}: {len(results.items)} \n"
         )
         self._download_path.mkdir(parents=True, exist_ok=True)
 
-        arguments = [(url, self._download_path) for url in file_items]
         results = pqdm(
-            arguments,
+            file_items,
             self._download_file,
             n_jobs=8,
             argument_type="args",
@@ -127,12 +133,12 @@ class Earthsearch(DataProvider):
         return results
 
     # TODO put this in utils
-    def _download_file(self, file_item, download_path):
+    def _download_file(self, file_item):
 
-        filename = str(download_path) + "/" + file_item[0] + ".tif"
+        filename = str(file_item[0])
         response = requests.get(file_item[1], stream=True)
         if response.status_code == 200:
-            if not Path(filename).is_file():
+            if not file_item[0].is_file():
                 with open(filename, "wb") as f:
                     # This is to cap memory usage for large files at 1MB per write to disk per thread
                     # https://docs.python-requests.org/en/latest/user/quickstart/#raw-response-content
