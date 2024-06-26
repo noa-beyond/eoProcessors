@@ -71,21 +71,32 @@ class Earthsearch(DataProvider):
 
         results = self._search_stac_collection(item)
 
-        for result in results.items:
-            click.echo(f"Data: {(result.assets['visual'].href)}")
-            file_items.append([result.id, result.assets["visual"].href])
+        for asset in item["assets"]:
+            for result in results.items:
+                try:
+                    click.echo(f"Data: {(result.assets[asset].href)}")
+                    if str(result.assets[asset].href).startswith("s3"):
+                        logging.warning("This is a 'requester pays' non public asset. Cannot download.")
+                    file_to_store = Path(
+                        self._download_path,
+                        Path(
+                            result.id + "_" + Path(result.assets[asset].href).stem + ".tif"
+                        ),
+                    )
+
+                    file_items.append([file_to_store, result.assets[asset].href])
+                except KeyError:
+                    logger.info("There is no asset: %s for %s", asset, result.id)
 
         click.echo(
             f"Total items to be downloaded for {item['collection']}: {len(results.items)} \n"
         )
         self._download_path.mkdir(parents=True, exist_ok=True)
 
-        arguments = [(url, self._download_path) for url in file_items]
         results = pqdm(
-            arguments,
+            file_items,
             self._download_file,
-            n_jobs=8,
-            argument_type="args",
+            n_jobs=8
         )
 
         return item["collection"], len(results)
@@ -127,12 +138,12 @@ class Earthsearch(DataProvider):
         return results
 
     # TODO put this in utils
-    def _download_file(self, file_item, download_path):
+    def _download_file(self, file_item):
 
-        filename = str(download_path) + "/" + file_item[0] + ".tif"
+        filename = str(file_item[0])
         response = requests.get(file_item[1], stream=True)
         if response.status_code == 200:
-            if not Path(filename).is_file():
+            if not file_item[0].is_file():
                 with open(filename, "wb") as f:
                     # This is to cap memory usage for large files at 1MB per write to disk per thread
                     # https://docs.python-requests.org/en/latest/user/quickstart/#raw-response-content

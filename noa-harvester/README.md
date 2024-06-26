@@ -32,7 +32,7 @@ EARTHDATA_PASSWORD=
 
 - For Windows: execute **git bash** and execute the rest of the operations on the git bash terminal.
 
-Open a terminal window (or git bash...), navigate to your prefered working directory and download the source code:
+Open a terminal window (or git bash...), navigate to your preferred working directory and download the source code:
 
 ```
 git clone https://github.com/Agri-Hub/eoProcessors.git
@@ -63,7 +63,7 @@ You can now either execute the processor as a [standalone cli application](#stan
 ```
   in order for the `.netrc` file to be created in your local environment. This file will take care of credential information based on the environmental variables you have set up before.
 
-- Finally, install necesarry requirements inside your virtual environment:
+- Finally, install necessary requirements inside your virtual environment:
 ```
 pip install -r requirements.txt
 ```
@@ -90,7 +90,7 @@ Moreover, a `-v` parameter is available to print verbose download progress bar f
 
 * Install Docker: https://docs.docker.com/get-docker/
 
-* Navigate to the folder (remeber, from git bash in Windows - use *winpty* in case git bash complains before every command):
+* Navigate to the folder (remember, from git bash in Windows - use *winpty* in case git bash complains before every command):
 
 ```
     cd eoProcessors/noa-harvester
@@ -167,8 +167,9 @@ Take a look at the sample config.json.
     },
     {
         "provider": "earthsearch",
-        "version": "v0",
+        "version": "v1",
         "collection": "sentinel-s2-l2a-cogs",
+        "assets": ["visual"],
         "search_terms":
         {
             "maxRecords": "100",
@@ -186,6 +187,9 @@ Please refer to
 - Earthdata and [earthaccess] python library for available EarthData collections, product type short names and query terms.
 - Element84 COG STAC collection (earthsearch - https://github.com/Element84/earth-search)
 
+Please note that in the STAC collections search, we do not search/download by bands, but by **assets**.
+This is because many providers provide interesting composites like snow/cloud probabilities under the item assets, along with the bands.
+
 ## Cli options
 
 Cli can be executed with the following:
@@ -199,7 +203,7 @@ Cli can be executed with the following:
     * `--log LEVEL (INFO, DEBUG, WARNING, ERROR)` Shows the logs depending on the selected `LEVEL`
 - Arguments
     * `config_file` - Necessary argument for the commands, indicating which config file will be used.
-    * `shape_file` - Optional. Create the query/donwload bounding box from a shapefile instead of the config file. Please note that this argument receives the base name of `.shp` and `.prj` files (e.g. argument should be `Thessalia` for `Thessalia.shp` and `Thessalia.prj` files)
+    * `shape_file` - Optional. Create the query/download bounding box from a shapefile instead of the config file. Please note that this argument receives the base name of `.shp` and `.prj` files (e.g. argument should be `Thessalia` for `Thessalia.shp` and `Thessalia.prj` files)
 
 ## Examples
 

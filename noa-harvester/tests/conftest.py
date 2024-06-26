@@ -17,6 +17,7 @@ def mocked_collection_item():
     yield {
         "collection": "mocked_collection",
         "version": "v0",
+        "assets": ["visual"],
         "search_terms": {
             "box": "1.1, 2.2, 3.3, 4.4",
             "startDate": "mocked_start_date",

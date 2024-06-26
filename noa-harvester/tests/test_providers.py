@@ -181,7 +181,7 @@ class TestProviders:
         class MockedAsset(Mock):
             def __init__(self):
                 super().__init__()
-                self.href = "Mocked URI"
+                self.href = "https://Mocked_URI/asset.tif"
 
         class MockedResult(Mock):
             def __init__(self):
@@ -231,7 +231,7 @@ class TestProviders:
         assert "Failed" in caplog.text
 
     def test_earthsearch_describe_raises_not_implemented(
-        self
+        self,
     ):  # pylint:disable=unused-argument
         """Testing not implemented error raise"""
         earthsearch = Earthsearch()

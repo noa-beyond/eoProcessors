@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] - 2024-06-26
+### Added
+- Introduced assets selection for earthsearch (#27)
+
 ## [0.5.0] - 2024-06-26
 ### Added
 - Introduce STAC search/download for Element84 COGs collections (#23)
