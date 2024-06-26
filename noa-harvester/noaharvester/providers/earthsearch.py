@@ -71,16 +71,22 @@ class Earthsearch(DataProvider):
 
         results = self._search_stac_collection(item)
 
-        for result in results.items:
-            click.echo(f"Data: {(result.assets['visual'].href)}")
-            file_to_store = Path(
-                self._download_path,
-                Path(
-                    result.id + "_" + Path(result.assets["visual"].href).stem + ".tif"
-                ),
-            )
+        for asset in item["assets"]:
+            for result in results.items:
+                try:
+                    click.echo(f"Data: {(result.assets[asset].href)}")
+                    if str(result.assets[asset].href).startswith("s3"):
+                        logging.warning("This is a 'requester pays' non public asset. Cannot download.")
+                    file_to_store = Path(
+                        self._download_path,
+                        Path(
+                            result.id + "_" + Path(result.assets[asset].href).stem + ".tif"
+                        ),
+                    )
 
-            file_items.append([file_to_store, result.assets["visual"].href])
+                    file_items.append([file_to_store, result.assets[asset].href])
+                except KeyError:
+                    logger.info("There is no asset: %s for %s", asset, result.id)
 
         click.echo(
             f"Total items to be downloaded for {item['collection']}: {len(results.items)} \n"
@@ -90,8 +96,7 @@ class Earthsearch(DataProvider):
         results = pqdm(
             file_items,
             self._download_file,
-            n_jobs=8,
-            argument_type="args",
+            n_jobs=8
         )
 
         return item["collection"], len(results)
