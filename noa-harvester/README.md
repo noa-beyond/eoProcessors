@@ -6,6 +6,9 @@ It is a simple cli wrapper of the following (to be expanded) libraries:
 - CDSETool (https://github.com/SDFIdk/CDSETool)
 - earthaccess (https://github.com/nsidc/earthaccess)
 
+and common STAC API functionality, for accessing public catalogs:
+- Element84 COG STAC collection (earthsearch - https://github.com/Element84/earth-search)
+
 It can be used as a standalone cli application or be built in a Docker container.
 
 # Using the processor
@@ -77,7 +80,7 @@ Available commands are:
 - describe (Copernicus only) - Describe collection's available query fields
 
 The config file *should* be placed inside `eoProcessors/noa-harvester/config`, but of course you could use any path.
-The optional shapefile argument can be used in the end, to draw the bounding box from shapefile information (`.shp` for the shape and `.prj` for the projection information). Please note that you should use the common file base name for both files as the argument. E.g. for `weird_area.shp` and `weird_area.prj`, use `weird_area` as the argument)
+The optional shapefile argument can be used in the end, to draw the bounding box from shapefile information (`.shp` for the shape and `.prj` for the projection information). Please note that you should use the common file base name for both files as the argument. E.g. for `weird_area.shp` and `weird_area.prj`, use `weird_area` as the argument
 
 Please check the [Config](#Config-file-parameters) section regarding config file specification.
 
@@ -149,9 +152,9 @@ Take a look at the sample config.json.
         {
             "maxRecords": "100",
             "startDate": "2024-01-06",
-        .....
+            .....
         }
-    }
+    },
     {
         "provider": "earthdata",
         "collection": "MODIS",
@@ -159,9 +162,21 @@ Take a look at the sample config.json.
         {
             "maxRecords": "100",
             "startDate": "2019-01-01",
-        .....
+            .....
         }
-    }        
+    },
+    {
+        "provider": "earthsearch",
+        "version": "v0",
+        "collection": "sentinel-s2-l2a-cogs",
+        "search_terms":
+        {
+            "maxRecords": "100",
+            "startDate": "2023-05-01",
+            "cloud_cover_lt": 90,
+            .....
+        }
+    }
 ]
 ```
 As the top level keys, you have to introduce the provider and collection names. You can include as many sources as needed.
@@ -169,6 +184,7 @@ As the top level keys, you have to introduce the provider and collection names. 
 Please refer to
 - Copernicus [OData API] for available collections and query keys
 - Earthdata and [earthaccess] python library for available EarthData collections, product type short names and query terms.
+- Element84 COG STAC collection (earthsearch - https://github.com/Element84/earth-search)
 
 ## Cli options
 
