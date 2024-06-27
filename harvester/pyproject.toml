@@ -13,8 +13,8 @@ description = "Earth Observation data harvester from various sources/hubs"
 requires-python = ">=3.11.8"
 dependencies = [
     "build>=1.1.1",
-    "requests>=2.28.2",
-    "tqdm>=4.65.0",
+    "requests>=2.31.0",
+    "tqdm>=4.66.3",
 ]
 keywords = [
     "data pipelines",
