@@ -53,7 +53,7 @@ You can now either execute the processor as a [standalone cli application](#stan
         - Install conda (https://docs.conda.io/projects/conda/en/latest/user-guide/install/linux.html)
     - Common:
         - Create the environment:
-            - Execute `conda create -n noaharvester_env python==3.11`
+            - Execute `conda create -n noaharvester_env python==3.11.8`
             - Execute `conda activate noaharvester_env`
 - Then:
 
