@@ -216,7 +216,7 @@ def parse_and_validate_bbox(bbox: str) -> list:
     try:
         bbox_list = [float(x) for x in bbox.split(",")]
         if len(bbox_list) == 4:
-            if bbox_list[0] < bbox_list[2] and bbox_list[1] < bbox_list[3]:
+            if abs(bbox_list[0]) < abs(bbox_list[2]) and abs(bbox_list[1]) < abs(bbox_list[3]):
                 return bbox_list
     except Exception:
         raise AttributeError(message)
