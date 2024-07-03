@@ -42,9 +42,9 @@ def cli(log):
     )
 )
 @click.argument("agg_function", required=True)
-@click.argument("path", required=True)
+@click.argument("data_path", required=True)
 @click.argument("config_file", required=False)
-def aggregate(agg_function: Argument | str, path: Argument | str, config_file: Argument | str) -> None:
+def aggregate(agg_function: Argument | str, data_path: Argument | str, config_file: Argument | str) -> None:
     """
     Instantiate Postprocess class and process path contents.
 
@@ -53,11 +53,11 @@ def aggregate(agg_function: Argument | str, path: Argument | str, config_file: A
         path (click.Argument | str): Path to look for files
         config_file (click.Argument | str): config json file
     """
-    if path:
+    if config_file:
         logger.debug("Cli query using config file: %s", config_file)
 
-    click.echo("Processing files in path %s:\n", path)
-    process = postaggregate.Aggregate(path, config_file)
+    click.echo(f"Processing files in path {data_path}:\n")
+    process = postaggregate.Aggregate(data_path, config_file)
     process.from_path(agg_function)
 
 
