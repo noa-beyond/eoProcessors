@@ -21,40 +21,31 @@ def get_bbox_from_shp(shp_path: str) -> list:
         [west, south, east, north] (list(float)): Bounding box coordinates.
     """
 
+    bboxes = []
     shp_path_shape = shp_path + ".shp"
     shp_path_projection = shp_path + ".prj"
-    target_crs = "EPSG:4326"  # default CRS
 
-    sf = shapefile.Reader(shp_path_shape)
-    minx, miny, maxx, maxy = sf.bbox
-
-    logger.debug("Shapefile (.shp) bounging box coordinates: %s", sf.bbox)
-
+    target_crs = "EPSG:4326"  # default CRS for majority of providers
     with open(shp_path_projection, "r", encoding="utf-8") as f:
         wkt = f.read()
         prj_crs = CRS.from_wkt(wkt)
-
     logger.debug("Source CRS: %s", prj_crs)
-
     transformer = Transformer.from_crs(prj_crs, target_crs)
-    minx, miny = transformer.transform(
-        minx, miny
-    )  # pylint:disable=unpacking-non-sequence
-    maxx, maxy = transformer.transform(
-        maxx, maxy
-    )  # pylint:disable=unpacking-non-sequence
 
-    west = miny
-    south = minx
-    east = maxy
-    north = maxx
+    sf = shapefile.Reader(shp_path_shape)
 
-    logger.debug(
-        "Transformed coordinates: \n west: %s, south: %s, east: %s, north: %s",
-        west,
-        south,
-        east,
-        north,
-    )
+    logger.debug("Total polygons: %s", len(sf.shapeRecords()))
+    logger.debug("Transforming...")
 
-    return [west, south, east, north]
+    for single_shape in sf.shapeRecords():
+        minx, miny, maxx, maxy = single_shape.shape.bbox
+
+        south, west = transformer.transform(
+            minx, miny
+        )  # pylint:disable=unpacking-non-sequence
+        north, east = transformer.transform(
+            maxx, maxy
+        )  # pylint:disable=unpacking-non-sequence
+
+        bboxes.append([west, south, east, north])
+    return bboxes
