@@ -1,6 +1,7 @@
 """Main Harvester module, calling abstract provider functions."""
 
 from __future__ import annotations
+from copy import deepcopy
 
 import logging
 import json
@@ -29,7 +30,7 @@ class Harvester:
 
         Parameters:
             config_file (str): Config filename (json) which includes all search items.
-            shape_file (str - Optional): Read and use shapefile instread of config coordinates.
+            shape_file (str - Optional): Read and use shapefile instead of config coordinates.
             verbose (bool - Optional): Indicate if Copernicus download progress is verbose.
         """
         self._config_filename = config_file
@@ -37,22 +38,26 @@ class Harvester:
 
         self._search_items: list = []
         self._providers = {}
-        self._shape_file_bbox = None
+        self._shape_file_bbox_list = None
 
         if shape_file:
             logger.debug("Using shapefile from path: %s", shape_file)
-            self._shape_file_bbox = str(utils.get_bbox_from_shp(shape_file)).strip()[
-                1:-1
-            ]
+            self._shape_file_bbox_list = utils.get_bbox_from_shp(shape_file)
 
         with open(config_file, encoding="utf8") as f:
             self._config = json.load(f)
 
         for item in self._config:
-            if self._shape_file_bbox:
-                item["search_terms"]["box"] = self._shape_file_bbox
-            logger.debug("Appending search item: %s", item)
-            self._search_items.append(item)
+            if self._shape_file_bbox_list:
+                for bbox in self._shape_file_bbox_list:
+                    sub_item = deepcopy(item)
+                    sub_item["search_terms"]["box"] = str(bbox).strip()[1:-1]
+                    self._search_items.append(sub_item)
+                    logger.debug("Appending search item: %s", sub_item)
+            else:
+                self._search_items.append(item)
+                logger.debug("Appending search item: %s", item)
+        logger.debug("Total search items: %s", len(self._search_items))
 
     def query_data(self) -> None:
         """
