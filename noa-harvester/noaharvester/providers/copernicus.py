@@ -45,6 +45,7 @@ class Copernicus(DataProvider):
         logger.debug("Checking Copernicus credentials - trying to aquire token")
         self._credentials = Credentials()
 
+        self._downloaded_feature_ids = []
         self.verbose = verbose
 
     @property
@@ -68,6 +69,7 @@ class Copernicus(DataProvider):
         click.echo(
             f"Total available items for {item['collection']}: {len(features)} \n"
         )
+
         return item["collection"], len(features)
 
     def describe(self, collection: str) -> tuple[str, list]:
@@ -102,12 +104,21 @@ class Copernicus(DataProvider):
         self._download_path.mkdir(parents=True, exist_ok=True)
 
         features = list(query_features(item["collection"], item["search_terms"]))
+        initial_query_return = len(features)
+
+        for feature in features:
+            if feature["properties"]["status"] == "ONLINE":
+                if feature["id"] not in self._downloaded_feature_ids:
+                    self._downloaded_feature_ids.append(feature["id"])
+                else:
+                    features.remove(feature)
         click.echo(
-            f"Total items to be downloaded for {item['collection']}: {len(features)} \n"
+            f"Total items to be downloaded for {item['collection']}: {len(features)}. "
+            f"Avoided {initial_query_return - len(features)} duplicates.\n"
         )
 
         sys.stdout.flush()
-
+        downloaded_files = []
         downloaded_files = list(
             download_features(
                 features,
