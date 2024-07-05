@@ -99,8 +99,9 @@ class Copernicus(DataProvider):
         Returns:
             tuple (string, int):  Collection name, sum of downloaded files.
         """
-
+        downloaded_files = []
         logger.debug("Download search terms: %s", item["search_terms"])
+
         self._download_path.mkdir(parents=True, exist_ok=True)
 
         features = list(query_features(item["collection"], item["search_terms"]))
@@ -118,17 +119,18 @@ class Copernicus(DataProvider):
         )
 
         sys.stdout.flush()
-        downloaded_files = []
-        downloaded_files = list(
-            download_features(
-                features,
-                self._download_path,
-                {
-                    "concurrency": 4,
-                    "monitor": StatusMonitor() if self.verbose else False,
-                    "credentials": self.credentials,
-                },
+
+        if features:
+            downloaded_files = list(
+                download_features(
+                    features,
+                    self._download_path,
+                    {
+                        "concurrency": 4,
+                        "monitor": StatusMonitor() if self.verbose else False,
+                        "credentials": self.credentials,
+                    },
+                )
             )
-        )
 
         return item["collection"], len(downloaded_files)
