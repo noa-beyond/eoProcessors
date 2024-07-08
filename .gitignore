@@ -38,5 +38,7 @@ htmlcov/
 test-output.xml
 coverage.xml
 *.cover
-
 .pytest_cache/
+
+# Other
+*.ipynb*

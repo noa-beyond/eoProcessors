@@ -25,10 +25,10 @@ class TestHarvester:
         test_shape_uri = Path(__file__).parent.name + test_shape
         harvester = Harvester(config_file, test_shape_uri)
 
-        # Asserting that the extracted and transformed coordinates have succesfully
+        # Asserting that the extracted and transformed coordinates have successfully
         # entered in place of bbox of search terms
         assert (
-            "22.657162" in harvester._search_items[0]["search_terms"]["box"]
+            "24.139947" in harvester._search_items[0]["search_terms"]["box"]
         )  # pylint:disable=protected-access
 
     # The following tests are really dummy

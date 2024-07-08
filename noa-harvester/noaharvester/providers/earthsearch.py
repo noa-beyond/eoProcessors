@@ -35,6 +35,7 @@ class Earthsearch(DataProvider):
         super().__init__()
 
         logger.debug("Earthsearch provider. No credentials needed.")
+        self._downloaded_files = []
         self._STAC_URL = "https://earth-search.aws.element84.com/"
 
     def query(self, item: dict) -> tuple[str, int]:
@@ -74,32 +75,36 @@ class Earthsearch(DataProvider):
         for asset in item["assets"]:
             for result in results.items:
                 try:
-                    click.echo(f"Data: {(result.assets[asset].href)}")
                     if str(result.assets[asset].href).startswith("s3"):
-                        logging.warning("This is a 'requester pays' non public asset. Cannot download.")
+                        logger.warning(
+                            "This is a 'requester pays' non public asset. Cannot download."
+                        )
+                        continue
                     file_to_store = Path(
                         self._download_path,
                         Path(
-                            result.id + "_" + Path(result.assets[asset].href).stem + ".tif"
+                            result.id
+                            + "_"
+                            + Path(result.assets[asset].href).stem
+                            + ".tif"
                         ),
                     )
-
-                    file_items.append([file_to_store, result.assets[asset].href])
+                    if file_to_store not in self._downloaded_files:
+                        logger.debug("href: %s", (result.assets[asset].href))
+                        self._downloaded_files.append(file_to_store)
+                        file_items.append([file_to_store, result.assets[asset].href])
                 except KeyError:
                     logger.info("There is no asset: %s for %s", asset, result.id)
+        if file_items:
+            click.echo(
+                f"Total items to be downloaded for {item['collection']}: {len(file_items)} \n"
+                f"Avoided {len(results.items) - len(file_items)} duplicates or private assets."
+            )
+            self._download_path.mkdir(parents=True, exist_ok=True)
 
-        click.echo(
-            f"Total items to be downloaded for {item['collection']}: {len(results.items)} \n"
-        )
-        self._download_path.mkdir(parents=True, exist_ok=True)
+            results = pqdm(file_items, self._download_file, n_jobs=8)
 
-        results = pqdm(
-            file_items,
-            self._download_file,
-            n_jobs=8
-        )
-
-        return item["collection"], len(results)
+        return item["collection"], len(file_items)
 
     def describe(self, collection):
         """Not implemented for Earthsearch. Service is not provided."""
