@@ -3,6 +3,7 @@ import glob
 import xarray as xr
 import rasterio as rio
 import rioxarray
+import numpy as np
 
 
 class Aggregate:
@@ -23,9 +24,10 @@ class Aggregate:
         #         height=median_img.shape[1]
         #     )
             with rio.Env():
+                # TODO check output folder (create it first...)
                 profile.update(driver='GTiff')
                 with rio.open(f"./output/_{tile}.tif", "w", **profile) as dst:
-                    dst.write(median_img.astype(rio.uint8))
+                    dst.write(median_img)
             images = []
 
     def _get_images_and_profile(self, tile):
@@ -37,7 +39,9 @@ class Aggregate:
                     if profile is None:
                         temp_image = rio.open(os.path.join(root, fname))
                         profile = temp_image.profile
-                    tci_images.append(rioxarray.open_rasterio(os.path.join(root, fname), chunks={'x': 2000, 'y': 2000}))
+                    img = rioxarray.open_rasterio(os.path.join(root, fname), chunks={"x": 1024, "y": 1024})
+                    img = img.where(img != 0.0, np.nan)
+                    tci_images.append(img)
         return (tci_images, profile)
 
     def _get_median_img(self, imgs, no_of_bands):
@@ -45,9 +49,9 @@ class Aggregate:
         bands_medians = []
         for b in range(no_of_bands):
             bands = [img.sel(band=b+1) for img in imgs]
-            bands_comp = xr.concat(bands, dim='band')
-            bands_medians.append(bands_comp.median(dim='band', skipna=True))
-        return xr.concat(bands_medians, dim='band')
+            bands_comp = xr.concat(bands, dim="band")
+            bands_medians.append(bands_comp.median(dim="band", skipna=True))
+        return xr.concat(bands_medians, dim="band")
 
     def _get_tiles_list(self):
 
