@@ -24,7 +24,7 @@ class Aggregate:
             click.echo(f"Processing tile: {tile}\n")
             images, profile = self._get_images_and_profile(tile)
             logger.debug("Calculating aggregation of tile: %s", tile)
-            median_img = self._get_median_img(images, 3)
+            median_img = self._get_median_img(images, 3).astype(rio.uint8)
 
         # profile.update(
         #         driver="GTiff",
@@ -36,7 +36,7 @@ class Aggregate:
                 profile.update(driver='GTiff')
                 self._output_path.mkdir(parents=True, exist_ok=True)
                 with rio.open(f"{str(self._output_path)}/{tile}_{agg_function}.tif", "w", **profile) as dst:
-                    dst.write(median_img).astype(rio.uint8)
+                    dst.write(median_img)
             images = []
 
     def _get_images_and_profile(self, tile):
