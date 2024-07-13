@@ -43,21 +43,23 @@ def cli(log):
 )
 @click.argument("agg_function", required=True)
 @click.argument("data_path", required=True)
+@click.argument("output_path", required=True)
 @click.argument("config_file", required=False)
-def aggregate(agg_function: Argument | str, data_path: Argument | str, config_file: Argument | str) -> None:
+def aggregate(agg_function: Argument | str, data_path: Argument | str, output_path: Argument | str, config_file: Argument | str) -> None:
     """
     Instantiate Postprocess class and process path contents.
 
     Parameters:
         agg_function (click.Argument | str): Aggregate function [median, average, min, max]
-        path (click.Argument | str): Path to look for files
+        data_path (click.Argument | str): Path to look for files
+        output_path (click.Argument | str): Path to store output files
         config_file (click.Argument | str): config json file
     """
     if config_file:
         logger.debug("Cli query using config file: %s", config_file)
 
     click.echo(f"Processing files in path {data_path}:\n")
-    process = postaggregate.Aggregate(data_path, config_file)
+    process = postaggregate.Aggregate(data_path, output_path, config_file)
     process.from_path(agg_function)
 
 
