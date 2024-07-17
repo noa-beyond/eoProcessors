@@ -21,8 +21,8 @@ logger = logging.getLogger(__name__)
 
 @click.group(
     help=(
-        "Processes downloaded EO data to [PATH] according to parameters defined "
-        "in the [CONFIG_FILE]."
+        "Processes downloaded EO data in [input_path] according to parameters defined "
+        "in the [config_file], and store them in [output_path]."
     )
 )
 @click.option(
@@ -36,15 +36,44 @@ def cli(log):
     logging.basicConfig(level=numeric_level, format="%(asctime)s %(message)s")
 
 
-@cli.command(
-    help=(
-        "Generic unzipping and COG transforming of files in [PATH]."
-    )
-)
+@cli.command(help=("Generic unzipping and COG transforming of files in [input_path]."))
 @click.argument("config_file", required=False)
 @click.option("--output_path", default="./output", help="Output path")
-@click.argument("input_path", required=True, help="All .zip files under that path will be processed")
-def process(input_path: Argument | str, output_path: Option | str, config_file: Argument | str) -> None:
+@click.argument("input_path", required=True)
+def process(
+    input_path: Argument | str, output_path: Option | str, config_file: Argument | str
+) -> None:
+    """
+    Instantiate Preprocess class and process path contents.
+
+    Parameters:
+        input_path (click.Argument | str): Path to look for files
+        output_path (click.Argument | str): Path to store output
+        config_file (click.Argument | str): config json file
+        # TODO: raster resolutions config filter is dumb. Only checks if "in" filename
+          if "all" is set, it also downloads quality masks. So either search by filename field,
+          or set config option of "quality_files": True
+            "raster_resolutions": ["10m", "60m"]: all, 10m, 20m 60m, qa?
+    """
+    if config_file:
+        logger.debug("Cli preprocessing using config file: %s", config_file)
+
+    click.echo(f"Processing files in path {input_path}, storing in {output_path}\n")
+    process = preprocess.Preprocess(input_path, output_path, config_file)
+    process.from_path()
+
+
+@cli.command(help=("Clip files in [input_path] against a [shapefile]."))
+@click.argument("config_file", required=False)
+@click.option("--output_path", default="./output", help="Output path")
+@click.argument("shapefile_path", required=True)
+@click.argument("input_path", required=True)
+def clip(
+    input_path: Argument | str,
+    shapefile_path: Argument | str,
+    output_path: Option | str,
+    config_file: Argument | str,
+) -> None:
     """
     Instantiate Preprocess class and process path contents.
 
@@ -53,11 +82,11 @@ def process(input_path: Argument | str, output_path: Option | str, config_file: 
         config_file (click.Argument | str): config json file
     """
     if config_file:
-        logger.debug("Cli query for config file: %s", config_file)
+        logger.debug("Cli preprocessing using config file: %s", config_file)
 
-    click.echo("Processing files in path %s, storing in %s\n", input_path, output_path)
+    click.echo(f"Processing files in path {input_path}, storing in {output_path}\n")
     process = preprocess.Preprocess(input_path, output_path, config_file)
-    process.from_path()
+    process.clip(shapefile_path)
 
 
 if __name__ == "__main__":  # pragma: no cover
