@@ -94,8 +94,9 @@ class Preprocess:
                         shapefile_bbox_polygon = box(*transformed_shapefile_bbox)
 
                         if raster_bbox.intersects(shapefile_bbox_polygon):
-                            shape_file = PurePath(shapefile_path).parent.name
-                            output_raster_path = os.path.join(self._output_path, f"{shape_file}_clipped_{Path(raster_path).stem}.tif")
+                            shp_output_path = Path(self._output_path, PurePath(shapefile_path).parent.name)
+                            os.makedirs(shp_output_path, exist_ok=True)
+                            output_raster_path = os.path.join(shp_output_path, f"clipped_{Path(raster_path).stem}.tif")
                             clip_raster_with_rasterio(raster_path, shapefile_path, output_raster_path)
 
 
