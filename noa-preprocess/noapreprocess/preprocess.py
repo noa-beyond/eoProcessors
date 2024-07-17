@@ -5,7 +5,16 @@ from __future__ import annotations
 import os
 import logging
 import json
-from pathlib import Path
+import glob
+from pathlib import Path, PurePath
+
+import rasterio as rio
+from rasterio.mask import mask
+from shapely.geometry import box, shape, mapping
+from shapely.ops import transform
+import shapefile
+import pyproj
+
 import zipfile
 import click
 
@@ -31,6 +40,7 @@ class Preprocess:
             output_path (str): Where to store results
             config_file (str): Config filename (json)
         """
+
         self._input_path = Path(input_path).absolute()
         self._output_path = Path(output_path).absolute()
         os.makedirs(str(self._output_path), exist_ok=True)
@@ -67,5 +77,95 @@ class Preprocess:
                                         f"Extracted {Path(file).name} from {filename} to {self._output_path}"
                                     )
 
-    def clip(self):
-        pass
+    def clip(self, shapefile_path):
+        for root, dirs, files in os.walk(shapefile_path):
+            for file in files:
+                if file.endswith('.shp'):
+                    shapefile_path = os.path.join(root, file)
+
+                    for raster_file in glob.glob(os.path.join(self._input_path, '*.jp2')):
+                        raster_path = raster_file
+                        raster_bbox = get_raster_bbox(raster_path)
+
+                        raster_crs = get_raster_crs(raster_path)
+                        transformed_shapefile_geom = transform_shapefile_geometry(shapefile_path, raster_crs)
+                        transformed_shapefile_bbox = transformed_shapefile_geom.bounds
+
+                        shapefile_bbox_polygon = box(*transformed_shapefile_bbox)
+
+                        if raster_bbox.intersects(shapefile_bbox_polygon):
+                            shape_file = PurePath(shapefile_path).parent.name
+                            output_raster_path = os.path.join(self._output_path, f"{shape_file}_clipped_{Path(raster_path).stem}.tif")
+                            clip_raster_with_rasterio(raster_path, shapefile_path, output_raster_path)
+
+
+def get_shapefile_bbox(shapefile_path):
+    encoding = "utf-8"
+    cpg_path = shapefile_path.replace('.shp', '.cpg')
+    if os.path.exists(cpg_path):
+        with open(cpg_path) as cpg_file:
+            for line in cpg_file:
+                encoding = str(line).split("_")[0]
+    with shapefile.Reader(shapefile_path, encoding=encoding) as shp:
+        shapes = shp.shapes()
+        bbox = shapes[0].bbox  # xmin, ymin, xmax, ymax
+        bbox_polygon = box(*bbox)
+    return bbox_polygon
+
+
+def get_shapefile_crs(shapefile_path):
+    prj_path = shapefile_path.replace('.shp', '.prj')
+    with open(prj_path, 'r') as prj_file:
+        prj = prj_file.read()
+    return pyproj.CRS(prj)
+
+
+def get_raster_bbox(raster_path):
+    with rio.open(raster_path) as src:
+        bbox = src.bounds  # left, bottom, right, top
+        bbox_polygon = box(*bbox)
+    return bbox_polygon
+
+
+def get_raster_crs(raster_path):
+    with rio.open(raster_path) as src:
+        return src.crs
+
+
+def transform_shapefile_geometry(shapefile_path, target_crs):
+    source_crs = get_shapefile_crs(shapefile_path)
+
+    encoding = "utf-8"
+    cpg_path = shapefile_path.replace('.shp', '.cpg')
+    if os.path.exists(cpg_path):
+        with open(cpg_path) as cpg_file:
+            for line in cpg_file:
+                encoding = str(line).split("_")[0]
+
+    with shapefile.Reader(shapefile_path, encoding=encoding) as shp:
+        geom = shape(shp.shape(0).__geo_interface__)
+
+    project = pyproj.Transformer.from_crs(source_crs, target_crs, always_xy=True).transform
+    transformed_geom = transform(project, geom)
+    return transformed_geom
+
+
+def clip_raster_with_rasterio(raster_path, shapefile_path, output_raster_path):
+    raster_crs = get_raster_crs(raster_path)
+    geom = transform_shapefile_geometry(shapefile_path, raster_crs)
+
+    with rio.open(raster_path) as src:
+        out_image, out_transform = mask(src, [mapping(geom)], crop=True, filled=True, nodata=src.nodata)
+        out_meta = src.meta.copy()
+        out_meta.update({
+            "driver": "GTiff",
+            "height": out_image.shape[1],
+            "width": out_image.shape[2],
+            "transform": out_transform,
+            "nodata": 0
+        })
+
+    with rio.open(output_raster_path, "w", **out_meta) as dest:
+        dest.write(out_image)
+
+    print(f'Clipped {raster_path} using {shapefile_path} and saved to {output_raster_path}')

@@ -48,7 +48,7 @@ def process(
 
     Parameters:
         input_path (click.Argument | str): Path to look for files
-        output_path (click.Argument | str): Path to store output
+        output_path (click.Option | str): Path to store output
         config_file (click.Argument | str): config json file
         # TODO: raster resolutions config filter is dumb. Only checks if "in" filename
           if "all" is set, it also downloads quality masks. So either search by filename field,
@@ -78,11 +78,16 @@ def clip(
     Instantiate Preprocess class and process path contents.
 
     Parameters:
-        path (click.Argument | str): Path to look for files
+        input_path (click.Argument | str): Path to look for rasters (no walk in tree please)
+        shapefile_path (click.Argument | str): Path where 1 or more shapefile paths exist. The program does
+        not expect from you to know the shapefile name. It expects to give a path where more than one shapefile
+        folders exist. This is because some users have divided their multipolygon shapefiles to individual polygons.
+        An ad-hoc scenario uses the name of each individual shapefile for the output folder structure.
+        output_path (click.Option | str): Path to store output
         config_file (click.Argument | str): config json file
     """
     if config_file:
-        logger.debug("Cli preprocessing using config file: %s", config_file)
+        logger.debug("Cli preprocessing/clipping using config file: %s", config_file)
 
     click.echo(f"Processing files in path {input_path}, storing in {output_path}\n")
     process = preprocess.Preprocess(input_path, output_path, config_file)
