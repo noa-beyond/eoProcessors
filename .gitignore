@@ -40,3 +40,6 @@ coverage.xml
 *.cover
 
 .pytest_cache/
+
+# Other
+*.ipynb*
