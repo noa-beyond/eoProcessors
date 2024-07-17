@@ -9,7 +9,7 @@ import logging
 from pathlib import Path
 
 import click
-from click import Argument  # , Option
+from click import Argument, Option
 
 # Appending the module path in order to have a kind of cli "dry execution"
 sys.path.append(str(Path(__file__).parent / ".."))
@@ -41,9 +41,10 @@ def cli(log):
         "Generic unzipping and COG transforming of files in [PATH]."
     )
 )
-@click.argument("path", required=True)
 @click.argument("config_file", required=False)
-def process(path: Argument | str, config_file: Argument | str) -> None:
+@click.option("--output_path", default="./output", help="Output path")
+@click.argument("input_path", required=True, help="All .zip files under that path will be processed")
+def process(input_path: Argument | str, output_path: Option | str, config_file: Argument | str) -> None:
     """
     Instantiate Preprocess class and process path contents.
 
@@ -54,8 +55,8 @@ def process(path: Argument | str, config_file: Argument | str) -> None:
     if config_file:
         logger.debug("Cli query for config file: %s", config_file)
 
-    click.echo("Processing files in path %s:\n", path)
-    process = preprocess.Preprocess(path, config_file)
+    click.echo("Processing files in path %s, storing in %s\n", input_path, output_path)
+    process = preprocess.Preprocess(input_path, output_path, config_file)
     process.from_path()
 
 
