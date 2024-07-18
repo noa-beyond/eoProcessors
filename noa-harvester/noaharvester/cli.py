@@ -46,9 +46,15 @@ def cli(log):
         "the bounding box there instead of the config file."
     )
 )
+@click.option(
+    "--bbox_only",
+    "-bb",
+    is_flag=True,
+    help="Only use multipolygon total bbox, not individual",
+)
 @click.argument("config_file", required=True)
 @click.argument("shape_file", required=False)
-def query(config_file: Argument | str, shape_file: Argument | str) -> None:
+def query(config_file: Argument | str, shape_file: Argument | str, bbox_only: Option | bool) -> None:
     """
     Instantiate Harvester class and call query function in order to search for
     available products for the selected collections.
@@ -61,7 +67,7 @@ def query(config_file: Argument | str, shape_file: Argument | str) -> None:
         logger.debug("Cli query for config file: %s", config_file)
 
         click.echo("Querying providers for products:\n")
-        harvest = harvester.Harvester(config_file, shape_file)
+        harvest = harvester.Harvester(config_file, shape_file, bbox_only=False)
         harvest.query_data()
 
 
@@ -78,10 +84,16 @@ def query(config_file: Argument | str, shape_file: Argument | str) -> None:
     is_flag=True,
     help="Shows the progress indicator (for Copernicus only)",
 )
+@click.option(
+    "--bbox_only",
+    "-bb",
+    is_flag=True,
+    help="Only use multipolygon total bbox, not individual",
+)
 @click.argument("config_file", required=True)
 @click.argument("shape_file", required=False)
 def download(
-    config_file: Argument | str, shape_file: Argument | str, verbose: Option | bool
+    config_file: Argument | str, shape_file: Argument | str, verbose: Option | bool, bbox_only: Option | bool
 ) -> None:
     """
     Instantiate Harvester class and call download function.
@@ -96,7 +108,7 @@ def download(
         logger.debug("Cli download for config file: %s", config_file)
 
         click.echo("Downloading...\n")
-        harvest = harvester.Harvester(config_file, shape_file, verbose)
+        harvest = harvester.Harvester(config_file, shape_file, verbose, bbox_only=False)
         harvest.download_data()
         click.echo("Done.\n")
 

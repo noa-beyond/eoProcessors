@@ -23,7 +23,7 @@ class Harvester:
     """
 
     def __init__(
-        self, config_file: str, shape_file: str = None, verbose: bool = False
+        self, config_file: str, shape_file: str = None, verbose: bool = False, bbox_only: bool = False
     ) -> Harvester:
         """
         Harvester class. Constructor reads and loads the search items json file.
@@ -42,7 +42,7 @@ class Harvester:
 
         if shape_file:
             logger.debug("Using shapefile from path: %s", shape_file)
-            self._shape_file_bbox_list = utils.get_bbox_from_shp(shape_file)
+            self._shape_file_bbox_list = utils.get_bbox_from_shp(shape_file, bbox_only)
 
         with open(config_file, encoding="utf8") as f:
             self._config = json.load(f)
