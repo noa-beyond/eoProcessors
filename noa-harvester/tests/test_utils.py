@@ -13,7 +13,8 @@ class TestUtils:
 
         area_base_name_path = "/test_data/foo_shape"
         result = utils.get_bbox_from_shp(
-            Path(__file__).parent.name + area_base_name_path
+            Path(__file__).parent.name + area_base_name_path,
+            False
         )
 
         # [24.13994783117419, 38.638860630145174, 24.16899285922327, 38.66872082233962]
