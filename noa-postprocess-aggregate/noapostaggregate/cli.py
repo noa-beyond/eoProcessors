@@ -60,5 +60,29 @@ def aggregate(agg_function: Argument | str, data_path: Argument | str, output_pa
     process.from_path(agg_function)
 
 
+@cli.command(
+    help=(
+        "Aggregate according to [agg_function] argument for files in [path]."
+    )
+)
+@click.argument("agg_function", required=True)
+@click.argument("data_path", required=True)
+@click.option("--output_path", default="./output", help="Output path")
+def histogram_stretching(agg_function: Argument | str, data_path: Argument | str, output_path: Option | str) -> None:
+    """
+    Instantiate Postprocess class and process path contents.
+
+    Parameters:
+        agg_function (click.Argument | str): Aggregate function [median, mean, min, max]
+        data_path (click.Argument | str): Path to look for files
+        output_path (click.Argument | str): Path to store output files
+        config_file (click.Argument | str): config json file
+    """
+
+    click.echo(f"Processing files in path {data_path}:\n")
+    process = postaggregate.Aggregate(data_path, output_path)
+    process.from_path(agg_function)
+
+
 if __name__ == "__main__":  # pragma: no cover
     cli()
