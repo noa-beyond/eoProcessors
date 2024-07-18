@@ -83,14 +83,10 @@ class Preprocess:
                 if file.endswith(".shp"):
                     shapefile_path = os.path.join(root, file)
 
-                    for raster_file in glob.glob(
-                        os.path.join(
-                            self._input_path, f"*{self._config['raster_suffix_input']}"
-                        )
-                    ):
+                    for raster_file in glob.glob(os.path.join(self._input_path, '*.jp2')):
                         raster_path = raster_file
                         raster_bbox = self._get_raster_bbox(raster_path)
-
+                        print(f"!!!!!!!!!!!!!{shapefile_path}")
                         raster_crs = self._get_raster_crs(raster_path)
                         transformed_shapefile_geom = self._transform_shapefile_geometry(
                             shapefile_path, raster_crs
@@ -108,9 +104,10 @@ class Preprocess:
                                 shp_output_path,
                                 f"clipped_{Path(raster_path).stem}{self._config['raster_suffix_output']}",
                             )
-                            self._clip_raster_with_rasterio(
-                                raster_path, shapefile_path, output_raster_path
-                            )
+                            if "Nanjili" in shapefile_path:
+                                self._clip_raster_with_rasterio(
+                                    raster_path, shapefile_path, output_raster_path
+                                )
 
     # TODO: with "self", you pass the whole object, where you don't need it. It needs
     # triage, to separate functions to utils and important ones as private.
@@ -151,7 +148,7 @@ class Preprocess:
     def _transform_shapefile_geometry(self, shapefile_path, target_crs):
         source_crs = self._get_shapefile_crs(shapefile_path)
         with shapefile.Reader(
-            self, shapefile_path, encoding=self._get_encoding(shapefile_path)
+            shapefile_path, encoding=self._get_encoding(shapefile_path)
         ) as shp:
             geom = shape(shp.shape(0).__geo_interface__)
 
@@ -168,9 +165,18 @@ class Preprocess:
         geom = self._transform_shapefile_geometry(shapefile_path, raster_crs)
 
         with rio.open(raster_path) as src:
-            out_image, out_transform = mask(
-                src, [mapping(geom)], crop=True, filled=True, nodata=src.nodata
-            )
+            # Read the entire band
+            band = src.read(1, masked=True)
+            min_val = band.min()
+            max_val = band.max()
+            print(f"!!!!{min_val}...{max_val}")
+
+            # Apply mask
+            out_image, out_transform = mask(src, [mapping(geom)], crop=True, filled=False, nodata=src.nodata)
+            # out_image, out_transform = mask(
+            #     src, [mapping(geom)], crop=True, filled=False, nodata=src.nodata
+            # )
+
             out_meta = src.meta.copy()
             out_meta.update(
                 {
@@ -178,13 +184,24 @@ class Preprocess:
                     "height": out_image.shape[1],
                     "width": out_image.shape[2],
                     "transform": out_transform,
-                    "nodata": self._config.get("nodata_custom_value", src.nodata),
+                    "nodata": self._config.get("nodata_custom_value", src.nodata)
                 }
             )
 
         with rio.open(output_raster_path, "w", **out_meta) as dest:
             dest.write(out_image)
+            dest.update_tags(MIN=min_val, MAX=max_val)
+
 
         print(
             f"Clipped {raster_path} using {shapefile_path} and saved to {output_raster_path}"
         )
+
+def calculate_image_statistics(band):
+    nodata = band.fill_value
+    valid_pixels = band.data[~band.mask]  # Access data where mask is False
+    valid_pixels = band[band != nodata]
+    if len(valid_pixels) > 0:
+        return float(valid_pixels.min()), float(valid_pixels.max())
+    else:
+        raise ValueError("No valid pixels found in the image.")
