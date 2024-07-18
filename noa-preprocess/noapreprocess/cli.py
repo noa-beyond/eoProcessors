@@ -50,8 +50,8 @@ def process(
         input_path (click.Argument | str): Path to look for files
         output_path (click.Option | str): Path to store output
         config_file (click.Argument | str): config json file
-        # TODO: raster resolutions config filter is dumb. Only checks if "in" filename
-          if "all" is set, it also downloads quality masks. So either search by filename field,
+        # TODO: raster resolutions config filter is dumb. Only checks if "in" filename.
+          If "all" is set, it also downloads quality masks. So either search by filename field,
           or set config option of "quality_files": True
             "raster_resolutions": ["10m", "60m"]: all, 10m, 20m 60m, qa?
     """
@@ -75,12 +75,12 @@ def clip(
     config_file: Argument | str,
 ) -> None:
     """
-    Instantiate Preprocess class and process path contents.
+    Instantiate Preprocess class and clip input path contents against a shapefile path.
 
     Parameters:
         input_path (click.Argument | str): Path to look for rasters (no walk in tree please)
         shapefile_path (click.Argument | str): Path where 1 or more shapefile paths exist. The program does
-        not expect from you to know the shapefile name. It expects to give a path where more than one shapefile
+        not expect from you to know the shapefile name. It expects to give a path where one or more shapefile
         folders exist. This is because some users have divided their multipolygon shapefiles to individual polygons.
         An ad-hoc scenario uses the name of each individual shapefile for the output folder structure.
         output_path (click.Option | str): Path to store output
