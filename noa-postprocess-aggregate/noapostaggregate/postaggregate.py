@@ -20,7 +20,7 @@ class Aggregate:
     def __init__(self, input_path, output_path) -> None:
         self._input_path = input_path
         self._output_path = Path(output_path).absolute()
-        pass
+        self._output_path.mkdir(parents=True, exist_ok=True)
 
     def from_path(self, agg_function):
 
@@ -48,15 +48,17 @@ class Aggregate:
 
         for root, dirs, files in os.walk(self._input_path, topdown=True):
             for file in files:
-                if "reference" in file and reference_image is None:
-                    reference_image = file
-                reference_parts = reference_image.split("_")
-                print(reference_parts)
-                print("---------------------------")
-                reference = gdal.Open(reference_image, gdal.GA_Update)
+                if "reference" in file:
+                    if reference_image is None:
+                        ref_image = str(Path(root, file))
+                    else:
+                        ref_image = reference_image
+                else:
+                    continue
+                reference_parts = ref_image.split("_")
+                reference = gdal.Open(ref_image, gdal.GA_Update)
                 reference_array = np.array(reference.GetRasterBand(1).ReadAsArray())
-
-                for filename in glob.glob(f"{self._input_path}/*.tif"):
+                for filename in glob.glob(f"{root}/*.tif"):
                     filename_parts = filename.split("_")
                     if (
                         reference_parts[-1] == filename_parts[-1]
@@ -64,14 +66,13 @@ class Aggregate:
                         and reference_parts[-4] == filename_parts[-4]
                         and "reference" not in filename
                     ):
-
-                        self._match_and_save(filename, reference_array)
+                        self._match_and_save(root, filename, reference_array)
                 del reference_array
 
     def _get_images_and_profile(self, tile):
         tci_images = []
         profile = None
-        for root, dirs, files in os.walk(self._input_path, topdown=True):
+        for root, _, files in os.walk(self._input_path, topdown=True):
             for fname in files:
                 if fname.endswith(".tif") and fname.split("_")[-5] == tile:
                     if profile is None:
@@ -105,7 +106,7 @@ class Aggregate:
                 tiles_list.append(tile)
         return tiles_list
 
-    def _match_and_save(self, source, reference_array):
+    def _match_and_save(self, parent_folder, source, reference_array):
         image_to_match = gdal.Open(source, gdal.GA_Update)
         image_array = np.array(image_to_match.GetRasterBand(1).ReadAsArray())
 
@@ -118,9 +119,8 @@ class Aggregate:
 
         creation_options = ["COMPRESS=LZW", "TILED=YES"]
 
-        self._output_path.mkdir(parents=True, exist_ok=True)
         output_image = (
-            str(self._output_path)
+            parent_folder
             + "/"
             + "histomatch_"
             + source.split("/")[-1]

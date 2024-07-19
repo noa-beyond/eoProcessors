@@ -64,9 +64,9 @@ def aggregate(
 @cli.command(
     help=("Histogram matching of files in [input_path] based on a reference raster")
 )
-@click.argument("input_reference_filename", required=False)
 @click.option("--output_path", default="./output", help="Output path")
 @click.argument("input_path", required=True)
+@click.argument("input_reference_filename", required=False)
 def histogram_matching(
     input_path: Argument | str,
     output_path: Option | str,
@@ -82,7 +82,7 @@ def histogram_matching(
     """
 
     if input_reference_filename is None:
-        click.echo(f"No reference file is given. Will process full path\n")
+        click.echo("No reference file is given. Will process full path\n")
 
     click.echo(f"Processing files in path {input_path}:\n")
     process = postaggregate.Aggregate(input_path, output_path)
