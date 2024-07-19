@@ -48,7 +48,7 @@ class Aggregate:
 
         for root, dirs, files in os.walk(self._input_path, topdown=True):
             for file in files:
-                if "reference" in file:
+                if "reference" in file and str(file).endswith(".tif"):
                     if reference_image is None:
                         ref_image = str(Path(root, file))
                     else:
