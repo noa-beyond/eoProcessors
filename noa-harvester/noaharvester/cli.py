@@ -71,6 +71,7 @@ def query(config_file: Argument | str, shape_file: Argument | str, bbox_only: Op
         harvest.query_data()
 
 
+# TODO download location as an optional argument for download
 @cli.command(
     help=(
         "Downloads data from the selected providers and query terms"
