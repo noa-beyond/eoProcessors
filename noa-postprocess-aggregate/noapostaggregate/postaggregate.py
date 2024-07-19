@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class Aggregate:
 
     def __init__(self, input_path, output_path) -> None:
-        self._path = input_path
+        self._input_path = input_path
         self._output_path = Path(output_path).absolute()
         pass
 
@@ -44,70 +44,34 @@ class Aggregate:
                     dst.write(aggregated_img)
             images = []
 
-    def histogram_matching(self, reference_image: str):
+    def histogram_matching(self, reference_image: str | None):
 
-        reference_parts = reference_image.split("_")
-        print(reference_parts)
-        print("---------------------------")
-        reference = gdal.Open(reference_image, gdal.GA_Update)
-        reference_array = np.array(reference.GetRasterBand(1).ReadAsArray())
+        for root, dirs, files in os.walk(self._input_path, topdown=True):
+            for file in files:
+                if "reference" in file and reference_image is None:
+                    reference_image = file
+                reference_parts = reference_image.split("_")
+                print(reference_parts)
+                print("---------------------------")
+                reference = gdal.Open(reference_image, gdal.GA_Update)
+                reference_array = np.array(reference.GetRasterBand(1).ReadAsArray())
 
-        for filename in glob.glob(f"{self._path}/*.tif"):
-            filename_parts = filename.split("_")
-            if (
-                reference_parts[-1] == filename_parts[-1]
-                and reference_parts[-2] == filename_parts[-2]
-                and reference_parts[-4] == filename_parts[-4]
-                and reference_image not in filename
-            ):
+                for filename in glob.glob(f"{self._input_path}/*.tif"):
+                    filename_parts = filename.split("_")
+                    if (
+                        reference_parts[-1] == filename_parts[-1]
+                        and reference_parts[-2] == filename_parts[-2]
+                        and reference_parts[-4] == filename_parts[-4]
+                        and "reference" not in filename
+                    ):
 
-                image_to_match = gdal.Open(filename, gdal.GA_Update)
-                image_array = np.array(image_to_match.GetRasterBand(1).ReadAsArray())
-
-                matched = match_histograms(
-                    image_array, reference_array, channel_axis=None
-                )
-
-                geotransform = image_to_match.GetGeoTransform()
-                projection = image_to_match.GetProjection()
-
-                creation_options = ["COMPRESS=LZW", "TILED=YES"]
-
-                self._output_path.mkdir(parents=True, exist_ok=True)
-                output_image = (
-                    str(self._output_path)
-                    + "/"
-                    + "histomatch_"
-                    + filename.split("/")[-1]
-                )
-                print(output_image)
-
-                driver = gdal.GetDriverByName("GTiff")
-                dst_dataset = driver.Create(
-                    output_image,
-                    image_to_match.RasterXSize,
-                    image_to_match.RasterYSize,
-                    1,
-                    gdal.GDT_UInt16,
-                    options=creation_options,
-                )
-                dst_dataset.SetGeoTransform(geotransform)
-                dst_dataset.SetProjection(projection)
-
-                dst_band = dst_dataset.GetRasterBand(1)
-                dst_band.WriteArray(matched)
-                dst_band.FlushCache()
-
-                dst_band.SetNoDataValue(0)
-                # Clean up
-                del image_to_match
-                del dst_dataset
-        del reference
+                        self._match_and_save(filename, reference_array)
+                del reference_array
 
     def _get_images_and_profile(self, tile):
         tci_images = []
         profile = None
-        for root, dirs, files in os.walk(self._path, topdown=True):
+        for root, dirs, files in os.walk(self._input_path, topdown=True):
             for fname in files:
                 if fname.endswith(".tif") and fname.split("_")[-5] == tile:
                     if profile is None:
@@ -135,8 +99,51 @@ class Aggregate:
 
         tiles_list = []
 
-        for filename in glob.glob(f"{self._path}/*.tif"):
+        for filename in glob.glob(f"{self._input_path}/*.tif"):
             tile = filename.split("_")[-5]
             if tile not in tiles_list:
                 tiles_list.append(tile)
         return tiles_list
+
+    def _match_and_save(self, source, reference_array):
+        image_to_match = gdal.Open(source, gdal.GA_Update)
+        image_array = np.array(image_to_match.GetRasterBand(1).ReadAsArray())
+
+        matched = match_histograms(
+            image_array, reference_array, channel_axis=None
+        )
+
+        geotransform = image_to_match.GetGeoTransform()
+        projection = image_to_match.GetProjection()
+
+        creation_options = ["COMPRESS=LZW", "TILED=YES"]
+
+        self._output_path.mkdir(parents=True, exist_ok=True)
+        output_image = (
+            str(self._output_path)
+            + "/"
+            + "histomatch_"
+            + source.split("/")[-1]
+        )
+        print(output_image)
+
+        driver = gdal.GetDriverByName("GTiff")
+        dst_dataset = driver.Create(
+            output_image,
+            image_to_match.RasterXSize,
+            image_to_match.RasterYSize,
+            1,
+            gdal.GDT_UInt16,
+            options=creation_options,
+        )
+        dst_dataset.SetGeoTransform(geotransform)
+        dst_dataset.SetProjection(projection)
+
+        dst_band = dst_dataset.GetRasterBand(1)
+        dst_band.WriteArray(matched)
+        dst_band.FlushCache()
+
+        dst_band.SetNoDataValue(0)
+        # Clean up
+        del image_to_match
+        del dst_dataset
