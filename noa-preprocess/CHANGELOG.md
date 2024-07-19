@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.0] - 2024-06-26
 ### Added
-- Initial commit (#29)
+- Initial commit - Extracting and clipping (#29)
 
 ### Changed
 ### Deprecated
