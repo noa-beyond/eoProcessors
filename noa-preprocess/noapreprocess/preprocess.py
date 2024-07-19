@@ -151,7 +151,7 @@ class Preprocess:
     def _transform_shapefile_geometry(self, shapefile_path, target_crs):
         source_crs = self._get_shapefile_crs(shapefile_path)
         with shapefile.Reader(
-            self, shapefile_path, encoding=self._get_encoding(shapefile_path)
+            shapefile_path, encoding=self._get_encoding(shapefile_path)
         ) as shp:
             geom = shape(shp.shape(0).__geo_interface__)
 
