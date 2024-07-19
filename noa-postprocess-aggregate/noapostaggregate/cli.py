@@ -14,7 +14,9 @@ from click import Argument, Option
 # Appending the module path in order to have a kind of cli "dry execution"
 sys.path.append(str(Path(__file__).parent / ".."))
 
-from noapostaggregate import postaggregate  # noqa:402 pylint:disable=wrong-import-position
+from noapostaggregate import ( # noqa:402 pylint:disable=wrong-import-position
+    postaggregate
+)
 
 logger = logging.getLogger(__name__)
 
@@ -37,14 +39,14 @@ def cli(log):
 
 
 @cli.command(
-    help=(
-        "Aggregate according to [agg_function] argument for files in [path]."
-    )
+    help=("Aggregate according to [agg_function] argument for files in [path].")
 )
 @click.argument("agg_function", required=True)
 @click.argument("data_path", required=True)
 @click.option("--output_path", default="./output", help="Output path")
-def aggregate(agg_function: Argument | str, data_path: Argument | str, output_path: Option | str) -> None:
+def aggregate(
+    agg_function: Argument | str, data_path: Argument | str, output_path: Option | str
+) -> None:
     """
     Instantiate Postprocess class and process path contents.
 
@@ -60,26 +62,28 @@ def aggregate(agg_function: Argument | str, data_path: Argument | str, output_pa
 
 
 @cli.command(
-    help=(
-        "Histogram stretching of files in [input_path] based on a reference raster"
-    )
+    help=("Histogram matching of files in [input_path] based on a reference raster")
 )
 @click.argument("input_reference_filename", required=True)
 @click.argument("input_path", required=True)
 @click.option("--output_path", default="./output", help="Output path")
-def histogram_stretching(input_reference_filename: Argument | str, input_path: Argument | str, output_path: Option | str) -> None:
+def histogram_matching(
+    input_reference_filename: Argument | str,
+    input_path: Argument | str,
+    output_path: Option | str,
+) -> None:
     """
     Instantiate Postprocess class and process path contents.
 
     Parameters:
-        input_reference_filename (click.Argument | str): Filename to stretch against to.
+        input_reference_filename (click.Argument | str): Filename to match against to.
         input_path (click.Argument | str): Path of files to be processed
         output_path (click.Option | str): Path to store output files
     """
 
     click.echo(f"Processing files in path {input_path}:\n")
     process = postaggregate.Aggregate(input_path, output_path)
-    process.histogram_stretch(input_reference_filename)
+    process.histogram_matching(input_reference_filename)
 
 
 if __name__ == "__main__":  # pragma: no cover
