@@ -89,5 +89,33 @@ def histogram_matching(
     process.histogram_matching(input_reference_filename)
 
 
+@cli.command(
+    help=("Total difference vector of files in [input_path] against a reference raster")
+)
+@click.option("--output_path", default="./output", help="Output path")
+@click.argument("input_path", required=True)
+@click.argument("input_reference_filename", required=False)
+def difference_vector(
+    input_path: Argument | str,
+    output_path: Option | str,
+    input_reference_filename: Argument | str | None,
+) -> None:
+    """
+    Instantiate Postprocess class and process path contents.
+
+    Parameters:
+        input_reference_filename (click.Argument | str): Filename to calculate difference from
+        input_path (click.Argument | str): Path of files to be processed
+        output_path (click.Option | str): Path to store output files
+    """
+
+    if input_reference_filename is None:
+        click.echo("No reference file is given. Will process full path\n")
+
+    click.echo(f"Processing files in path {input_path}:\n")
+    process = postaggregate.Aggregate(input_path, output_path)
+    process.difference_vector(input_reference_filename)
+
+
 if __name__ == "__main__":  # pragma: no cover
     cli()

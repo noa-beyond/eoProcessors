@@ -60,6 +60,7 @@ class Aggregate:
                 reference_array = np.array(reference.GetRasterBand(1).ReadAsArray())
                 for filename in glob.glob(f"{root}/*.tif"):
                     filename_parts = filename.split("_")
+                    # TODO make all these file name parts comparison in a pattern matching algo
                     if (
                         reference_parts[-1] == filename_parts[-1]
                         and reference_parts[-2] == filename_parts[-2]
@@ -68,6 +69,40 @@ class Aggregate:
                     ):
                         self._match_and_save(root, filename, reference_array)
                 del reference_array
+
+    def difference_vector(self, reference_image: str | None):
+
+        for root, dirs, files in os.walk(self._input_path, topdown=True):
+            for file in files:
+                if "reference" in file and str(file).endswith(".tif") and "dif_vector" not in file:
+                    if reference_image is None:
+                        ref_image = str(Path(root, file))
+                    else:
+                        ref_image = reference_image
+                else:
+                    continue
+                reference_parts = ref_image.split("_")
+                da_ref = rioxarray.open_rasterio(ref_image)
+                difference_vector = []
+                for filename in glob.glob(f"{root}/*.tif"):
+                    filename_parts = filename.split("_")
+                    if (
+                        reference_parts[-1] == filename_parts[-1]
+                        and reference_parts[-2] == filename_parts[-2]
+                        and reference_parts[-4] == filename_parts[-4]
+                        and "reference" not in filename
+                        and "dif_vector" not in filename
+                        and "histomatch" in filename
+                    ):
+
+                        # Get the normalized difference vector
+                        # Get its power of 2 and store it in the collection
+                        difference_vector.append(self._difference_vector(da_ref, filename))
+
+                # Sum all the elements in the array to produce the final output image
+                sum_image = np.sum(difference_vector, axis=0).astype(np.uint8)
+
+                self._save_total_difference_vector(root, ref_image, sum_image)
 
     def _get_images_and_profile(self, tile):
         tci_images = []
@@ -147,3 +182,41 @@ class Aggregate:
         # Clean up
         del image_to_match
         del dst_dataset
+
+    def _difference_vector(self, reference_data_array, image_filename):
+        da = rioxarray.open_rasterio(image_filename)
+        difference = reference_data_array - da
+        difference = difference * difference
+        # Normalize the difference to the 0-255 range
+        difference_min = difference.min().item()
+        difference_max = difference.max().item()
+        # Prevent division by zero in case of a flat image
+        if difference_min == difference_max:
+            normalized_difference = np.zeros_like(difference, dtype=np.uint8)
+        else:
+            normalized_difference = ((difference - difference_min) / (difference_max - difference_min) * 255).astype(np.uint8)
+
+        # return difference
+        return normalized_difference
+
+    def _save_total_difference_vector(self, parent_folder, reference_image, sum_image):
+
+        # creation_options = ["COMPRESS=LZW", "TILED=YES"]
+
+        output_image = (
+            parent_folder
+            + "/"
+            + "dif_vector"
+            + reference_image.split("/")[-1]
+        )
+        print(output_image)
+
+        # Get the metadata from the original image
+        with rio.open(reference_image) as src:
+            meta = src.meta
+        # Update the metadata for the output image
+        meta.update(dtype=rio.uint8)
+
+        # Save the resulting output image as a GeoTIFF
+        with rio.open(output_image, 'w', **meta) as dst:
+            dst.write(sum_image)  # Write the first band
