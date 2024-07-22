@@ -208,6 +208,7 @@ class Aggregate:
         ref_file = reference_image.split("/")[-1].split("_")
         output_image = (
             parent_folder
+            + "/"
             + ref_file[-4]
             + "_"
             + ref_file[-3]
