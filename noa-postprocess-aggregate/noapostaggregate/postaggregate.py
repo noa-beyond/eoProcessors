@@ -97,12 +97,13 @@ class Aggregate:
 
                         # Get the normalized difference vector
                         # Get its power of 2 and store it in the collection
-                        difference_vector.append(self._difference_vector(da_ref, filename))
+                        single_difference_vector = self._difference_vector(da_ref, filename)
+                        self._save_difference_vector(root, ref_image, single_difference_vector, filename_parts[-3])
+                        difference_vector.append(single_difference_vector)
                 if difference_vector:
                     # Sum all the elements in the array to produce the final output image
                     sum_image = np.sum(difference_vector, axis=0).astype(np.uint8)
-
-                    self._save_total_difference_vector(root, ref_image, sum_image)
+                    self._save_difference_vector(root, ref_image, sum_image)
 
     def _get_images_and_profile(self, tile):
         tci_images = []
@@ -199,15 +200,23 @@ class Aggregate:
         # return difference
         return normalized_difference
 
-    def _save_total_difference_vector(self, parent_folder, reference_image, sum_image):
+    def _save_difference_vector(self, parent_folder, reference_image, dif_image, source_filename_part=None):
 
-        # creation_options = ["COMPRESS=LZW", "TILED=YES"]
-
+        source_text = "TOTAL"
+        if source_filename_part:
+            source_text = source_filename_part
+        ref_file = reference_image.split("/")[-1].split("_")
         output_image = (
             parent_folder
-            + "/"
-            + "dif_vector"
-            + reference_image.split("/")[-1]
+            + ref_file[-4]
+            + "_"
+            + ref_file[-3]
+            + "_dif_"
+            + source_text
+            + "_"
+            + ref_file[-2]
+            + "_"
+            + ref_file[-1]
         )
         print(output_image)
 
@@ -219,4 +228,4 @@ class Aggregate:
 
         # Save the resulting output image as a GeoTIFF
         with rio.open(output_image, 'w', **meta) as dst:
-            dst.write(sum_image)  # Write the first band
+            dst.write(dif_image)  # Write the first band
