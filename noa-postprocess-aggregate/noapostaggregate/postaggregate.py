@@ -98,11 +98,11 @@ class Aggregate:
                         # Get the normalized difference vector
                         # Get its power of 2 and store it in the collection
                         difference_vector.append(self._difference_vector(da_ref, filename))
+                if difference_vector:
+                    # Sum all the elements in the array to produce the final output image
+                    sum_image = np.sum(difference_vector, axis=0).astype(np.uint8)
 
-                # Sum all the elements in the array to produce the final output image
-                sum_image = np.sum(difference_vector, axis=0).astype(np.uint8)
-
-                self._save_total_difference_vector(root, ref_image, sum_image)
+                    self._save_total_difference_vector(root, ref_image, sum_image)
 
     def _get_images_and_profile(self, tile):
         tci_images = []
