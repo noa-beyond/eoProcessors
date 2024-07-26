@@ -1,5 +1,6 @@
 import os
 import glob
+import re
 from pathlib import Path
 import logging
 import click
@@ -70,11 +71,115 @@ class Aggregate:
                         self._match_and_save(root, filename, reference_array)
                 del reference_array
 
+    def differnce_vector_per_month(self):
+
+        yearmonth_set = set()
+
+        for root, dirs, files in os.walk(self._input_path, topdown=True):
+            for dir in dirs:
+                for file in os.listdir(Path(root, dir)):
+                    if str(file).endswith(".tif") and "dif" not in str(file):
+                        yearmonth = str(file).split("_")[-3]
+                        if not re.search("\\d{8}T\\d{6}", yearmonth):
+                            click.echo(
+                                f"Wrong input filename(s): {file}. The third from the "
+                                f"end '_' delimiter part, should be the timedate, "
+                                f"following the 'YyyyMmDdTHhMmSs' pattern. This "
+                                f"follows the Copernicus naming convention. If "
+                                f"you need another type of naming for date "
+                                f"retrieval, please open a ticket."
+                            )
+                            return False
+                        yearmonth = yearmonth.split("T")[0][:6]
+                        yearmonth_set.add(int(yearmonth))
+                yearmonth_list = list(sorted(yearmonth_set, key=int))
+                for month in yearmonth_list[:-1]:
+                    # You should check with next available month, but the initial user did
+                    # not want that:
+                    # next_month = yearmonth_list[yearmonth_list.index(month) + 1]
+                    if str(month)[-2:] == "12":
+                        # I bet you can't read this. I'm going to jail
+                        next_month = int(str(int(str(month)[0:4]) + 1) + "01")
+                    else:
+                        next_month = month + 1
+                    for ref_file in os.listdir(Path(root, dir)):
+                        if str(ref_file).endswith(".tif") and os.path.isfile(
+                            Path(root, dir, ref_file)
+                        ):
+                            if str(month) in str(ref_file).split("_")[-3].split("T")[0]:
+                                date = str(ref_file).split("_")[-3].split("T")[0]
+                                band = str(ref_file).split("_")[-2]
+                                tile = str(ref_file).split("_")[-4]
+                                for dif_file in os.listdir(Path(root, dir)):
+                                    if os.path.isfile(Path(root, dir, dif_file)):
+                                        if (
+                                            str(next_month)
+                                            in str(dif_file)
+                                            .split("_")[-3]
+                                            .split("T")[0]
+                                            and band == str(dif_file).split("_")[-2]
+                                        ):
+                                            output_path = Path(
+                                                root,
+                                                dir,
+                                                (str(month) + "_" + str(next_month)),
+                                            )
+                                            output_path.mkdir(
+                                                parents=True, exist_ok=True
+                                            )
+                                            da_ref = rioxarray.open_rasterio(
+                                                str(Path(root, dir, ref_file))
+                                            )
+                                            single_difference_vector = (
+                                                self._difference_vector(
+                                                    da_ref, Path(root, dir, dif_file)
+                                                )
+                                            )
+                                            # Get the metadata from the original image
+                                            with rio.open(
+                                                str(Path(root, dir, ref_file))
+                                            ) as src:
+                                                meta = src.meta
+                                            # Update the metadata for the output image
+                                            meta.update(dtype=rio.uint8)
+                                            output_image = Path(
+                                                root,
+                                                dir,
+                                                output_path,
+                                                str(
+                                                    tile
+                                                    + "_"
+                                                    + date
+                                                    + "_dif_"
+                                                    + str(dif_file)
+                                                    .split("_")[-3]
+                                                    .split("T")[0]
+                                                    + "_"
+                                                    + band
+                                                    + ".tif"
+                                                ),
+                                            )
+                                            # Save the resulting output image as a GeoTIFF
+                                            with rio.open(
+                                                output_image, "w", **meta
+                                            ) as dst:
+                                                dst.write(
+                                                    single_difference_vector
+                                                )  # Write the first band
+
+                                            # self._save_difference_vector(root, file, single_difference_vector, filename_parts[-3])
+                print(yearmonth_list)
+                yearmonth_set.clear()
+
     def difference_vector(self, reference_image: str | None):
 
         for root, dirs, files in os.walk(self._input_path, topdown=True):
             for file in files:
-                if "reference" in file and str(file).endswith(".tif") and "dif_vector" not in file:
+                if (
+                    "reference" in file
+                    and str(file).endswith(".tif")
+                    and "dif_vector" not in file
+                ):
                     if reference_image is None:
                         ref_image = str(Path(root, file))
                     else:
@@ -97,8 +202,15 @@ class Aggregate:
 
                         # Get the normalized difference vector
                         # Get its power of 2 and store it in the collection
-                        single_difference_vector = self._difference_vector(da_ref, filename)
-                        self._save_difference_vector(root, ref_image, single_difference_vector, filename_parts[-3])
+                        single_difference_vector = self._difference_vector(
+                            da_ref, filename
+                        )
+                        self._save_difference_vector(
+                            root,
+                            ref_image,
+                            single_difference_vector,
+                            filename_parts[-3],
+                        )
                         difference_vector.append(single_difference_vector)
                 if difference_vector:
                     # Sum all the elements in the array to produce the final output image
@@ -146,21 +258,14 @@ class Aggregate:
         image_to_match = gdal.Open(source, gdal.GA_Update)
         image_array = np.array(image_to_match.GetRasterBand(1).ReadAsArray())
 
-        matched = match_histograms(
-            image_array, reference_array, channel_axis=None
-        )
+        matched = match_histograms(image_array, reference_array, channel_axis=None)
 
         geotransform = image_to_match.GetGeoTransform()
         projection = image_to_match.GetProjection()
 
         creation_options = ["COMPRESS=LZW", "TILED=YES"]
 
-        output_image = (
-            parent_folder
-            + "/"
-            + "histomatch_"
-            + source.split("/")[-1]
-        )
+        output_image = parent_folder + "/" + "histomatch_" + source.split("/")[-1]
         print(output_image)
 
         driver = gdal.GetDriverByName("GTiff")
@@ -187,7 +292,7 @@ class Aggregate:
     def _difference_vector(self, reference_data_array, image_filename):
         da = rioxarray.open_rasterio(image_filename)
         difference = reference_data_array - da
-        difference = difference * difference
+        difference = np.multiply(difference, difference)
         # Normalize the difference to the 0-255 range
         difference_min = difference.min().item()
         difference_max = difference.max().item()
@@ -195,12 +300,16 @@ class Aggregate:
         if difference_min == difference_max:
             normalized_difference = np.zeros_like(difference, dtype=np.uint8)
         else:
-            normalized_difference = ((difference - difference_min) / (difference_max - difference_min) * 255).astype(np.uint8)
+            normalized_difference = (
+                (difference - difference_min) / (difference_max - difference_min) * 255
+            ).astype(np.uint8)
 
         # return difference
         return normalized_difference
 
-    def _save_difference_vector(self, parent_folder, reference_image, dif_image, source_filename_part=None):
+    def _save_difference_vector(
+        self, parent_folder, reference_image, dif_image, source_filename_part=None
+    ):
 
         source_text = "TOTAL"
         if source_filename_part:
@@ -212,7 +321,7 @@ class Aggregate:
             + ref_file[-4]
             + "_"
             + ref_file[-3]
-            + "_dif_"
+            + "_dif_!!!!!!!_"
             + source_text
             + "_"
             + ref_file[-2]
@@ -228,5 +337,5 @@ class Aggregate:
         meta.update(dtype=rio.uint8)
 
         # Save the resulting output image as a GeoTIFF
-        with rio.open(output_image, 'w', **meta) as dst:
+        with rio.open(output_image, "w", **meta) as dst:
             dst.write(dif_image)  # Write the first band

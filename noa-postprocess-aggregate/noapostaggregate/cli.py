@@ -14,8 +14,8 @@ from click import Argument, Option
 # Appending the module path in order to have a kind of cli "dry execution"
 sys.path.append(str(Path(__file__).parent / ".."))
 
-from noapostaggregate import ( # noqa:402 pylint:disable=wrong-import-position
-    postaggregate
+from noapostaggregate import (  # noqa:402 pylint:disable=wrong-import-position
+    postaggregate,
 )
 
 logger = logging.getLogger(__name__)
@@ -93,12 +93,20 @@ def histogram_matching(
     help=("Total difference vector of files in [input_path] against a reference raster")
 )
 @click.option("--output_path", default="./output", help="Output path")
+@click.option(
+    "--per_month",
+    is_flag=True,
+    show_default=True,
+    default=False,
+    help="If true, then a per month dif is produced under the same folder",
+)
 @click.argument("input_path", required=True)
 @click.argument("input_reference_filename", required=False)
 def difference_vector(
     input_path: Argument | str,
     output_path: Option | str,
     input_reference_filename: Argument | str | None,
+    per_month: Option | bool,
 ) -> None:
     """
     Instantiate Postprocess class and process path contents.
@@ -109,12 +117,17 @@ def difference_vector(
         output_path (click.Option | str): Path to store output files
     """
 
-    if input_reference_filename is None:
-        click.echo("No reference file is given. Will process full path\n")
+    if input_reference_filename is None and not per_month:
+        click.echo(
+            "No reference file is given. Will process full path, searching for 'reference' in filename\n"
+        )
 
     click.echo(f"Processing files in path {input_path}:\n")
     process = postaggregate.Aggregate(input_path, output_path)
-    process.difference_vector(input_reference_filename)
+    if per_month:
+        process.differnce_vector_per_month()
+    else:
+        process.difference_vector(input_reference_filename)
 
 
 if __name__ == "__main__":  # pragma: no cover
