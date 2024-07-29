@@ -97,27 +97,37 @@ class Aggregate:
                     # You should check with next available month, but the initial user did
                     # not want that:
                     # next_month = yearmonth_list[yearmonth_list.index(month) + 1]
-                    if str(month)[-2:] == "12":
-                        # I bet you can't read this. I'm going to jail
-                        next_month = int(str(int(str(month)[0:4]) + 1) + "01")
+                    # if str(month)[-2:] == "12":
+                    if abs(month) % 100 == 12:
+                        next_month = month + 89
+                        # This was the first "solution", after 8 hours of
+                        # programming and child care. TL;DR:
+                        # When in doubt, take a weekend break.
+                        # I bet you can't read this. I'm going to jail:
+                        # next_month = int(str(int(str(month)[0:4]) + 1) + "01")
                     else:
                         next_month = month + 1
                     for ref_file in os.listdir(Path(root, dir)):
                         if str(ref_file).endswith(".tif") and os.path.isfile(
                             Path(root, dir, ref_file)
                         ):
-                            if str(month) in str(ref_file).split("_")[-3].split("T")[0]:
-                                date = str(ref_file).split("_")[-3].split("T")[0]
-                                band = str(ref_file).split("_")[-2]
-                                tile = str(ref_file).split("_")[-4]
+                            ref_date = str(ref_file).split("_")[-3].split("T")[0]
+                            ref_month = int(ref_date[:6])
+                            if month == ref_month:
+                                ref_band = str(ref_file).split("_")[-2]
+                                ref_tile = str(ref_file).split("_")[-4]
                                 for dif_file in os.listdir(Path(root, dir)):
                                     if os.path.isfile(Path(root, dir, dif_file)):
+                                        dif_date = (
+                                            str(dif_file).split("_")[-3].split("T")[0]
+                                        )
+                                        dif_month = int(dif_date[:6])
+                                        dif_band = str(dif_file).split("_")[-2]
+                                        dif_tile = str(dif_file).split("_")[-4]
                                         if (
-                                            str(next_month)
-                                            in str(dif_file)
-                                            .split("_")[-3]
-                                            .split("T")[0]
-                                            and band == str(dif_file).split("_")[-2]
+                                            next_month == dif_month
+                                            and ref_band == dif_band
+                                            and ref_tile == dif_tile
                                         ):
                                             output_path = Path(
                                                 root,
@@ -147,15 +157,13 @@ class Aggregate:
                                                 dir,
                                                 output_path,
                                                 str(
-                                                    tile
+                                                    ref_tile
                                                     + "_"
-                                                    + date
+                                                    + ref_date
                                                     + "_dif_"
-                                                    + str(dif_file)
-                                                    .split("_")[-3]
-                                                    .split("T")[0]
+                                                    + dif_date
                                                     + "_"
-                                                    + band
+                                                    + ref_band
                                                     + ".tif"
                                                 ),
                                             )
@@ -163,11 +171,7 @@ class Aggregate:
                                             with rio.open(
                                                 output_image, "w", **meta
                                             ) as dst:
-                                                dst.write(
-                                                    single_difference_vector
-                                                )  # Write the first band
-
-                                            # self._save_difference_vector(root, file, single_difference_vector, filename_parts[-3])
+                                                dst.write(single_difference_vector)
                 print(yearmonth_list)
                 yearmonth_set.clear()
 
@@ -292,7 +296,7 @@ class Aggregate:
     def _difference_vector(self, reference_data_array, image_filename):
         da = rioxarray.open_rasterio(image_filename)
         difference = reference_data_array - da
-        difference = np.multiply(difference, difference)
+        difference = difference * difference
         # Normalize the difference to the 0-255 range
         difference_min = difference.min().item()
         difference_max = difference.max().item()
@@ -321,7 +325,7 @@ class Aggregate:
             + ref_file[-4]
             + "_"
             + ref_file[-3]
-            + "_dif_!!!!!!!_"
+            + "_dif_"
             + source_text
             + "_"
             + ref_file[-2]
