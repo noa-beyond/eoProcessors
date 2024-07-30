@@ -296,7 +296,7 @@ class Aggregate:
         da = rioxarray.open_rasterio(image_filename)
         difference = reference_data_array - da
         difference = difference * difference
-        # Normalize the difference to the 1-255 range
+        # Normalize the difference to the 0-255 range
         difference_min = difference.min().item()
         difference_max = difference.max().item()
         # Prevent division by zero in case of a flat image
@@ -308,7 +308,7 @@ class Aggregate:
             ).astype(np.uint8)
 
         # return difference
-        return normalized_difference + 1
+        return normalized_difference
 
     def _save_difference_vector(
         self, parent_folder, reference_image, dif_image, source_filename_part=None
