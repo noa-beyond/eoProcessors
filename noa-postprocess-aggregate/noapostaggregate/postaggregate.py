@@ -76,8 +76,8 @@ class Aggregate:
         yearmonth_set = set()
 
         for root, dirs, files in os.walk(self._input_path, topdown=True):
-            for dir in dirs:
-                for file in os.listdir(Path(root, dir)):
+            for directory in dirs:
+                for file in os.listdir(Path(root, directory)):
                     if str(file).endswith(".tif") and "dif" not in str(file):
                         yearmonth = str(file).split("_")[-3]
                         if not re.search("\\d{8}T\\d{6}", yearmonth):
@@ -94,30 +94,21 @@ class Aggregate:
                         yearmonth_set.add(int(yearmonth))
                 yearmonth_list = list(sorted(yearmonth_set, key=int))
                 for month in yearmonth_list[:-1]:
-                    # You should check with next available month, but the initial user did
-                    # not want that:
-                    # next_month = yearmonth_list[yearmonth_list.index(month) + 1]
-                    # if str(month)[-2:] == "12":
                     if abs(month) % 100 == 12:
                         next_month = month + 89
-                        # This was the first "solution", after 8 hours of
-                        # programming and child care. TL;DR:
-                        # When in doubt, take a weekend break.
-                        # I bet you can't read this. I'm going to jail:
-                        # next_month = int(str(int(str(month)[0:4]) + 1) + "01")
                     else:
                         next_month = month + 1
-                    for ref_file in os.listdir(Path(root, dir)):
+                    for ref_file in os.listdir(Path(root, directory)):
                         if str(ref_file).endswith(".tif") and os.path.isfile(
-                            Path(root, dir, ref_file)
+                            Path(root, directory, ref_file)
                         ):
                             ref_date = str(ref_file).split("_")[-3].split("T")[0]
                             ref_month = int(ref_date[:6])
                             if month == ref_month:
                                 ref_band = str(ref_file).split("_")[-2]
                                 ref_tile = str(ref_file).split("_")[-4]
-                                for dif_file in os.listdir(Path(root, dir)):
-                                    if os.path.isfile(Path(root, dir, dif_file)):
+                                for dif_file in os.listdir(Path(root, directory)):
+                                    if os.path.isfile(Path(root, directory, dif_file)):
                                         dif_date = (
                                             str(dif_file).split("_")[-3].split("T")[0]
                                         )
@@ -131,30 +122,30 @@ class Aggregate:
                                         ):
                                             output_path = Path(
                                                 root,
-                                                dir,
+                                                directory,
                                                 (str(month) + "_" + str(next_month)),
                                             )
                                             output_path.mkdir(
                                                 parents=True, exist_ok=True
                                             )
                                             da_ref = rioxarray.open_rasterio(
-                                                str(Path(root, dir, ref_file))
+                                                str(Path(root, directory, ref_file))
                                             )
                                             single_difference_vector = (
                                                 self._difference_vector(
-                                                    da_ref, Path(root, dir, dif_file)
+                                                    da_ref, Path(root, directory, dif_file)
                                                 )
                                             )
                                             # Get the metadata from the original image
                                             with rio.open(
-                                                str(Path(root, dir, ref_file))
+                                                str(Path(root, directory, ref_file))
                                             ) as src:
                                                 meta = src.meta
                                             # Update the metadata for the output image
                                             meta.update(dtype=rio.uint8)
                                             output_image = Path(
                                                 root,
-                                                dir,
+                                                directory,
                                                 output_path,
                                                 str(
                                                     ref_tile
