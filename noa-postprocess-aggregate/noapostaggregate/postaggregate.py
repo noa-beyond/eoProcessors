@@ -105,6 +105,7 @@ class Aggregate:
                             ref_date = str(ref_file).split("_")[-3].split("T")[0]
                             ref_month = int(ref_date[:6])
                             if month == ref_month:
+                                difference_vector = []
                                 ref_band = str(ref_file).split("_")[-2]
                                 ref_tile = str(ref_file).split("_")[-4]
                                 da_ref = rioxarray.open_rasterio(
@@ -143,6 +144,7 @@ class Aggregate:
                                                     da_ref, Path(root, directory, dif_file)
                                                 )
                                             )
+                                            difference_vector.append(single_difference_vector)
                                             output_image = Path(
                                                 root,
                                                 directory,
@@ -163,6 +165,10 @@ class Aggregate:
                                                 output_image, "w", **meta
                                             ) as dst:
                                                 dst.write(single_difference_vector)
+                                if difference_vector:
+                                    # Sum all the elements in the array to produce the final output image
+                                    sum_image = np.sum(difference_vector, axis=0).astype(np.uint8)
+                                    self._save_difference_vector(root, ref_file, sum_image)
                 yearmonth_set.clear()
 
     def difference_vector(self, reference_image: str | None):
@@ -193,7 +199,6 @@ class Aggregate:
                         and "dif_vector" not in filename
                         and "histomatch" in filename
                     ):
-
                         # Get the normalized difference vector
                         # Get its power of 2 and store it in the collection
                         single_difference_vector = self._difference_vector(
