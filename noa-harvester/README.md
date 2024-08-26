@@ -221,6 +221,8 @@ noaharvester describe config/config.json
 docker run -it \
 -v ./config/config.json:/app/config/config.json \
 -v /home/user/project/strange_area:/app/shapes/strange_area/ \
+**TODO: **
+-v [data]:/app/data (optional) \
 noaharvester download -v config/config.json shapes/strange_area/area
 ```
 
