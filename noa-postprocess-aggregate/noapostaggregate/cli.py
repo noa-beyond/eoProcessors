@@ -125,7 +125,7 @@ def difference_vector(
     click.echo(f"Processing files in path {input_path}:\n")
     process = postaggregate.Aggregate(input_path, output_path)
     if per_month:
-        process.differnce_vector_per_month()
+        process.difference_vector_per_month()
     else:
         process.difference_vector(input_reference_filename)
 

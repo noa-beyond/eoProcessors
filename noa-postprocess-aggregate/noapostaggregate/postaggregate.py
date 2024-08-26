@@ -71,7 +71,7 @@ class Aggregate:
                         self._match_and_save(root, filename, reference_array)
                 del reference_array
 
-    def differnce_vector_per_month(self):
+    def difference_vector_per_month(self):
 
         yearmonth_set = set()
 
