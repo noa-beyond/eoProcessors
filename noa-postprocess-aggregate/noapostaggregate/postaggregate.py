@@ -107,6 +107,16 @@ class Aggregate:
                             if month == ref_month:
                                 ref_band = str(ref_file).split("_")[-2]
                                 ref_tile = str(ref_file).split("_")[-4]
+                                da_ref = rioxarray.open_rasterio(
+                                    str(Path(root, directory, ref_file))
+                                )
+                                # Get the metadata from the original image
+                                with rio.open(
+                                    str(Path(root, directory, ref_file))
+                                ) as src:
+                                    meta = src.meta
+                                # Update the metadata for the output image
+                                meta.update(dtype=rio.uint8)
                                 for dif_file in os.listdir(Path(root, directory)):
                                     if os.path.isfile(Path(root, directory, dif_file)):
                                         dif_date = (
@@ -128,21 +138,11 @@ class Aggregate:
                                             output_path.mkdir(
                                                 parents=True, exist_ok=True
                                             )
-                                            da_ref = rioxarray.open_rasterio(
-                                                str(Path(root, directory, ref_file))
-                                            )
                                             single_difference_vector = (
                                                 self._difference_vector(
                                                     da_ref, Path(root, directory, dif_file)
                                                 )
                                             )
-                                            # Get the metadata from the original image
-                                            with rio.open(
-                                                str(Path(root, directory, ref_file))
-                                            ) as src:
-                                                meta = src.meta
-                                            # Update the metadata for the output image
-                                            meta.update(dtype=rio.uint8)
                                             output_image = Path(
                                                 root,
                                                 directory,
