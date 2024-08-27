@@ -10,7 +10,10 @@ import zipfile
 from pathlib import Path, PurePath
 
 import rasterio as rio
+from rasterio.io import MemoryFile
 from rasterio.mask import mask
+from rio_cogeo.profiles import cog_profiles
+from rio_cogeo.cogeo import cog_translate
 from shapely.geometry import box, shape, mapping
 from shapely.ops import transform
 import shapefile
@@ -69,6 +72,14 @@ class Preprocess:
                                         self._output_path, Path(file).name
                                     )
                                     output_file_path.write_bytes(data)
+
+                                    # ONLY FOR SENTINEL 2
+                                    if self._config["convert_to_cog"]:
+                                        cog_output_path = str(output_file_path).replace(
+                                            self._config["raster_suffix_input"],
+                                            f'_COG{self._config["raster_suffix_output"]}'
+                                        )
+                                        self._convert_to_cog(output_file_path, cog_output_path)
 
                                     # NOTE: If you want to retain directory structure:
                                     #       comment above, uncomment below
@@ -189,3 +200,30 @@ class Preprocess:
         print(
             f"Clipped {raster_path} using {shapefile_path} and saved to {output_raster_path}"
         )
+
+    # Based on https://guide.cloudnativegeo.org/cloud-optimized-geotiffs/writing-cogs-in-python.html
+    def _convert_to_cog(self, original_raster, cog_filename):
+
+        with rio.Env(GDAL_DRIVER_NAME='JP2OpenJPEG'):
+            with rio.open(original_raster, "r") as src:
+                arr = src.read()
+                kwargs = src.meta
+                kwargs.update(driver="GTiff", predictor=2)
+
+            with MemoryFile() as memfile:
+                # Opening an empty MemoryFile for in memory operation - faster
+                with memfile.open(**kwargs) as mem:
+                    # Writing the array values to MemoryFile using the rasterio.io module
+                    # https://rasterio.readthedocs.io/en/stable/api/rasterio.io.html
+                    mem.write(arr)
+
+                    dst_profile = cog_profiles.get("deflate")
+
+                    # Creating destination COG
+                    cog_translate(
+                        mem,
+                        cog_filename,
+                        dst_profile,
+                        use_cog_driver=True,
+                        in_memory=False
+                    )

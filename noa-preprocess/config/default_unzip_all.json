@@ -4,5 +4,6 @@
     "raster_compression_output": "COG",
     "raster_suffix_output": ".tif",
     "raster_resolutions": ["all"],
-    "bands": ["all"]
+    "bands": ["all"],
+    "convert_to_cog": true
 }
