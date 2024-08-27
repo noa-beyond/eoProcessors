@@ -6,6 +6,7 @@ import os
 import logging
 import json
 import glob
+import zipfile
 from pathlib import Path, PurePath
 
 import rasterio as rio
@@ -15,7 +16,6 @@ from shapely.ops import transform
 import shapefile
 import pyproj
 
-import zipfile
 import click
 
 logger = logging.getLogger(__name__)
@@ -41,17 +41,17 @@ class Preprocess:
             config_file (str): Config filename (json)
         """
 
-        self._input_path = Path(input_path).absolute()
-        self._output_path = Path(output_path).absolute()
+        self._input_path = input_path
+        self._output_path = output_path
         os.makedirs(str(self._output_path), exist_ok=True)
 
         with open(config_file, encoding="utf8") as f:
             self._config = json.load(f)
 
-    def from_path(self):
+    def extract(self):
         for filename in os.listdir(str(self._input_path)):
             if filename.endswith(self._config["input_file_type"]):
-                zip_path = os.path.join(str(self._input_path), filename)
+                zip_path = str(Path(self._input_path, filename))
                 with zipfile.ZipFile(zip_path, "r") as archive:
                     # TODO write the following spaghetti better
                     for file in archive.namelist():
@@ -65,8 +65,8 @@ class Preprocess:
                                     # TODO separate private function
                                     # Do not retain directory structure, just extract
                                     data = archive.read(file, self._input_path)
-                                    output_file_path = (
-                                        self._output_path / Path(file).name
+                                    output_file_path = Path(
+                                        self._output_path, Path(file).name
                                     )
                                     output_file_path.write_bytes(data)
 
@@ -84,9 +84,9 @@ class Preprocess:
                     shapefile_path = os.path.join(root, file)
 
                     for raster_file in glob.glob(
-                        os.path.join(
+                        str(Path(
                             self._input_path, f"*{self._config['raster_suffix_input']}"
-                        )
+                        ))
                     ):
                         raster_path = raster_file
                         raster_bbox = self._get_raster_bbox(raster_path)
@@ -134,8 +134,9 @@ class Preprocess:
             return src.crs
 
     def _get_shapefile_crs(self, shapefile_path):
+        encoding = self._get_encoding(shapefile_path)
         prj_path = shapefile_path.replace(".shp", ".prj")
-        with open(prj_path, "r") as prj_file:
+        with open(prj_path, "r", encoding=encoding) as prj_file:
             prj = prj_file.read()
         return pyproj.CRS(prj)
 
@@ -143,9 +144,9 @@ class Preprocess:
         encoding = "utf-8"
         cpg_path = shapefile_path.replace(".shp", ".cpg")
         if os.path.exists(cpg_path):
-            with open(cpg_path) as cpg_file:
+            with open(cpg_path, "r", encoding=encoding) as cpg_file:
                 for line in cpg_file:
-                    encoding = str(line).split("_")[0]
+                    encoding = str(line).split("_", maxsplit=1)[0]
         return encoding
 
     def _transform_shapefile_geometry(self, shapefile_path, target_crs):
