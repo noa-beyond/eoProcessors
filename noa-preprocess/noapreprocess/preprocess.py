@@ -209,6 +209,7 @@ class Preprocess:
                 arr = src.read()
                 kwargs = src.meta
                 kwargs.update(driver="GTiff", predictor=2)
+                config = {"GDAL_NUM_THREADS": "ALL_CPUS", "TILED": "TRUE"}
 
             with MemoryFile() as memfile:
                 # Opening an empty MemoryFile for in memory operation - faster
@@ -217,13 +218,14 @@ class Preprocess:
                     # https://rasterio.readthedocs.io/en/stable/api/rasterio.io.html
                     mem.write(arr)
 
-                    dst_profile = cog_profiles.get("deflate")
+                    dst_profile = cog_profiles.get("lerc_deflate")
 
                     # Creating destination COG
                     cog_translate(
                         mem,
                         cog_filename,
                         dst_profile,
+                        config=config,
                         use_cog_driver=True,
                         in_memory=False
                     )
