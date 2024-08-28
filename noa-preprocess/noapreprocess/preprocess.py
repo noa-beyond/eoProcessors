@@ -6,16 +6,19 @@ import os
 import logging
 import json
 import glob
+import zipfile
 from pathlib import Path, PurePath
 
 import rasterio as rio
+from rasterio.io import MemoryFile
 from rasterio.mask import mask
+from rio_cogeo.profiles import cog_profiles
+from rio_cogeo.cogeo import cog_translate
 from shapely.geometry import box, shape, mapping
 from shapely.ops import transform
 import shapefile
 import pyproj
 
-import zipfile
 import click
 
 logger = logging.getLogger(__name__)
@@ -41,17 +44,17 @@ class Preprocess:
             config_file (str): Config filename (json)
         """
 
-        self._input_path = Path(input_path).absolute()
-        self._output_path = Path(output_path).absolute()
+        self._input_path = input_path
+        self._output_path = output_path
         os.makedirs(str(self._output_path), exist_ok=True)
 
         with open(config_file, encoding="utf8") as f:
             self._config = json.load(f)
 
-    def from_path(self):
+    def extract(self):
         for filename in os.listdir(str(self._input_path)):
             if filename.endswith(self._config["input_file_type"]):
-                zip_path = os.path.join(str(self._input_path), filename)
+                zip_path = str(Path(self._input_path, filename))
                 with zipfile.ZipFile(zip_path, "r") as archive:
                     # TODO write the following spaghetti better
                     for file in archive.namelist():
@@ -65,14 +68,24 @@ class Preprocess:
                                     # TODO separate private function
                                     # Do not retain directory structure, just extract
                                     data = archive.read(file, self._input_path)
-                                    output_file_path = (
-                                        self._output_path / Path(file).name
+                                    output_file_path = Path(
+                                        self._output_path, Path(file).name
                                     )
                                     output_file_path.write_bytes(data)
-
                                     # NOTE: If you want to retain directory structure:
                                     #       comment above, uncomment below
                                     # archive.extract(file, self._output_path)
+                                    # output_file_path = Path(file)
+
+                                    # ONLY FOR SENTINEL 2
+                                    if self._config["convert_to_cog"]:
+                                        cog_output_path = str(output_file_path).replace(
+                                            self._config["raster_suffix_input"],
+                                            f'_COG{self._config["raster_suffix_output"]}'
+                                        )
+                                        self._convert_to_cog(output_file_path, cog_output_path)
+                                        os.remove(output_file_path)
+
                                     click.echo(
                                         f"Extracted {Path(file).name} from {filename} to {self._output_path}"
                                     )
@@ -84,9 +97,9 @@ class Preprocess:
                     shapefile_path = os.path.join(root, file)
 
                     for raster_file in glob.glob(
-                        os.path.join(
+                        str(Path(
                             self._input_path, f"*{self._config['raster_suffix_input']}"
-                        )
+                        ))
                     ):
                         raster_path = raster_file
                         raster_bbox = self._get_raster_bbox(raster_path)
@@ -134,8 +147,9 @@ class Preprocess:
             return src.crs
 
     def _get_shapefile_crs(self, shapefile_path):
+        encoding = self._get_encoding(shapefile_path)
         prj_path = shapefile_path.replace(".shp", ".prj")
-        with open(prj_path, "r") as prj_file:
+        with open(prj_path, "r", encoding=encoding) as prj_file:
             prj = prj_file.read()
         return pyproj.CRS(prj)
 
@@ -143,9 +157,9 @@ class Preprocess:
         encoding = "utf-8"
         cpg_path = shapefile_path.replace(".shp", ".cpg")
         if os.path.exists(cpg_path):
-            with open(cpg_path) as cpg_file:
+            with open(cpg_path, "r", encoding=encoding) as cpg_file:
                 for line in cpg_file:
-                    encoding = str(line).split("_")[0]
+                    encoding = str(line).split("_", maxsplit=1)[0]
         return encoding
 
     def _transform_shapefile_geometry(self, shapefile_path, target_crs):
@@ -188,3 +202,32 @@ class Preprocess:
         print(
             f"Clipped {raster_path} using {shapefile_path} and saved to {output_raster_path}"
         )
+
+    # Based on https://guide.cloudnativegeo.org/cloud-optimized-geotiffs/writing-cogs-in-python.html
+    def _convert_to_cog(self, original_raster, cog_filename):
+
+        with rio.Env(GDAL_DRIVER_NAME='JP2OpenJPEG'):
+            with rio.open(original_raster, "r") as src:
+                arr = src.read()
+                kwargs = src.meta
+                kwargs.update(driver="GTiff", predictor=2)
+                config = {"GDAL_NUM_THREADS": "ALL_CPUS", "TILED": "TRUE"}
+
+            with MemoryFile() as memfile:
+                # Opening an empty MemoryFile for in memory operation - faster
+                with memfile.open(**kwargs) as mem:
+                    # Writing the array values to MemoryFile using the rasterio.io module
+                    # https://rasterio.readthedocs.io/en/stable/api/rasterio.io.html
+                    mem.write(arr)
+
+                    dst_profile = cog_profiles.get("lerc_deflate")
+
+                    # Creating destination COG
+                    cog_translate(
+                        mem,
+                        cog_filename,
+                        dst_profile,
+                        config=config,
+                        use_cog_driver=True,
+                        in_memory=False
+                    )
