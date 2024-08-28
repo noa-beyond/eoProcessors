@@ -72,6 +72,10 @@ class Preprocess:
                                         self._output_path, Path(file).name
                                     )
                                     output_file_path.write_bytes(data)
+                                    # NOTE: If you want to retain directory structure:
+                                    #       comment above, uncomment below
+                                    # archive.extract(file, self._output_path)
+                                    # output_file_path = Path(file)
 
                                     # ONLY FOR SENTINEL 2
                                     if self._config["convert_to_cog"]:
@@ -80,10 +84,8 @@ class Preprocess:
                                             f'_COG{self._config["raster_suffix_output"]}'
                                         )
                                         self._convert_to_cog(output_file_path, cog_output_path)
+                                        os.remove(output_file_path)
 
-                                    # NOTE: If you want to retain directory structure:
-                                    #       comment above, uncomment below
-                                    # archive.extract(file, self._output_path)
                                     click.echo(
                                         f"Extracted {Path(file).name} from {filename} to {self._output_path}"
                                     )
