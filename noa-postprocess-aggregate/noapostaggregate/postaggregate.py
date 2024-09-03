@@ -1,6 +1,7 @@
 import os
 import glob
 import re
+import shutil
 from pathlib import Path
 import logging
 import click
@@ -46,30 +47,52 @@ class Aggregate:
             images = []
 
     def histogram_matching(self, reference_image: str | None):
-
         for root, dirs, files in os.walk(self._input_path, topdown=True):
-            for file in files:
-                if "reference" in file and str(file).endswith(".tif"):
-                    if reference_image is None:
-                        ref_image = str(Path(root, file))
-                    else:
-                        ref_image = reference_image
-                else:
-                    continue
-                reference_parts = ref_image.split("_")
-                reference = gdal.Open(ref_image, gdal.GA_Update)
-                reference_array = np.array(reference.GetRasterBand(1).ReadAsArray())
-                for filename in glob.glob(f"{root}/*.tif"):
-                    filename_parts = filename.split("_")
-                    # TODO make all these file name parts comparison in a pattern matching algo
-                    if (
-                        reference_parts[-1] == filename_parts[-1]
-                        and reference_parts[-2] == filename_parts[-2]
-                        and reference_parts[-4] == filename_parts[-4]
-                        and "reference" not in filename
-                    ):
-                        self._match_and_save(root, filename, reference_array)
-                del reference_array
+            for directory in dirs:
+                bands = []
+                pattern = re.compile(r"(T\d\d.*)_(\d+)T(\d+)_(.*)_(.*)\.tif")
+                for file in os.listdir(Path(root, directory)):
+                    if pattern.match(str(file)):
+                        resolution = str(file).rsplit("_", maxsplit=1)[-1]
+                        band = str(file).split("_")[-2]
+                        tile = str(file).split("_")[-4]
+
+                        if band not in bands:
+                            bands.append(band)
+                        else:
+                            continue
+
+                        if reference_image is None:
+                            ref_image = str(Path(root, directory, file))
+                        else:
+                            ref_image = reference_image
+                        reference = gdal.Open(ref_image, gdal.GA_Update)
+                        reference_array = np.array(reference.GetRasterBand(1).ReadAsArray())
+
+                        for file_to_match in os.listdir(Path(root, directory)):
+                            if pattern.match(str(file_to_match)):
+                                resolution_to_match = str(file_to_match).rsplit("_", maxsplit=1)[-1]
+                                band_to_match = str(file_to_match).split("_")[-2]
+                                tile_to_match = str(file_to_match).split("_")[-4]
+                                filename_to_match = str(Path(root, directory, file_to_match))
+                                if (
+                                    tile == tile_to_match
+                                    and band == band_to_match
+                                    and resolution == resolution_to_match
+                                    and filename_to_match != ref_image
+                                ):
+                                    match_folder = Path(self._input_path, "histogram_matched")
+                                    match_folder.mkdir(parents=True, exist_ok=True)
+                                    current_dir = str(Path(root, directory))
+                                    p = [str(self._input_path), current_dir]
+                                    commonprefix = os.path.commonprefix(p)
+                                    path_to_save = Path(match_folder, current_dir.replace(commonprefix, ""))
+                                    path_to_save.mkdir(parents=True, exist_ok=True)
+                                    self._match_and_save(path_to_save, filename_to_match, reference_array)
+                                    if not os.path.isfile(Path(path_to_save, file)):
+                                        shutil.copy2(ref_image, str(Path(path_to_save, file)))
+
+                        del reference_array
 
     def difference_vector_per_month(self):
 
@@ -262,7 +285,8 @@ class Aggregate:
                 tiles_list.append(tile)
         return tiles_list
 
-    def _match_and_save(self, parent_folder, source, reference_array):
+    def _match_and_save(self, path_to_save, source, reference_array):
+
         image_to_match = gdal.Open(source, gdal.GA_Update)
         image_array = np.array(image_to_match.GetRasterBand(1).ReadAsArray())
 
@@ -273,8 +297,8 @@ class Aggregate:
 
         creation_options = ["COMPRESS=LZW", "TILED=YES"]
 
-        output_image = parent_folder + "/" + "histomatch_" + source.split("/")[-1]
-        print(output_image)
+        output_image = str(path_to_save) + "/" + source.split("/")[-1]
+        print(f"Matched: {output_image}")
 
         driver = gdal.GetDriverByName("GTiff")
         dst_dataset = driver.Create(
