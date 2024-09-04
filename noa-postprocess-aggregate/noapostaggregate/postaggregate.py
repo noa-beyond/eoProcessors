@@ -203,6 +203,7 @@ class Aggregate:
                                     )
                 yearmonth_set.clear()
 
+    # TODO: need to remove here the look for "reference" in file and histomatch in result. Work with folders
     def difference_vector(self, reference_image: str | None):
 
         for root, dirs, files in os.walk(self._input_path, topdown=True):
