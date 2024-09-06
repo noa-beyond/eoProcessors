@@ -1,0 +1,26 @@
+# Start with an official Miniconda3 image
+FROM continuumio/miniconda3
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+
+# Create a new Conda environment and install dependencies
+RUN conda create -n fmask_env python=3.9 && \
+    conda init bash && \
+    echo "conda activate fmask_env" >> ~/.bashrc
+
+# Activate the conda environment
+SHELL ["conda", "run", "-n", "fmask_env", "/bin/bash", "-c"]
+
+# Install necessary packages in the conda environment, including GDAL
+RUN conda install -n fmask_env -c conda-forge fmask gdal pyyaml && \
+    conda clean -afy
+
+# Set the working directory inside the container
+WORKDIR /app
+
+# Copy the current directory contents into the container at /app
+COPY . /app
+
+# Define the entry point for the container (this runs the script using the config file)
+ENTRYPOINT ["conda", "run", "--no-capture-output", "-n", "fmask_env", "python", "fmask_cloud_mask.py", "--config", "config.yaml"]

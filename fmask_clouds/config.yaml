@@ -1,0 +1,2 @@
+input_dir: ./data
+output_dir: ./masks
