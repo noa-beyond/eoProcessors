@@ -6,6 +6,9 @@ It is a simple cli wrapper of the following (to be expanded) libraries:
 - CDSETool (https://github.com/SDFIdk/CDSETool)
 - earthaccess (https://github.com/nsidc/earthaccess)
 
+and common STAC API functionality, for accessing public catalogs:
+- Element84 COG STAC collection (earthsearch - https://github.com/Element84/earth-search)
+
 It can be used as a standalone cli application or be built in a Docker container.
 
 # Using the processor
@@ -29,7 +32,7 @@ EARTHDATA_PASSWORD=
 
 - For Windows: execute **git bash** and execute the rest of the operations on the git bash terminal.
 
-Open a terminal window (or git bash...), navigate to your prefered working directory and download the source code:
+Open a terminal window (or git bash...), navigate to your preferred working directory and download the source code:
 
 ```
 git clone https://github.com/Agri-Hub/eoProcessors.git
@@ -50,7 +53,7 @@ You can now either execute the processor as a [standalone cli application](#stan
         - Install conda (https://docs.conda.io/projects/conda/en/latest/user-guide/install/linux.html)
     - Common:
         - Create the environment:
-            - Execute `conda create -n noaharvester_env python==3.11`
+            - Execute `conda create -n noaharvester_env python==3.11.8`
             - Execute `conda activate noaharvester_env`
 - Then:
 
@@ -60,7 +63,7 @@ You can now either execute the processor as a [standalone cli application](#stan
 ```
   in order for the `.netrc` file to be created in your local environment. This file will take care of credential information based on the environmental variables you have set up before.
 
-- Finally, install necesarry requirements inside your virtual environment:
+- Finally, install necessary requirements inside your virtual environment:
 ```
 pip install -r requirements.txt
 ```
@@ -77,7 +80,7 @@ Available commands are:
 - describe (Copernicus only) - Describe collection's available query fields
 
 The config file *should* be placed inside `eoProcessors/noa-harvester/config`, but of course you could use any path.
-The optional shapefile argument can be used in the end, to draw the bounding box from shapefile information (`.shp` for the shape and `.prj` for the projection information). Please note that you should use the common file base name for both files as the argument. E.g. for `weird_area.shp` and `weird_area.prj`, use `weird_area` as the argument)
+The optional shapefile argument can be used in the end, to draw the bounding box from shapefile information (`.shp` for the shape and `.prj` for the projection information). Please note that you should use the common file base name for both files as the argument. E.g. for `weird_area.shp` and `weird_area.prj`, use `weird_area` as the argument
 
 Please check the [Config](#Config-file-parameters) section regarding config file specification.
 
@@ -87,7 +90,7 @@ Moreover, a `-v` parameter is available to print verbose download progress bar f
 
 * Install Docker: https://docs.docker.com/get-docker/
 
-* Navigate to the folder (remeber, from git bash in Windows - use *winpty* in case git bash complains before every command):
+* Navigate to the folder (remember, from git bash in Windows - use *winpty* in case git bash complains before every command):
 
 ```
     cd eoProcessors/noa-harvester
@@ -149,9 +152,9 @@ Take a look at the sample config.json.
         {
             "maxRecords": "100",
             "startDate": "2024-01-06",
-        .....
+            .....
         }
-    }
+    },
     {
         "provider": "earthdata",
         "collection": "MODIS",
@@ -159,9 +162,22 @@ Take a look at the sample config.json.
         {
             "maxRecords": "100",
             "startDate": "2019-01-01",
-        .....
+            .....
         }
-    }        
+    },
+    {
+        "provider": "earthsearch",
+        "version": "v1",
+        "collection": "sentinel-s2-l2a-cogs",
+        "assets": ["visual"],
+        "search_terms":
+        {
+            "maxRecords": "100",
+            "startDate": "2023-05-01",
+            "cloud_cover_lt": 90,
+            .....
+        }
+    }
 ]
 ```
 As the top level keys, you have to introduce the provider and collection names. You can include as many sources as needed.
@@ -169,6 +185,10 @@ As the top level keys, you have to introduce the provider and collection names. 
 Please refer to
 - Copernicus [OData API] for available collections and query keys
 - Earthdata and [earthaccess] python library for available EarthData collections, product type short names and query terms.
+- Element84 COG STAC collection (earthsearch - https://github.com/Element84/earth-search)
+
+Please note that in the STAC collections search, we do not search/download by bands, but by **assets**.
+This is because many providers provide interesting composites like snow/cloud probabilities under the item assets, along with the bands.
 
 ## Cli options
 
@@ -183,7 +203,7 @@ Cli can be executed with the following:
     * `--log LEVEL (INFO, DEBUG, WARNING, ERROR)` Shows the logs depending on the selected `LEVEL`
 - Arguments
     * `config_file` - Necessary argument for the commands, indicating which config file will be used.
-    * `shape_file` - Optional. Create the query/donwload bounding box from a shapefile instead of the config file. Please note that this argument receives the base name of `.shp` and `.prj` files (e.g. argument should be `Thessalia` for `Thessalia.shp` and `Thessalia.prj` files)
+    * `shape_file` - Optional. Create the query/download bounding box from a shapefile instead of the config file. Please note that this argument receives the base name of `.shp` and `.prj` files (e.g. argument should be `Thessalia` for `Thessalia.shp` and `Thessalia.prj` files)
 
 ## Examples
 
@@ -201,6 +221,8 @@ noaharvester describe config/config.json
 docker run -it \
 -v ./config/config.json:/app/config/config.json \
 -v /home/user/project/strange_area:/app/shapes/strange_area/ \
+**TODO: **
+-v [data]:/app/data (optional) \
 noaharvester download -v config/config.json shapes/strange_area/area
 ```
 

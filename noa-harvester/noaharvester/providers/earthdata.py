@@ -1,4 +1,5 @@
 """Earthdata data provider class. Implements Provider ABC."""
+
 from __future__ import annotations
 
 import logging
@@ -26,13 +27,14 @@ class Earthdata(DataProvider):
 
     def __init__(self) -> Earthdata:
         """
-        Earthdata provider. Constructor also perfoms the login operation based
+        Earthdata provider. Constructor also performs the login operation based
         on credentials present in the .netrc file.
         """
         super().__init__()
 
         # From .netrc
-        logger.debug("Checking Earthdata credentials - trying to aquire token")
+        logger.debug("Checking Earthdata credentials - trying to acquire token")
+        self._downloaded_links = []
         earthaccess.login()
 
     def query(self, item: dict) -> tuple[str, int]:
@@ -88,12 +90,19 @@ class Earthdata(DataProvider):
             bounding_box=bbox,
             temporal=(start_date, end_date),
         )
+        initial_results = len(results)
 
+        for result in results:
+            if result.data_links() not in self._downloaded_links:
+                self._downloaded_links.append(result.data_links())
+            else:
+                results.remove(result)
         click.echo(
             f"Total items to be downloaded for {item['collection']}: {len(results)} \n"
+            f"Avoided {initial_results - len(results)} duplicates."
         )
-
-        earthaccess.download(results, self._download_path)
+        if results:
+            earthaccess.download(results, self._download_path)
         return item["collection"], len(results)
 
     def describe(self, collection):

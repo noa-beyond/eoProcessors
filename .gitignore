@@ -4,6 +4,7 @@ __pycache__
 
 # tools
 .vscode
+.ipynb_checkpoints
 
 # project specific files
 .env.list.local
@@ -38,5 +39,7 @@ htmlcov/
 test-output.xml
 coverage.xml
 *.cover
-
 .pytest_cache/
+
+# Other
+*.ipynb*
