@@ -11,6 +11,12 @@ CONTENT = (
 )
 
 
+@pytest.fixture(autouse=True)
+def output_folder():
+    """Mocking the default output folder"""
+    return "./data"
+
+
 @pytest.fixture(scope="function", autouse=True)
 def mocked_collection_item():
     """Mocking an abstract collection item"""

@@ -15,7 +15,7 @@ from noaharvester.providers.copernicus import Copernicus
 class TestProviders:
     """Testing class"""
 
-    def test_data_provider(self):
+    def test_data_provider(self, output_folder):
         """Testing ABC class"""
 
         class AProvider(DataProvider):
@@ -30,26 +30,26 @@ class TestProviders:
             def describe(self, collection):
                 pass
 
-        mocked_data_provider = AProvider()
+        mocked_data_provider = AProvider(output_folder)
 
         mocked_data_provider.download(None)
         mocked_data_provider.query(None)
         mocked_data_provider.describe(None)
 
         assert (
-            mocked_data_provider._download_path == Path("./data").absolute()
-        )  # pylint:disable=protected-access
+            mocked_data_provider._download_path == Path("./data").absolute()   # pylint:disable=protected-access
+        )
 
     @patch("noaharvester.providers.earthdata.earthaccess.login")
     @patch("noaharvester.providers.earthdata.earthaccess.search_data")
     def test_earthdata_query(
-        self, mocked_search, mocked_login, mocked_collection_item
+        self, mocked_search, mocked_login, mocked_collection_item, output_folder
     ):  # pylint:disable=unused-argument
         """Testing earthdata query"""
         mocked_query_results = ["a result", "a second result"]
         mocked_search.return_value = mocked_query_results
 
-        earthdata = Earthdata()
+        earthdata = Earthdata(output_folder)
         result = earthdata.query(mocked_collection_item)
 
         assert result[0] == mocked_collection_item["collection"]
@@ -59,7 +59,7 @@ class TestProviders:
     @patch("noaharvester.providers.earthdata.earthaccess.download")
     @patch("noaharvester.providers.earthdata.earthaccess.search_data")
     def test_earthdata_download(
-        self, mocked_search, mocked_download, mocked_login, mocked_collection_item
+        self, mocked_search, mocked_download, mocked_login, mocked_collection_item, output_folder
     ):  # pylint:disable=unused-argument
         """Testing earthdata download"""
         mocked_single = Mock()
@@ -67,7 +67,7 @@ class TestProviders:
         mocked_query_results = [mocked_single]
         mocked_search.return_value = mocked_query_results
 
-        earthdata = Earthdata()
+        earthdata = Earthdata(output_folder)
         result = earthdata.download(mocked_collection_item)
 
         assert result[0] == mocked_collection_item["collection"]
@@ -75,24 +75,24 @@ class TestProviders:
 
     @patch("noaharvester.providers.earthdata.earthaccess.login")
     def test_earthdata_describe_raises_not_implemented(
-        self, mocked_earthaccess
+        self, mocked_earthaccess, output_folder
     ):  # pylint:disable=unused-argument
         """Testing not implemented error raise"""
-        earthdata = Earthdata()
+        earthdata = Earthdata(output_folder)
         with pytest.raises(NotImplementedError):
             earthdata.describe(None)
 
     @patch("noaharvester.providers.copernicus.query_features")
     @patch("noaharvester.providers.copernicus.Credentials")
     def test_copernicus_query(
-        self, mock_credentials_constructor, mocked_search, mocked_collection_item
+        self, mock_credentials_constructor, mocked_search, mocked_collection_item, output_folder
     ):
         """Testing Copernicus query"""
         mock_credentials_constructor.return_value = "a mocked class"
         mocked_query_results = ["a result", "a second result"]
         mocked_search.return_value = mocked_query_results
 
-        copernicus = Copernicus()
+        copernicus = Copernicus(output_folder)
         result = copernicus.query(mocked_collection_item)
 
         assert copernicus.credentials == "a mocked class"
@@ -108,6 +108,7 @@ class TestProviders:
         mocked_search,
         mocked_download,
         mocked_collection_item,
+        output_folder
     ):
         """Testing Copernicus download"""
         mocked_single = {"id": True, "properties": {"status": "ONLINE"}}
@@ -116,7 +117,7 @@ class TestProviders:
         mocked_search.return_value = mocked_query_results
         mocked_download.return_value = mocked_query_results
 
-        copernicus = Copernicus()
+        copernicus = Copernicus(output_folder)
         result = copernicus.download(mocked_collection_item)
 
         assert copernicus.credentials == "a mocked class"
@@ -126,12 +127,12 @@ class TestProviders:
     @patch("noaharvester.providers.copernicus.describe_collection")
     @patch("noaharvester.providers.copernicus.Credentials")
     def test_copernicus_describe(
-        self, mock_credentials_constructor, mocked_describe
+        self, mock_credentials_constructor, mocked_describe, output_folder
     ):  # pylint:disable=unused-argument
         """Testing Copernicus describe"""
         mocked_describe.return_value = {"a key": "a value"}
 
-        copernicus = Copernicus()
+        copernicus = Copernicus(output_folder)
         result = copernicus.describe("mocked_collection_name")
 
         assert result[0] == "mocked_collection_name"
@@ -139,7 +140,7 @@ class TestProviders:
 
     @patch("noaharvester.providers.earthsearch.pystac_client.Client")
     def test_earthsearch_query(
-        self, mocked_pystac_client, mocked_collection_item
+        self, mocked_pystac_client, mocked_collection_item, output_folder
     ):  # pylint:disable=unused-argument
         """Testing earthsearch query"""
 
@@ -163,7 +164,7 @@ class TestProviders:
         # 3) we have started by opening the Catalog:
         mocked_pystac_client.open.return_value = mocked_catalog_open
 
-        earthsearch = Earthsearch()
+        earthsearch = Earthsearch(output_folder)
         result = earthsearch.query(mocked_collection_item)
 
         assert result[0] == mocked_collection_item["collection"]
@@ -178,7 +179,8 @@ class TestProviders:
         mock_shutil,
         mocked_pystac_client,
         mocked_collection_item,
-        caplog,
+        output_folder,
+        caplog
     ):  # pylint:disable=unused-argument
 
         class MockedAsset(Mock):
@@ -219,7 +221,7 @@ class TestProviders:
         # 3) we have started by opening the Catalog:
         mocked_pystac_client.open.return_value = mocked_catalog_open
 
-        earthsearch = Earthsearch()
+        earthsearch = Earthsearch(output_folder)
 
         with patch("builtins.open", mock_open()) as _:
             result = earthsearch.download(mocked_collection_item)
@@ -234,9 +236,9 @@ class TestProviders:
         # assert "Failed" in caplog.text
 
     def test_earthsearch_describe_raises_not_implemented(
-        self,
+        self, output_folder
     ):  # pylint:disable=unused-argument
         """Testing not implemented error raise"""
-        earthsearch = Earthsearch()
+        earthsearch = Earthsearch(output_folder)
         with pytest.raises(NotImplementedError):
             earthsearch.describe(None)

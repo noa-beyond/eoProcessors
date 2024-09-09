@@ -9,9 +9,9 @@ from noaharvester.harvester import Harvester
 class TestHarvester:
     """Test class"""
 
-    def test_harvester_constructor(self, config_file):
+    def test_harvester_constructor(self, config_file, output_folder):
         """Test constructor"""
-        harvester = Harvester(config_file)
+        harvester = Harvester(config_file, output_path=output_folder)
 
         assert (
             harvester._search_items[0]["provider"] == "copernicus"
@@ -23,7 +23,7 @@ class TestHarvester:
         # Test constructor with shapefile:
         test_shape = "/test_data/foo_shape"
         test_shape_uri = Path(__file__).parent.name + test_shape
-        harvester = Harvester(config_file, test_shape_uri)
+        harvester = Harvester(config_file, output_path=output_folder, shape_file=test_shape_uri)
 
         # Asserting that the extracted and transformed coordinates have successfully
         # entered in place of bbox of search terms
@@ -67,7 +67,7 @@ class TestHarvester:
     @patch("noaharvester.harvester.copernicus.Copernicus")
     @patch("noaharvester.harvester.earthdata.Earthdata")
     def test_resolve_instances(
-        self, mocked_earthdata, mocked_copernicus, config_file
+        self, mocked_earthdata, mocked_copernicus, config_file, output_folder
     ):  # pylint:disable=unused-argument
         """Test private function which resolves provider instance"""
         mocked_cp_class = Mock()
@@ -75,7 +75,7 @@ class TestHarvester:
 
         mocked_copernicus.return_value = mocked_cp_class
 
-        harvester = Harvester(config_file)
+        harvester = Harvester(config_file, output_path=output_folder)
         harvester._resolve_provider_instance(
             "earthdata"
         )  # pylint:disable=protected-access
