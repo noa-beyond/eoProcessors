@@ -50,7 +50,8 @@ class Aggregate:
         for root, dirs, files in os.walk(self._input_path, topdown=True):
             for directory in dirs:
                 bands = []
-                pattern = re.compile(r"(T\d\d.*)_(\d+)T(\d+)_(.*)_(.*)\.tif")
+                # TODO: explain the pattern in log or generalize the prefix
+                pattern = re.compile(r"(clipped_T\d\d.*)_(\d+)T(\d+)_(.*)_(.*)\.tif")
                 for file in os.listdir(Path(root, directory)):
                     if pattern.match(str(file)):
                         resolution = str(file).rsplit("_", maxsplit=1)[-1]
@@ -68,6 +69,9 @@ class Aggregate:
                             ref_image = reference_image
                         reference = gdal.Open(ref_image, gdal.GA_Update)
                         reference_array = np.array(reference.GetRasterBand(1).ReadAsArray())
+                        if not np.any(reference_array):
+                            del reference_array
+                            continue
 
                         for file_to_match in os.listdir(Path(root, directory)):
                             if pattern.match(str(file_to_match)):
@@ -199,7 +203,7 @@ class Aggregate:
                                         difference_vector, axis=0
                                     ).astype(np.uint8)
                                     self._save_difference_vector(
-                                        root, ref_file, sum_image
+                                        str(Path(root, directory, output_path)), str(Path(root, directory, ref_file)), sum_image
                                     )
                 yearmonth_set.clear()
 
@@ -290,7 +294,9 @@ class Aggregate:
 
         image_to_match = gdal.Open(source, gdal.GA_Update)
         image_array = np.array(image_to_match.GetRasterBand(1).ReadAsArray())
-
+        if not np.any(image_array):
+            del image_to_match
+            return
         matched = match_histograms(image_array, reference_array, channel_axis=None)
 
         geotransform = image_to_match.GetGeoTransform()

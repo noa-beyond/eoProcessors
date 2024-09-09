@@ -78,7 +78,7 @@ class Preprocess:
                                     # output_file_path = Path(file)
 
                                     # ONLY FOR SENTINEL 2
-                                    if self._config["convert_to_cog"]:
+                                    if self._config.get("convert_to_cog", False):
                                         cog_output_path = str(output_file_path).replace(
                                             self._config["raster_suffix_input"],
                                             f'_COG{self._config["raster_suffix_output"]}'
@@ -147,9 +147,8 @@ class Preprocess:
             return src.crs
 
     def _get_shapefile_crs(self, shapefile_path):
-        encoding = self._get_encoding(shapefile_path)
         prj_path = shapefile_path.replace(".shp", ".prj")
-        with open(prj_path, "r", encoding=encoding) as prj_file:
+        with open(prj_path, "r") as prj_file:
             prj = prj_file.read()
         return pyproj.CRS(prj)
 
@@ -157,7 +156,7 @@ class Preprocess:
         encoding = "utf-8"
         cpg_path = shapefile_path.replace(".shp", ".cpg")
         if os.path.exists(cpg_path):
-            with open(cpg_path, "r", encoding=encoding) as cpg_file:
+            with open(cpg_path, "r") as cpg_file:
                 for line in cpg_file:
                     encoding = str(line).split("_", maxsplit=1)[0]
         return encoding
