@@ -14,11 +14,11 @@ class TestHarvester:
         harvester = Harvester(config_file, output_path=output_folder)
 
         assert (
-            harvester._search_items[0]["provider"] == "copernicus"
-        )  # pylint:disable=protected-access
+            harvester._search_items[0]["provider"] == "copernicus"  # pylint:disable=protected-access
+        )
         assert (
-            harvester._search_items[0]["collection"] == "Sentinel1"
-        )  # pylint:disable=protected-access
+            harvester._search_items[0]["collection"] == "Sentinel1"  # pylint:disable=protected-access
+        )
 
         # Test constructor with shapefile:
         test_shape = "/test_data/foo_shape"
@@ -28,8 +28,8 @@ class TestHarvester:
         # Asserting that the extracted and transformed coordinates have successfully
         # entered in place of bbox of search terms
         assert (
-            "24.139947" in harvester._search_items[0]["search_terms"]["box"]
-        )  # pylint:disable=protected-access
+            "24.139947" in harvester._search_items[0]["search_terms"]["box"]  # pylint:disable=protected-access
+        )
 
     # The following tests are really dummy
     @patch("noaharvester.harvester.copernicus.Copernicus")
@@ -76,19 +76,19 @@ class TestHarvester:
         mocked_copernicus.return_value = mocked_cp_class
 
         harvester = Harvester(config_file, output_path=output_folder)
-        harvester._resolve_provider_instance(
+        harvester._resolve_provider_instance(  # pylint:disable=protected-access
             "earthdata"
-        )  # pylint:disable=protected-access
-        harvester._resolve_provider_instance(
+        )
+        harvester._resolve_provider_instance(  # pylint:disable=protected-access
             "earthsearch"
-        )  # pylint:disable=protected-access
-        harvester._resolve_provider_instance(
+        )
+        harvester._resolve_provider_instance(  # pylint:disable=protected-access
             "copernicus"
-        )  # pylint:disable=protected-access
+        )
         # adding it again to check the else clause
-        harvester._resolve_provider_instance(
+        harvester._resolve_provider_instance(   # pylint:disable=protected-access
             "copernicus"
-        )  # pylint:disable=protected-access
+        )
 
         assert "earthdata" in harvester._providers  # pylint:disable=protected-access
         assert "earthsearch" in harvester._providers  # pylint:disable=protected-access

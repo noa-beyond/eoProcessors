@@ -1,9 +1,9 @@
 """Testing providers"""
 
-import pytest
 # import logging
 from unittest.mock import patch, Mock, mock_open
 from pathlib import Path
+import pytest
 
 
 from noaharvester.providers import DataProvider
@@ -147,6 +147,7 @@ class TestProviders:
         # TODO the same "fixture" exists in download. Put it in conftest
         # or in this test class
         class MockedResults(Mock):
+            """Mocked Results Class"""
             def __init__(self):
                 super().__init__()
                 self.items = ["a result", "a second result"]
@@ -182,25 +183,29 @@ class TestProviders:
         output_folder,
         caplog
     ):  # pylint:disable=unused-argument
-
+        """Testing earthsearch Download"""
         class MockedAsset(Mock):
+            """Mocked Assets Class"""
             def __init__(self):
                 super().__init__()
                 self.href = "https://Mocked_URI/asset.tif"
 
         class MockedResult(Mock):
+            """Mocked Results Class"""
             def __init__(self):
                 super().__init__()
                 self.id = "Mocked Id"
                 self.assets = {"visual": MockedAsset()}
 
         class MockedResults(Mock):
+            """Mocked Results Class"""
             def __init__(self):
                 super().__init__()
                 a_result = MockedResult()
                 self.items = [a_result]
 
         class MockedRequestResponse(Mock):
+            """Mocked Response Class"""
             def __init__(self, status):
                 super().__init__()
                 self.status_code = status
