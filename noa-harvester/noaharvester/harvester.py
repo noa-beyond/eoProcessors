@@ -23,7 +23,12 @@ class Harvester:
     """
 
     def __init__(
-        self, config_file: str, shape_file: str = None, verbose: bool = False, bbox_only: bool = False
+        self,
+        config_file: str,
+        output_path: str = None,
+        shape_file: str = None,
+        verbose: bool = False,
+        bbox_only: bool = False
     ) -> Harvester:
         """
         Harvester class. Constructor reads and loads the search items json file.
@@ -34,6 +39,7 @@ class Harvester:
             verbose (bool - Optional): Indicate if Copernicus download progress is verbose.
         """
         self._config_filename = config_file
+        self._output_path = output_path
         self._verbose = verbose
 
         self._search_items: list = []
@@ -112,11 +118,11 @@ class Harvester:
                 "Provider: %s DataProvider instance not found. Creating new.", provider
             )
             if provider == "copernicus":
-                self._providers[provider] = copernicus.Copernicus(self._verbose)
+                self._providers[provider] = copernicus.Copernicus(self._output_path, self._verbose)
             elif provider == "earthdata":
-                self._providers[provider] = earthdata.Earthdata()
+                self._providers[provider] = earthdata.Earthdata(self._output_path)
             elif provider == "earthsearch":
-                self._providers[provider] = earthsearch.Earthsearch()
+                self._providers[provider] = earthsearch.Earthsearch(self._output_path)
         else:
             logger.info("Provider: %s DataProvider instance found.", provider)
         return self._providers[provider]

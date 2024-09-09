@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import logging
-import requests
 import shutil
 from pathlib import Path
+import requests
 from pqdm.threads import pqdm
 
 import click
@@ -28,11 +28,11 @@ class Earthsearch(DataProvider):
         download (item): Download an [item].
     """
 
-    def __init__(self) -> Earthsearch:
+    def __init__(self, output_path) -> Earthsearch:
         """
         Earthsearch cloud provider.
         """
-        super().__init__()
+        super().__init__(output_path=output_path)
 
         logger.debug("Earthsearch provider. No credentials needed.")
         self._downloaded_files = []
@@ -145,8 +145,9 @@ class Earthsearch(DataProvider):
     # TODO put this in utils
     def _download_file(self, file_item):
 
+        timeout_in_sec = 60
         filename = str(file_item[0])
-        response = requests.get(file_item[1], stream=True)
+        response = requests.get(file_item[1], stream=True, timeout=timeout_in_sec)
         if response.status_code == 200:
             if not file_item[0].is_file():
                 with open(filename, "wb") as f:

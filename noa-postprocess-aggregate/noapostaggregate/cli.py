@@ -60,7 +60,7 @@ def aggregate(
     process = postaggregate.Aggregate(data_path, output_path)
     process.from_path(agg_function)
 
-
+# TODO TODO TODO: check gdal info version when installing requirements somehow
 @cli.command(
     help=("Histogram matching of files in [input_path] based on a reference raster")
 )

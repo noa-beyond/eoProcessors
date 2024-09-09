@@ -16,14 +16,14 @@ class DataProvider(ABC):
         describe(optional): Describe collection.
     """
 
-    def __init__(self) -> DataProvider:
+    def __init__(self, output_path) -> DataProvider:
         """
         Instantiates a new Data Provider class.
 
         Attributes:
             _download_path: Data are stored under /data of local execution folder.
         """
-        self._download_path = Path("./data").absolute()
+        self._download_path = Path(output_path).resolve()
 
     # @property
     # def config(self):

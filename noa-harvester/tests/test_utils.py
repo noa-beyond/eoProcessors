@@ -22,3 +22,15 @@ class TestUtils:
         assert result[0][1] == pytest.approx(38.638860)
         assert result[0][2] == pytest.approx(24.168992)
         assert result[0][3] == pytest.approx(38.668720)
+
+        # Checking if returns the same when bboxes = True:
+        # TODO: separate tests for bboxes and multipolygons
+        result = utils.get_bbox_from_shp(
+            Path(__file__).parent.name + area_base_name_path,
+            True
+        )
+
+        assert result[0][0] == pytest.approx(24.139947)
+        assert result[0][1] == pytest.approx(38.638860)
+        assert result[0][2] == pytest.approx(24.168992)
+        assert result[0][3] == pytest.approx(38.668720)

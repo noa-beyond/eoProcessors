@@ -54,7 +54,9 @@ def cli(log):
 )
 @click.argument("config_file", required=True)
 @click.argument("shape_file", required=False)
-def query(config_file: Argument | str, shape_file: Argument | str, bbox_only: Option | bool) -> None:
+def query(
+    config_file: Argument | str, shape_file: Argument | str, bbox_only: Option | bool
+) -> None:
     """
     Instantiate Harvester class and call query function in order to search for
     available products for the selected collections.
@@ -67,7 +69,9 @@ def query(config_file: Argument | str, shape_file: Argument | str, bbox_only: Op
         logger.debug("Cli query for config file: %s", config_file)
 
         click.echo("Querying providers for products:\n")
-        harvest = harvester.Harvester(config_file, shape_file, bbox_only=False)
+        harvest = harvester.Harvester(
+            config_file, shape_file=shape_file, bbox_only=bbox_only
+        )
         harvest.query_data()
 
 
@@ -93,8 +97,13 @@ def query(config_file: Argument | str, shape_file: Argument | str, bbox_only: Op
 )
 @click.argument("config_file", required=True)
 @click.argument("shape_file", required=False)
+@click.option("--output_path", default="./data", help="Output path")
 def download(
-    config_file: Argument | str, shape_file: Argument | str, verbose: Option | bool, bbox_only: Option | bool
+    config_file: Argument | str,
+    shape_file: Argument | str,
+    output_path: Option | str,
+    bbox_only: Option | bool,
+    verbose: Option | bool,
 ) -> None:
     """
     Instantiate Harvester class and call download function.
@@ -109,7 +118,14 @@ def download(
         logger.debug("Cli download for config file: %s", config_file)
 
         click.echo("Downloading...\n")
-        harvest = harvester.Harvester(config_file, shape_file, verbose, bbox_only=False)
+        click.echo(output_path)
+        harvest = harvester.Harvester(
+            config_file=config_file,
+            output_path=output_path,
+            shape_file=shape_file,
+            verbose=verbose,
+            bbox_only=bbox_only,
+        )
         harvest.download_data()
         click.echo("Done.\n")
 
@@ -128,7 +144,7 @@ def describe(config_file: Argument | str) -> None:
     if config_file:
         logger.debug("Cli describing for config file: %s", config_file)
 
-        harvest = harvester.Harvester(config_file)
+        harvest = harvester.Harvester(config_file=config_file)
         click.echo("Available parameters for selected collections:\n")
         harvest.describe()
 
