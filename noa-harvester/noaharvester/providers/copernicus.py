@@ -31,18 +31,18 @@ class Copernicus(DataProvider):
         describe (collection): Output available search terms of [collection].
     """
 
-    def __init__(self, verbose: bool = False) -> Copernicus:
+    def __init__(self, output_path, verbose: bool = False) -> Copernicus:
         """
-        Copernicus provider. Constructor also perfoms the login operation based
+        Copernicus provider. Constructor also performs the login operation based
         on credentials present in the .netrc file.
 
         Parameters:
             verbose (bool): If True, download progress indicator will be visible
         """
-        super().__init__()
+        super().__init__(output_path=output_path)
 
         # From .netrc
-        logger.debug("Checking Copernicus credentials - trying to aquire token")
+        logger.debug("Checking Copernicus credentials - trying to acquire token")
         self._credentials = Credentials()
 
         self._downloaded_feature_ids = []

@@ -25,12 +25,12 @@ class Earthdata(DataProvider):
         describe (collection): Output available search terms of [collection].
     """
 
-    def __init__(self) -> Earthdata:
+    def __init__(self, output_path) -> Earthdata:
         """
         Earthdata provider. Constructor also performs the login operation based
         on credentials present in the .netrc file.
         """
-        super().__init__()
+        super().__init__(output_path=output_path)
 
         # From .netrc
         logger.debug("Checking Earthdata credentials - trying to acquire token")
@@ -92,7 +92,7 @@ class Earthdata(DataProvider):
         )
         initial_results = len(results)
 
-        for result in results:
+        for result in results.copy():
             if result.data_links() not in self._downloaded_links:
                 self._downloaded_links.append(result.data_links())
             else:
