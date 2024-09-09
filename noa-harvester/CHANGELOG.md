@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
-- Introduced output folder cli option for downloading (#32)
+- Introduced output folder cli option for downloading on Harvester (#32)
 
 ## [0.5.1-beta] - 2024-06-26
 ### Added
