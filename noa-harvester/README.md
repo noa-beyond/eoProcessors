@@ -124,7 +124,7 @@ noaharvester
 ```
 
 to enter into the container and execute the cli application from there:
-`python noaharvester/cli.py download -v config/config.json`
+`python noaharvester/cli.py download -v --output_path /app/data/ config/config.json`
 
 * Or execute the command leaving the container when the command is completed:
 
@@ -136,7 +136,7 @@ noaharvester download -v config/config.json
 ```
 
 Please note that in the aforementioned commands you can replace:
-    * `[./data]` with the folder where the downloaded data will be stored
+    * `[./data]` with the folder where the downloaded data will be stored. The default location is "./data"
     * `[./config/config.json]` with the local location of your configuration file. In that way you will use the local edited file instead of the container one. If you have edited the already present config file before building the container, leave it as is is.
 
 
@@ -199,6 +199,7 @@ Cli can be executed with the following:
     * `query` - Queries the collection(s) for products according to the parameters present in the config file.
     * `describe` (Copernicus only) - Describes the available query parameters for the collections as defined in the config file.
 - Options
+    * `--output_path` (download only) Custom download location.
     * `-v`, `--verbose` Shows the progress indicator when downloading (Copernicus - only for download command)
     * `--log LEVEL (INFO, DEBUG, WARNING, ERROR)` Shows the logs depending on the selected `LEVEL`
 - Arguments
@@ -221,8 +222,7 @@ noaharvester describe config/config.json
 docker run -it \
 -v ./config/config.json:/app/config/config.json \
 -v /home/user/project/strange_area:/app/shapes/strange_area/ \
-**TODO: **
--v [data]:/app/data (optional) \
+-v /home/user/project/data:/app/data \
 noaharvester download -v config/config.json shapes/strange_area/area
 ```
 

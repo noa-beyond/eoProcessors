@@ -6,8 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- Introduced output folder cli option for downloading (#32)
 
-## [0.5.1] - 2024-06-26
+## [0.5.1-beta] - 2024-06-26
 ### Added
 - Introduced assets selection for earthsearch (#27)
 
