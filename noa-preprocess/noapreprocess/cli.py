@@ -36,7 +36,14 @@ def cli(log):
     logging.basicConfig(level=numeric_level, format="%(asctime)s %(message)s")
 
 
-@cli.command(help="Generic extract and COG transforming of files in [input_path], using [config_file] options. If output_path option is not defined, extraction is performed where input file(s) are.")
+@cli.command(
+    help=(
+        "Generic extract and COG transforming of rasters in [input_path], using [config_file] options."
+        "If output_path option is not defined, extraction is performed where input file(s) are."
+        "In either case, the (TILE_)YEAR_MONTH_DAY folder structure is used when extracting."
+        "The extraction process works for Sentinel 1 and Sentinel 2 SAFE files."
+    )
+)
 @click.option("--output_path", default="", help="Output path")
 @click.argument("config_file", required=True)
 @click.argument("input_path", required=True)
@@ -65,7 +72,9 @@ def extract(
     else:
         output_path = Path(output_path).resolve()
 
-    click.echo(f"Processing files in path {str(input_path)}, storing in {str(output_path)}\n")
+    click.echo(
+        f"Processing files in path {str(input_path)}, storing in {str(output_path)}\n"
+    )
     process = preprocess.Preprocess(input_path, output_path, config_file)
     process.extract()
 
