@@ -23,6 +23,8 @@ class DataProvider(ABC):
         Attributes:
             _download_path: Data are stored under /data of local execution folder.
         """
+        if not output_path:
+            output_path = "./data"
         self._download_path = Path(output_path).resolve()
 
     # @property

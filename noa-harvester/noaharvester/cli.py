@@ -46,14 +46,14 @@ def cli(log):
         "the bounding box there instead of the config file."
     )
 )
+@click.argument("config_file", required=True)
+@click.argument("shape_file", required=False)
 @click.option(
     "--bbox_only",
     "-bb",
     is_flag=True,
     help="Only use multipolygon total bbox, not individual",
 )
-@click.argument("config_file", required=True)
-@click.argument("shape_file", required=False)
 def query(
     config_file: Argument | str, shape_file: Argument | str, bbox_only: Option | bool
 ) -> None:
