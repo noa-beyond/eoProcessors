@@ -55,16 +55,16 @@ class Preprocess:
         for filename in os.listdir(str(self._input_path)):
             if filename.endswith(self._config["input_file_type"]):
                 zip_path = Path(self._input_path, filename)
-                with zipfile.ZipFile(str(zip_path), "r") as archive:
-                    # TODO write the following spaghetti better
-                    platform = zip_path.name.split("_")[0]
-                    if "S2" in platform:
+                platform = zip_path.name.split("_")[0]
+                if "S2" in platform:
+                    with zipfile.ZipFile(str(zip_path), "r") as archive:
                         self.extract_s2(zip_path, archive)
-                    elif "S1" in platform:
+                elif "S1" in platform:
+                    with zipfile.ZipFile(str(zip_path), "r") as archive:
                         self.extract_s1(zip_path, archive)
-                    else:
-                        click.echo(f"Zip {zip_path} does not seem to have a valid Sentinel 1 or Sentinel 2 filename")
-                        continue
+                else:
+                    click.echo(f"Zip {zip_path} does not seem to have a valid Sentinel 1 or Sentinel 2 filename")
+                    continue
 
     def clip(self, shapefile_path):
         for root, dirs, files in os.walk(shapefile_path):
@@ -117,13 +117,10 @@ class Preprocess:
                         year = filename_parts[-3].split("T")[0][:4]
                         month = filename_parts[-3].split("T")[0][4:6]
                         day = filename_parts[-3].split("T")[0][6:8]
-                        # TODO separate private function
-                        # Do not retain directory structure, just extract
                         data = archive.read(file, self._input_path)
                         output_file_path = Path(
                             self._output_path, tile, year, month, day, Path(file).name
                         )
-                        print(tile)
                         os.makedirs(Path(self._output_path, tile, year, month, day), exist_ok=True)
                         output_file_path.write_bytes(data)
 
@@ -140,7 +137,33 @@ class Preprocess:
                         )
 
     def extract_s1(self, zip_path, archive):
-        pass
+        default_s1_raster_suffix = ".tiff"
+        for file in archive.namelist():
+            if file.endswith(default_s1_raster_suffix):
+                # absoluteOrbitNumber
+                filename_parts = Path(file).name.split("_")
+                orbit_number = filename_parts[-3]
+                year = filename_parts[-5].split("T")[0][:4]
+                month = filename_parts[-5].split("T")[0][4:6]
+                day = filename_parts[-5].split("T")[0][6:8]
+                data = archive.read(file, self._input_path)
+                output_file_path = Path(
+                    self._output_path, orbit_number, year, month, day, Path(file).name
+                )
+                os.makedirs(Path(self._output_path, orbit_number, year, month, day), exist_ok=True)
+                output_file_path.write_bytes(data)
+
+                if self._config.get("convert_to_cog", False):
+                    cog_output_path = str(output_file_path).replace(
+                        default_s1_raster_suffix,
+                        f'.cog.{default_s1_raster_suffix}'
+                    )
+                    self._convert_to_cog(output_file_path, cog_output_path)
+                    os.remove(output_file_path)
+
+                click.echo(
+                    f"Extracted {Path(file).name} from {zip_path} to {self._output_path}"
+                )
 
     def _get_shapefile_bbox(self, shapefile_path):
         with shapefile.Reader(
