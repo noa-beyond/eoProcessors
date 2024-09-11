@@ -127,7 +127,7 @@ class Preprocess:
                         if self._config.get("convert_to_cog", False):
                             cog_output_path = str(output_file_path).replace(
                                 self._config["raster_suffix_input"],
-                                f'.cog.{self._config["raster_suffix_output"]}'
+                                f'-cog{self._config["raster_suffix_output"]}'
                             )
                             self._convert_to_cog(output_file_path, cog_output_path)
                             os.remove(output_file_path)
@@ -156,10 +156,10 @@ class Preprocess:
                 if self._config.get("convert_to_cog", False):
                     # Sentinel 1 has a "new" COG translated Product. In case
                     # you have not downloaded that, then:
-                    if "COG" not in zip_path:
+                    if "COG" not in str(zip_path):
                         cog_output_path = str(output_file_path).replace(
                             default_s1_raster_suffix,
-                            f'.cog.{default_s1_raster_suffix}'
+                            f'-cog{default_s1_raster_suffix}'
                         )
                         self._convert_to_cog(output_file_path, cog_output_path)
                         os.remove(output_file_path)
