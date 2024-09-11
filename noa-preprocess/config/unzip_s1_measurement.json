@@ -3,6 +3,7 @@
     "raster_suffix_input": ".jp2",
     "raster_compression_output": "COG",
     "raster_suffix_output": ".tif",
-    "raster_resolutions": ["10m"],
-    "bands": ["B02", "B03", "B04"]
+    "raster_resolutions": ["all"],
+    "bands": ["all"],
+    "convert_to_cog": true
 }

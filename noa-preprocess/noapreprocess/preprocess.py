@@ -54,41 +54,17 @@ class Preprocess:
     def extract(self):
         for filename in os.listdir(str(self._input_path)):
             if filename.endswith(self._config["input_file_type"]):
-                zip_path = str(Path(self._input_path, filename))
-                with zipfile.ZipFile(zip_path, "r") as archive:
-                    # TODO write the following spaghetti better
-                    for file in archive.namelist():
-                        for resolution in self._config["raster_resolutions"]:
-                            for band in self._config["bands"]:
-                                if (
-                                    file.endswith(self._config["raster_suffix_input"])
-                                    and (resolution in file or resolution == "all")
-                                    and (band in file or band == "all")
-                                ):
-                                    # TODO separate private function
-                                    # Do not retain directory structure, just extract
-                                    data = archive.read(file, self._input_path)
-                                    output_file_path = Path(
-                                        self._output_path, Path(file).name
-                                    )
-                                    output_file_path.write_bytes(data)
-                                    # NOTE: If you want to retain directory structure:
-                                    #       comment above, uncomment below
-                                    # archive.extract(file, self._output_path)
-                                    # output_file_path = Path(file)
-
-                                    # ONLY FOR SENTINEL 2
-                                    if self._config.get("convert_to_cog", False):
-                                        cog_output_path = str(output_file_path).replace(
-                                            self._config["raster_suffix_input"],
-                                            f'_COG{self._config["raster_suffix_output"]}'
-                                        )
-                                        self._convert_to_cog(output_file_path, cog_output_path)
-                                        os.remove(output_file_path)
-
-                                    click.echo(
-                                        f"Extracted {Path(file).name} from {filename} to {self._output_path}"
-                                    )
+                zip_path = Path(self._input_path, filename)
+                platform = zip_path.name.split("_")[0]
+                if "S2" in platform:
+                    with zipfile.ZipFile(str(zip_path), "r") as archive:
+                        self.extract_s2(zip_path, archive)
+                elif "S1" in platform:
+                    with zipfile.ZipFile(str(zip_path), "r") as archive:
+                        self.extract_s1(zip_path, archive)
+                else:
+                    click.echo(f"Zip {zip_path} does not seem to have a valid Sentinel 1 or Sentinel 2 filename")
+                    continue
 
     def clip(self, shapefile_path):
         for root, dirs, files in os.walk(shapefile_path):
@@ -127,6 +103,71 @@ class Preprocess:
 
     # TODO: with "self", you pass the whole object, where you don't need it. It needs
     # triage, to separate functions to utils and important ones as private.
+    def extract_s2(self, zip_path, archive):
+        for file in archive.namelist():
+            for resolution in self._config["raster_resolutions"]:
+                for band in self._config["bands"]:
+                    if (
+                        file.endswith(self._config["raster_suffix_input"])
+                        and (resolution in file or resolution == "all")
+                        and (band in file or band == "all")
+                    ):
+                        filename_parts = Path(file).name.split("_")
+                        tile = filename_parts[-4]
+                        year = filename_parts[-3].split("T")[0][:4]
+                        month = filename_parts[-3].split("T")[0][4:6]
+                        day = filename_parts[-3].split("T")[0][6:8]
+                        data = archive.read(file, self._input_path)
+                        output_file_path = Path(
+                            self._output_path, tile, year, month, day, Path(file).name
+                        )
+                        os.makedirs(Path(self._output_path, tile, year, month, day), exist_ok=True)
+                        output_file_path.write_bytes(data)
+
+                        if self._config.get("convert_to_cog", False):
+                            cog_output_path = str(output_file_path).replace(
+                                self._config["raster_suffix_input"],
+                                f'-cog{self._config["raster_suffix_output"]}'
+                            )
+                            self._convert_to_cog(output_file_path, cog_output_path)
+                            os.remove(output_file_path)
+
+                        click.echo(
+                            f"Extracted {Path(file).name} from {zip_path} to {self._output_path}"
+                        )
+
+    def extract_s1(self, zip_path, archive):
+        default_s1_raster_suffix = ".tiff"
+        for file in archive.namelist():
+            if file.endswith(default_s1_raster_suffix):
+                # absoluteOrbitNumber
+                filename_parts = Path(file).name.split("-")
+                orbit_number = filename_parts[-3]
+                year = filename_parts[-5].split("T")[0][:4]
+                month = filename_parts[-5].split("T")[0][4:6]
+                day = filename_parts[-5].split("T")[0][6:8]
+                data = archive.read(file, self._input_path)
+                output_file_path = Path(
+                    self._output_path, orbit_number, year, month, day, Path(file).name
+                )
+                os.makedirs(Path(self._output_path, orbit_number, year, month, day), exist_ok=True)
+                output_file_path.write_bytes(data)
+
+                if self._config.get("convert_to_cog", False):
+                    # Sentinel 1 has a "new" COG translated Product. In case
+                    # you have not downloaded that, then:
+                    if "COG" not in str(zip_path):
+                        cog_output_path = str(output_file_path).replace(
+                            default_s1_raster_suffix,
+                            f'-cog{default_s1_raster_suffix}'
+                        )
+                        self._convert_to_cog(output_file_path, cog_output_path)
+                        os.remove(output_file_path)
+
+                click.echo(
+                    f"Extracted {Path(file).name} from {zip_path} to {self._output_path}"
+                )
+
     def _get_shapefile_bbox(self, shapefile_path):
         with shapefile.Reader(
             shapefile_path, encoding=self._get_encoding(shapefile_path)
@@ -227,6 +268,8 @@ class Preprocess:
                         cog_filename,
                         dst_profile,
                         config=config,
+                        forward_band_tags=True,
+                        forward_ns_tags=True,
                         use_cog_driver=True,
                         in_memory=False
                     )
