@@ -141,7 +141,7 @@ class Preprocess:
         for file in archive.namelist():
             if file.endswith(default_s1_raster_suffix):
                 # absoluteOrbitNumber
-                filename_parts = Path(file).name.split("_")
+                filename_parts = Path(file).name.split("-")
                 orbit_number = filename_parts[-3]
                 year = filename_parts[-5].split("T")[0][:4]
                 month = filename_parts[-5].split("T")[0][4:6]
@@ -154,12 +154,15 @@ class Preprocess:
                 output_file_path.write_bytes(data)
 
                 if self._config.get("convert_to_cog", False):
-                    cog_output_path = str(output_file_path).replace(
-                        default_s1_raster_suffix,
-                        f'.cog.{default_s1_raster_suffix}'
-                    )
-                    self._convert_to_cog(output_file_path, cog_output_path)
-                    os.remove(output_file_path)
+                    # Sentinel 1 has a "new" COG translated Product. In case
+                    # you have not downloaded that, then:
+                    if "COG" not in zip_path:
+                        cog_output_path = str(output_file_path).replace(
+                            default_s1_raster_suffix,
+                            f'.cog.{default_s1_raster_suffix}'
+                        )
+                        self._convert_to_cog(output_file_path, cog_output_path)
+                        os.remove(output_file_path)
 
                 click.echo(
                     f"Extracted {Path(file).name} from {zip_path} to {self._output_path}"
@@ -265,6 +268,8 @@ class Preprocess:
                         cog_filename,
                         dst_profile,
                         config=config,
+                        forward_band_tags=True,
+                        forward_ns_tags=True,
                         use_cog_driver=True,
                         in_memory=False
                     )
