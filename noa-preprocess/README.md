@@ -12,4 +12,5 @@ A pre-process processor which:
 
 `python noapreprocess/cli.py --help`:
 1. `python noapreprocess/cli.py extract config/default_unzip_all.json /data/path`
-2. `python noapreprocess/cli.py clip config/default_unzip_all.json /shape/file/path /input/data/path/`
+2. `python noapreprocess/cli.py extract --output_path /home/user/data/ config/default_unzip_all.json /data/path`
+3. `python noapreprocess/cli.py clip config/default_unzip_all.json /shape/file/path /input/data/path/`
