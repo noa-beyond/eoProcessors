@@ -56,15 +56,13 @@ class Preprocess:
             if filename.endswith(self._config["input_file_type"]):
                 zip_path = Path(self._input_path, filename)
                 platform = zip_path.name.split("_")[0]
-                if "S2" in platform:
-                    with zipfile.ZipFile(str(zip_path), "r") as archive:
+                with zipfile.ZipFile(str(zip_path), "r") as archive:
+                    if "S2" in platform:
                         self.extract_s2(zip_path, archive)
-                elif "S1" in platform:
-                    with zipfile.ZipFile(str(zip_path), "r") as archive:
+                    elif "S1" in platform:
                         self.extract_s1(zip_path, archive)
-                else:
-                    click.echo(f"Zip {zip_path} does not seem to have a valid Sentinel 1 or Sentinel 2 filename")
-                    continue
+                    else:
+                        self.generic_extract(zip_path, archive)
 
     def clip(self, shapefile_path):
         for root, dirs, files in os.walk(shapefile_path):
@@ -73,9 +71,12 @@ class Preprocess:
                     shapefile_path = os.path.join(root, file)
 
                     for raster_file in glob.glob(
-                        str(Path(
-                            self._input_path, f"*{self._config['raster_suffix_input']}"
-                        ))
+                        str(
+                            Path(
+                                self._input_path,
+                                f"*{self._config['raster_suffix_input']}",
+                            )
+                        )
                     ):
                         raster_path = raster_file
                         raster_bbox = self._get_raster_bbox(raster_path)
@@ -121,13 +122,16 @@ class Preprocess:
                         output_file_path = Path(
                             self._output_path, tile, year, month, day, Path(file).name
                         )
-                        os.makedirs(Path(self._output_path, tile, year, month, day), exist_ok=True)
+                        os.makedirs(
+                            Path(self._output_path, tile, year, month, day),
+                            exist_ok=True,
+                        )
                         output_file_path.write_bytes(data)
 
                         if self._config.get("convert_to_cog", False):
                             cog_output_path = str(output_file_path).replace(
                                 self._config["raster_suffix_input"],
-                                f'-cog{self._config["raster_suffix_output"]}'
+                                f'-cog{self._config["raster_suffix_output"]}',
                             )
                             self._convert_to_cog(output_file_path, cog_output_path)
                             os.remove(output_file_path)
@@ -150,7 +154,10 @@ class Preprocess:
                 output_file_path = Path(
                     self._output_path, orbit_number, year, month, day, Path(file).name
                 )
-                os.makedirs(Path(self._output_path, orbit_number, year, month, day), exist_ok=True)
+                os.makedirs(
+                    Path(self._output_path, orbit_number, year, month, day),
+                    exist_ok=True,
+                )
                 output_file_path.write_bytes(data)
 
                 if self._config.get("convert_to_cog", False):
@@ -158,8 +165,7 @@ class Preprocess:
                     # you have not downloaded that, then:
                     if "COG" not in str(zip_path):
                         cog_output_path = str(output_file_path).replace(
-                            default_s1_raster_suffix,
-                            f'-cog{default_s1_raster_suffix}'
+                            default_s1_raster_suffix, f"-cog{default_s1_raster_suffix}"
                         )
                         self._convert_to_cog(output_file_path, cog_output_path)
                         os.remove(output_file_path)
@@ -167,6 +173,18 @@ class Preprocess:
                 click.echo(
                     f"Extracted {Path(file).name} from {zip_path} to {self._output_path}"
                 )
+
+    def generic_extract(self, zip_path, archive: zipfile.ZipFile):
+
+        try:
+            archive.extractall(path=self._output_path)
+            click.echo(f"Extracted {zip_path} to {self._output_path}")
+        except NotADirectoryError as e:
+            click.echo(
+                f"Please note that some zipped files cannot be extracted in the same folder as the source zip. "
+                f"(e.g. Sentinel 3 .SEN3 files, which do not have a '.zip' suffix) "
+                f"Please change output folder. Error: {e}"
+            )
 
     def _get_shapefile_bbox(self, shapefile_path):
         with shapefile.Reader(
@@ -246,7 +264,7 @@ class Preprocess:
     # Based on https://guide.cloudnativegeo.org/cloud-optimized-geotiffs/writing-cogs-in-python.html
     def _convert_to_cog(self, original_raster, cog_filename):
 
-        with rio.Env(GDAL_DRIVER_NAME='JP2OpenJPEG'):
+        with rio.Env(GDAL_DRIVER_NAME="JP2OpenJPEG"):
             with rio.open(original_raster, "r") as src:
                 arr = src.read()
                 kwargs = src.meta
@@ -271,5 +289,5 @@ class Preprocess:
                         forward_band_tags=True,
                         forward_ns_tags=True,
                         use_cog_driver=True,
-                        in_memory=False
+                        in_memory=False,
                     )
