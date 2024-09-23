@@ -13,7 +13,10 @@ It can be used as a standalone cli application or be built in a Docker container
 
 # Using the processor
 
-The noaharvester processor can be executed as a standalone cli application or inside a container. 
+The noaharvester processor can be executed as:
+- Standalone [**Cli application**](#standalone-cli-execution) or
+- Inside a [**Container**](#docker-execution)
+
 In either case, a user must have credentials for accessing one or more data hubs:
 - [Copernicus]
 - [EarthData] ([EarthData Register])
@@ -38,24 +41,22 @@ Open a terminal window (or git bash...), navigate to your preferred working dire
 git clone https://github.com/Agri-Hub/eoProcessors.git
 ```
 
-You can also download the repo directly from github.
-
 You can now either execute the processor as a [standalone cli application](#standalone-cli-execution) or [build a container and run it](#docker-execution).
 
 ## Standalone CLI execution
 
-- You must have a Python version greater than 3.**12**.
-- Navigate to where you cloned the repo.
-- You should perform the following operations in a virtual environment:
+1. You must have a Python version greater than 3.**12**.
+2. Navigate to where you cloned the repo.
+3. You should perform the following operations in a virtual environment:
     - Windows:
         - Install miniconda (https://docs.anaconda.com/free/miniconda/miniconda-install/)
     - Linux:
         - Install conda (https://docs.conda.io/projects/conda/en/latest/user-guide/install/linux.html)
-    - Common:
+    - **Common**:
         - Create the environment:
             - Execute `conda create -n noaharvester_env python==3.12`
             - Execute `conda activate noaharvester_env`
-- Then:
+4. Then:
 
 ```
     cd eoProcessors/noa-harvester
@@ -63,12 +64,12 @@ You can now either execute the processor as a [standalone cli application](#stan
 ```
   in order for the `.netrc` file to be created in your local environment. This file will take care of credential information based on the environmental variables you have set up before.
 
-- Finally, install necessary requirements inside your virtual environment:
+5. Finally, install necessary requirements inside your virtual environment:
 ```
 pip install -r requirements.txt
 ```
 
-You are ready to execute the cli scripts:
+6. You are ready to execute the cli scripts:
 
 ```
 python noaharvester/cli.py [command] config/config.json [shape_file]
@@ -79,7 +80,10 @@ Available commands are:
 - download - Downloads data
 - describe (Copernicus only) - Describe collection's available query fields
 
+#### Config file
 The config file *should* be placed inside `eoProcessors/noa-harvester/config`, but of course you could use any path.
+
+#### Shape files
 The optional shapefile argument can be used in the end, to draw the bounding box from shapefile information (`.shp` for the shape and `.prj` for the projection information). Please note that you should use the common file base name for both files as the argument. E.g. for `weird_area.shp` and `weird_area.prj`, use `weird_area` as the argument
 
 Please check the [Config](#Config-file-parameters) section regarding config file specification.
@@ -88,15 +92,15 @@ Moreover, a `-v` parameter is available to print verbose download progress bar f
 
 ## Docker execution
 
-* Install Docker: https://docs.docker.com/get-docker/
+1. Install Docker: https://docs.docker.com/get-docker/
 
-* Navigate to the folder (remember, from git bash in Windows - use *winpty* in case git bash complains before every command):
+2. Navigate to the folder (remember, from git bash in Windows - use *winpty* in case git bash complains before every command):
 
 ```
     cd eoProcessors/noa-harvester
 ```
 
-- Then:
+3. Then:
 
 ```
 docker build -t noaharvester \
@@ -111,9 +115,9 @@ Please note that you **should not** replace the above command with your already 
 You now have a local container named noaharvester.
 
 
-* Edit `config/config.json` (or create a new one)
+4. Edit `config/config.json` (or create a new one)
 
-* Execute either:
+5.1 Execute either:
 
 ```
 docker run -it \
@@ -126,7 +130,7 @@ noaharvester
 to enter into the container and execute the cli application from there:
 `python noaharvester/cli.py download -v --output_path /app/data/ config/config.json`
 
-* Or execute the command leaving the container when the command is completed:
+5.2 Or execute the command leaving the container when the command is completed:
 
 ```
 docker run -it \
@@ -200,6 +204,7 @@ Cli can be executed with the following:
     * `describe` (Copernicus only) - Describes the available query parameters for the collections as defined in the config file.
 - Options
     * `--output_path` (download only) Custom download location.
+    * `-bb, --bbox_only` Draw total bbox, not individual polygons in multipolygon shapefile.
     * `-v`, `--verbose` Shows the progress indicator when downloading (Copernicus - only for download command)
     * `--log LEVEL (INFO, DEBUG, WARNING, ERROR)` Shows the logs depending on the selected `LEVEL`
 - Arguments
