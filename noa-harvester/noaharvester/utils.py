@@ -1,5 +1,4 @@
 """Utility functions"""
-
 import logging
 
 from pyproj import Transformer, CRS
@@ -16,7 +15,7 @@ def get_bbox_from_shp(shp_path: str, bbox_only: bool) -> list:
 
     Parameters:
         shp_path (str): The shapefile path. It should contain .shp and .prj files.
-        bbox_only (bool): Calculate the whole bbox instead of creating a bbox list. 
+        bbox_only (bool): Calculate the whole bbox instead of creating a bbox list.
     Returns:
         [west, south, east, north] (list(float)): Bounding box coordinates.
     """

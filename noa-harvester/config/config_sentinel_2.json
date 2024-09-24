@@ -1,0 +1,14 @@
+[
+    {   
+        "provider": "copernicus",
+        "collection": "Sentinel2",
+        "search_terms":
+        {
+            "maxRecords": "100",
+            "startDate": "2024-09-01",
+            "completionDate": "2024-09-05",
+            "box": "24.15943,38.50005,24.24733,38.55608",
+            "productType": "S2MSI2A"
+        }
+    }
+]

@@ -129,6 +129,7 @@ class Copernicus(DataProvider):
                         "concurrency": 4,
                         "monitor": StatusMonitor() if self.verbose else False,
                         "credentials": self.credentials,
+                        "logger": logger
                     },
                 )
             )
