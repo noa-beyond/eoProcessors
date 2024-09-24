@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.6.0] - 2024-09-23
+## [0.6.0] - 2024-09-24
 ### Added
 - Introduced output folder cli option for downloading on Harvester (#32)
 - Accept shapefile with multipolygon. Query for every polygon separately (#34)
