@@ -40,23 +40,32 @@ def cli(log):
     help=(
         "Generic extract and COG transforming of rasters in [input_path], using [config_file] options."
         "If output_path option is not defined, extraction is performed where input file(s) are."
-        "In either case, the (TILE_)YEAR_MONTH_DAY folder structure is used when extracting."
-        "The extraction process works for Sentinel 1 and Sentinel 2 SAFE files."
+        "If -t flag is used, the (TILE_)YEAR_MONTH_DAY folder structure is used when extracting."
+        "The extraction process works for Sentinel 1 and Sentinel 2 SAFE files, while for Sentinel 3 a"
+        "simple extraction is performed without Tile format."
     )
 )
-@click.option("--output_path", default="", help="Output path")
-@click.argument("config_file", required=True)
+@click.option("--output_path", "-o", default="", help="Output path")
+@click.option("--simple", "-s", is_flag=True, help="Just extract. No config used.")
+@click.option("--tile_tree", "-t", is_flag=True, help="Extract in TILE/YYYY/MM/DD tree structure")
 @click.argument("input_path", required=True)
+@click.argument("config_file", required=True)
 def extract(
-    input_path: Argument | str, output_path: Option | str, config_file: Argument | str
+    input_path: Argument | str,
+    config_file: Argument | str,
+    output_path: Option | str,
+    simple: Option | bool,
+    tile_tree: Option | bool
 ) -> None:
     """
     Instantiate Preprocess class and process path contents.
 
     Parameters:
         input_path (click.Argument | str): Path to look for files
-        output_path (click.Option | str): Path to store output
         config_file (click.Argument | str): config json file
+        output_path (click.Option | str): Path to store output
+        simple (click.Option | bool): Just extract, no options
+        tile_tree (click.Option | bool): Create Tile tree folder structure
         # TODO: raster resolutions config filter is dumb. Only checks if "in" filename.
           If "all" is set, it also downloads quality masks. So either search by filename field,
           or set config option of "quality_files": True
@@ -76,6 +85,10 @@ def extract(
         f"Processing files in path {str(input_path)}, storing in {str(output_path)}\n"
     )
     process = preprocess.Preprocess(input_path, output_path, config_file)
+    process.update_config({
+        "simple": simple,
+        "tile_tree": tile_tree
+    })
     process.extract()
 
 
