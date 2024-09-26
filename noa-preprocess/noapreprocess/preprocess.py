@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 import logging
 import json
-import glob
 import zipfile
 from pathlib import Path, PurePath
 
@@ -51,12 +50,18 @@ class Preprocess:
         with open(config_file, encoding="utf8") as f:
             self._config = json.load(f)
 
+    def update_config(self, options: dict):
+        self._config.update(options)
+
     def extract(self):
         for filename in os.listdir(str(self._input_path)):
             if filename.endswith(self._config["input_file_type"]):
                 zip_path = Path(self._input_path, filename)
                 platform = zip_path.name.split("_")[0]
                 with zipfile.ZipFile(str(zip_path), "r") as archive:
+                    if self._config.get("simple", False):
+                        self.generic_extract(zip_path, archive)
+                        continue
                     if "S2" in platform:
                         self.extract_s2(zip_path, archive)
                     elif "S1" in platform:
@@ -65,42 +70,36 @@ class Preprocess:
                         self.generic_extract(zip_path, archive)
 
     def clip(self, shapefile_path):
-        for root, dirs, files in os.walk(shapefile_path):
+        for root, _, files in os.walk(shapefile_path):
             for file in files:
                 if file.endswith(".shp"):
                     shapefile_path = os.path.join(root, file)
+                    for tif_root, _, tif_files in os.walk(self._input_path):
+                        for raster_file in tif_files:
+                            if raster_file.endswith(self._config['raster_suffix_input']):
+                                raster_path = os.path.join(tif_root, raster_file)
+                                raster_bbox = self._get_raster_bbox(raster_path)
 
-                    for raster_file in glob.glob(
-                        str(
-                            Path(
-                                self._input_path,
-                                f"*{self._config['raster_suffix_input']}",
-                            )
-                        )
-                    ):
-                        raster_path = raster_file
-                        raster_bbox = self._get_raster_bbox(raster_path)
+                                raster_crs = self._get_raster_crs(raster_path)
+                                transformed_shapefile_geom = self._transform_shapefile_geometry(
+                                    shapefile_path, raster_crs
+                                )
+                                transformed_shapefile_bbox = transformed_shapefile_geom.bounds
 
-                        raster_crs = self._get_raster_crs(raster_path)
-                        transformed_shapefile_geom = self._transform_shapefile_geometry(
-                            shapefile_path, raster_crs
-                        )
-                        transformed_shapefile_bbox = transformed_shapefile_geom.bounds
+                                shapefile_bbox_polygon = box(*transformed_shapefile_bbox)
 
-                        shapefile_bbox_polygon = box(*transformed_shapefile_bbox)
-
-                        if raster_bbox.intersects(shapefile_bbox_polygon):
-                            shp_output_path = Path(
-                                self._output_path, PurePath(shapefile_path).parent.name
-                            )
-                            os.makedirs(shp_output_path, exist_ok=True)
-                            output_raster_path = os.path.join(
-                                shp_output_path,
-                                f"clipped_{Path(raster_path).stem}{self._config['raster_suffix_output']}",
-                            )
-                            self._clip_raster_with_rasterio(
-                                raster_path, shapefile_path, output_raster_path
-                            )
+                                if raster_bbox.intersects(shapefile_bbox_polygon):
+                                    shp_output_path = Path(
+                                        self._output_path, PurePath(shapefile_path).parent.name
+                                    )
+                                    os.makedirs(shp_output_path, exist_ok=True)
+                                    output_raster_path = os.path.join(
+                                        shp_output_path,
+                                        f"clipped_{Path(raster_path).stem}{self._config['raster_suffix_output']}",
+                                    )
+                                    self._clip_raster_with_rasterio(
+                                        raster_path, shapefile_path, output_raster_path
+                                    )
 
     # TODO: with "self", you pass the whole object, where you don't need it. It needs
     # triage, to separate functions to utils and important ones as private.
@@ -119,13 +118,19 @@ class Preprocess:
                         month = filename_parts[-3].split("T")[0][4:6]
                         day = filename_parts[-3].split("T")[0][6:8]
                         data = archive.read(file, self._input_path)
-                        output_file_path = Path(
-                            self._output_path, tile, year, month, day, Path(file).name
-                        )
-                        os.makedirs(
-                            Path(self._output_path, tile, year, month, day),
-                            exist_ok=True,
-                        )
+
+                        output_file_path = Path(self._output_path, Path(file).name)
+                        os.makedirs(Path(self._output_path), exist_ok=True)
+
+                        if self._config.get("tile_tree", False):
+                            output_file_path = Path(
+                                self._output_path, tile, year, month, day, Path(file).name
+                            )
+                            os.makedirs(
+                                Path(self._output_path, tile, year, month, day),
+                                exist_ok=True,
+                            )
+
                         output_file_path.write_bytes(data)
 
                         if self._config.get("convert_to_cog", False):
