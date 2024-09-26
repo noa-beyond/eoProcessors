@@ -23,8 +23,8 @@ logger = logging.getLogger(__name__)
 
 @click.group(
     help=(
-        "Processes EO data from [PATH] according to parameters defined "
-        "in the [CONFIG_FILE]."
+        "Processes EO data from [input_path] according to parameters defined "
+        "in [config_file]."
     )
 )
 @click.option(
@@ -39,85 +39,100 @@ def cli(log):
 
 
 @cli.command(
-    help=("Aggregate according to [agg_function] argument for files in [path].")
+    help=("Aggregate according to [agg_function] argument for files in [input_path].")
 )
 @click.argument("agg_function", required=True)
-@click.argument("data_path", required=True)
+@click.argument("input_path", required=True)
 @click.option("--output_path", default="./output", help="Output path")
 def aggregate(
-    agg_function: Argument | str, data_path: Argument | str, output_path: Option | str
+    agg_function: Argument | str, input_path: Argument | str, output_path: Option | str
 ) -> None:
     """
     Instantiate Postprocess class and process path contents.
 
     Parameters:
         agg_function (click.Argument | str): Aggregate function [median, mean, min, max]
-        data_path (click.Argument | str): Path to look for files
+        input_path (click.Argument | str): Path to look for files
         output_path (click.Option | str): Path to store output files
     """
 
-    click.echo(f"Processing files in path {data_path}:\n")
-    process = postaggregate.Aggregate(data_path, output_path)
+    click.echo(f"Processing files in path {input_path}:\n")
+    process = postaggregate.Aggregate(input_path, output_path)
     process.from_path(agg_function)
+
 
 # TODO TODO TODO: check gdal info version when installing requirements somehow
 @cli.command(
-    help=("Histogram matching of files in [input_path] based on a reference raster")
+    help=(
+        "Histogram matching of files in [input_path] based on an optional reference raster. "
+        "If no reference raster is provided, then a random (usually the first grammatically) "
+        "raster from the folder is selected as reference."
+    )
 )
 @click.option("--output_path", default="./output", help="Output path")
 @click.argument("input_path", required=True)
-@click.argument("input_reference_filename", required=False)
+@click.argument("reference_file", required=False)
 def histogram_matching(
     input_path: Argument | str,
     output_path: Option | str,
-    input_reference_filename: Argument | str | None,
+    reference_file: Argument | str | None,
 ) -> None:
     """
     Instantiate Postprocess class and process path contents.
 
     Parameters:
-        input_reference_filename (click.Argument | str): Filename to match against to.
+        reference_file (click.Argument | str): Filename to match against to.
         input_path (click.Argument | str): Path of files to be processed
         output_path (click.Option | str): Path to store output files
     """
 
-    if input_reference_filename is None:
+    if reference_file is None:
         click.echo("No reference file is given. Will process full path\n")
 
     click.echo(f"Processing files in path {input_path}:\n")
     process = postaggregate.Aggregate(input_path, output_path)
-    process.histogram_matching(input_reference_filename)
+    process.histogram_matching(reference_file)
 
 
 @cli.command(
-    help=("Total difference vector of files in [input_path] against a reference raster")
+    help=(
+        "Per raster and total difference vector of rasters in [input_path] "
+        "against a reference raster. If no reference is provided, "
+        "then 'all against all' difference strategy is performed. "
+        "If '-pm' flag is used, then differences are calculated in a "
+        "per month basis. e.g. all August rasters are compared with "
+        "all September rasters, and a Total difference vector is produced "
+        "for every reference raster of August against all rasters "
+        "of September. Please note that it only calculates adjacent months."
+    )
 )
 @click.option("--output_path", default="./output", help="Output path")
 @click.option(
     "--per_month",
+    "-pm",
     is_flag=True,
     show_default=True,
     default=False,
     help="If true, then a per month dif is produced under the same folder",
 )
 @click.argument("input_path", required=True)
-@click.argument("input_reference_filename", required=False)
+@click.argument("reference_file", required=False)
 def difference_vector(
     input_path: Argument | str,
     output_path: Option | str,
-    input_reference_filename: Argument | str | None,
+    reference_file: Argument | str | None,
     per_month: Option | bool,
 ) -> None:
     """
     Instantiate Postprocess class and process path contents.
 
     Parameters:
-        input_reference_filename (click.Argument | str): Filename to calculate difference from
+        reference_file (click.Argument | str): Filename to calculate difference from
         input_path (click.Argument | str): Path of files to be processed
         output_path (click.Option | str): Path to store output files
     """
 
-    if input_reference_filename is None and not per_month:
+    if reference_file is None and not per_month:
         click.echo(
             "No reference file is given. Will process full path, searching for 'reference' in filename\n"
         )
@@ -127,7 +142,8 @@ def difference_vector(
     if per_month:
         process.difference_vector_per_month()
     else:
-        process.difference_vector(input_reference_filename)
+        # TODO this does not work as intended: it looks for 'reference' files
+        process.difference_vector(reference_file)
 
 
 if __name__ == "__main__":  # pragma: no cover
