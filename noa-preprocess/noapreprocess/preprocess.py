@@ -44,8 +44,12 @@ class Preprocess:
         """
 
         self._input_path = input_path
-        self._output_path = output_path
-        os.makedirs(str(self._output_path), exist_ok=True)
+        if output_path == "":
+            self._output_path = str(Path(self._input_path, "clipped").resolve())
+        else:
+            self._output_path = str(Path(output_path).resolve())
+
+        os.makedirs(self._output_path, exist_ok=True)
 
         with open(config_file, encoding="utf8") as f:
             self._config = json.load(f)
@@ -93,9 +97,9 @@ class Preprocess:
                                         self._output_path, PurePath(shapefile_path).parent.name
                                     )
                                     os.makedirs(shp_output_path, exist_ok=True)
-                                    output_raster_path = os.path.join(
+                                    output_raster_path = Path(
                                         shp_output_path,
-                                        f"clipped_{Path(raster_path).stem}{self._config['raster_suffix_output']}",
+                                        str(PurePath(raster_path).stem) + self._config['raster_suffix_output']
                                     )
                                     self._clip_raster_with_rasterio(
                                         raster_path, shapefile_path, output_raster_path
