@@ -48,7 +48,9 @@ def cli(log):
 )
 @click.option("--output_path", "-o", default="", help="Output path")
 @click.option("--simple", "-s", is_flag=True, help="Just extract. No config used.")
-@click.option("--tile_tree", "-t", is_flag=True, help="Extract in TILE/YYYY/MM/DD tree structure")
+@click.option(
+    "--tile_tree", "-t", is_flag=True, help="Extract in TILE/YYYY/MM/DD tree structure"
+)
 @click.argument("input_path", required=True)
 @click.argument("config_file", required=True)
 def extract(
@@ -56,7 +58,7 @@ def extract(
     config_file: Argument | str,
     output_path: Option | str,
     simple: Option | bool,
-    tile_tree: Option | bool
+    tile_tree: Option | bool,
 ) -> None:
     """
     Instantiate Preprocess class and process path contents.
@@ -86,10 +88,7 @@ def extract(
         f"Processing files in path {str(input_path)}, storing in {str(output_path)}\n"
     )
     process = preprocess.Preprocess(input_path, output_path, config_file)
-    process.update_config({
-        "simple": simple,
-        "tile_tree": tile_tree
-    })
+    process.update_config({"simple": simple, "tile_tree": tile_tree})
     process.extract()
 
 
@@ -104,8 +103,8 @@ def extract(
         "raster extensions. Optional output_path points where clipped "
         "rasters will be saved. If not set, they will be under "
         "input_path/clipped"
-        )
     )
+)
 @click.argument("input_path", required=True)
 @click.argument("shapefile_path", required=True)
 @click.argument("config_file", required=True)
@@ -129,8 +128,7 @@ def clip(
         config_file (click.Argument | str): config json file
     """
     logger.debug("Cli preprocessing/clipping using config file: %s", config_file)
-
-    click.echo(f"Processing files in path {input_path}, storing in {output_path}\n")
+    click.echo(f"Processing files under path {input_path}\n")
     process = preprocess.Preprocess(input_path, output_path, config_file)
     process.clip(shapefile_path)
 

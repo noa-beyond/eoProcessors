@@ -80,26 +80,36 @@ class Preprocess:
                     shapefile_path = os.path.join(root, file)
                     for tif_root, _, tif_files in os.walk(self._input_path):
                         for raster_file in tif_files:
-                            if raster_file.endswith(self._config['raster_suffix_input']):
+                            if raster_file.endswith(
+                                self._config["raster_suffix_input"]
+                            ):
                                 raster_path = os.path.join(tif_root, raster_file)
                                 raster_bbox = self._get_raster_bbox(raster_path)
 
                                 raster_crs = self._get_raster_crs(raster_path)
-                                transformed_shapefile_geom = self._transform_shapefile_geometry(
-                                    shapefile_path, raster_crs
+                                transformed_shapefile_geom = (
+                                    self._transform_shapefile_geometry(
+                                        shapefile_path, raster_crs
+                                    )
                                 )
-                                transformed_shapefile_bbox = transformed_shapefile_geom.bounds
+                                transformed_shapefile_bbox = (
+                                    transformed_shapefile_geom.bounds
+                                )
 
-                                shapefile_bbox_polygon = box(*transformed_shapefile_bbox)
+                                shapefile_bbox_polygon = box(
+                                    *transformed_shapefile_bbox
+                                )
 
                                 if raster_bbox.intersects(shapefile_bbox_polygon):
                                     shp_output_path = Path(
-                                        self._output_path, PurePath(shapefile_path).parent.name
+                                        self._output_path,
+                                        PurePath(shapefile_path).parent.name,
                                     )
                                     os.makedirs(shp_output_path, exist_ok=True)
                                     output_raster_path = Path(
                                         shp_output_path,
-                                        str(PurePath(raster_path).stem) + self._config['raster_suffix_output']
+                                        str(PurePath(raster_path).stem)
+                                        + self._config["raster_suffix_output"],
                                     )
                                     self._clip_raster_with_rasterio(
                                         raster_path, shapefile_path, output_raster_path
@@ -128,7 +138,12 @@ class Preprocess:
 
                         if self._config.get("tile_tree", False):
                             output_file_path = Path(
-                                self._output_path, tile, year, month, day, Path(file).name
+                                self._output_path,
+                                tile,
+                                year,
+                                month,
+                                day,
+                                Path(file).name,
                             )
                             os.makedirs(
                                 Path(self._output_path, tile, year, month, day),
