@@ -1,9 +1,6 @@
 {
-    "input_file_type": ".zip",
-    "raster_suffix_input": ".jp2",
+    "raster_suffix_input": ".tif",
     "raster_compression_output": "COG",
     "raster_suffix_output": ".tif",
-    "raster_resolutions": ["10m", "60m"],
-    "bands": ["B02", "B03"],
     "nodata_custom_value": 9999
 }

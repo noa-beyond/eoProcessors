@@ -38,11 +38,12 @@ def cli(log):
 
 @cli.command(
     help=(
-        "Generic extract and COG transforming of rasters in [input_path], using [config_file] options."
-        "If output_path option is not defined, extraction is performed where input file(s) are."
-        "If -t flag is used, the (TILE_)YEAR_MONTH_DAY folder structure is used when extracting."
-        "The extraction process works for Sentinel 1 and Sentinel 2 SAFE files, while for Sentinel 3 a"
-        "simple extraction is performed without Tile format."
+        "Generic extract and COG transforming of rasters in [input_path], using [config_file] options. "
+        "If output_path option is not defined, extraction is performed where input file(s) are. "
+        "If -t flag is used, the (TILE_)YEAR_MONTH_DAY folder structure is used when extracting. "
+        "If -s flag is used, a simple extract all is performed (bypassing config in a way). "
+        "The extraction process works for Sentinel 1 and Sentinel 2 SAFE files, while for Sentinel"
+        " 3, a simple extraction is performed without Tile format."
     )
 )
 @click.option("--output_path", "-o", default="", help="Output path")
@@ -92,11 +93,21 @@ def extract(
     process.extract()
 
 
-@cli.command(help="Clip files in [input_path] against a [shapefile].")
-@click.argument("config_file", required=False)
-@click.option("--output_path", default="./output", help="Output path")
-@click.argument("shapefile_path", required=True)
+@cli.command(
+    help=(
+        "Clip files in [input_path] against a [shapefile] path. "
+        "Both path options are recursive, meaning that all "
+        "files found under input path are going to be clipped "
+        "against all shapefiles under shapefile path."
+        "Config file argument serves for custom nodata value "
+        "in new clipped raster results, along with input and output "
+        "raster extensions."
+        )
+    )
 @click.argument("input_path", required=True)
+@click.argument("shapefile_path", required=True)
+@click.argument("config_file", required=True)
+@click.option("--output_path", default="./output", help="Output path")
 def clip(
     input_path: Argument | str,
     shapefile_path: Argument | str,
@@ -115,8 +126,7 @@ def clip(
         output_path (click.Option | str): Path to store output
         config_file (click.Argument | str): config json file
     """
-    if config_file:
-        logger.debug("Cli preprocessing/clipping using config file: %s", config_file)
+    logger.debug("Cli preprocessing/clipping using config file: %s", config_file)
 
     click.echo(f"Processing files in path {input_path}, storing in {output_path}\n")
     process = preprocess.Preprocess(input_path, output_path, config_file)
