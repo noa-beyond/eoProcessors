@@ -98,16 +98,18 @@ def extract(
         "Clip files in [input_path] against a [shapefile] path. "
         "Both path options are recursive, meaning that all "
         "files found under input path are going to be clipped "
-        "against all shapefiles under shapefile path."
+        "against all shapefiles under shapefile path. "
         "Config file argument serves for custom nodata value "
         "in new clipped raster results, along with input and output "
-        "raster extensions."
+        "raster extensions. Optional output_path points where clipped "
+        "rasters will be saved. If not set, they will be under "
+        "input_path/clipped"
         )
     )
 @click.argument("input_path", required=True)
 @click.argument("shapefile_path", required=True)
 @click.argument("config_file", required=True)
-@click.option("--output_path", default="./output", help="Output path")
+@click.option("--output_path", default="", help="Output path")
 def clip(
     input_path: Argument | str,
     shapefile_path: Argument | str,
