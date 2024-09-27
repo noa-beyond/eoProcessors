@@ -19,9 +19,9 @@ logger = logging.getLogger(__name__)
 
 class Aggregate:
 
-    def __init__(self, input_path, output_path) -> None:
+    def __init__(self, input_path: Path, output_path: Path) -> None:
         self._input_path = input_path
-        self._output_path = Path(output_path).absolute()
+        self._output_path = output_path
         self._output_path.mkdir(parents=True, exist_ok=True)
 
     def from_path(self, agg_function):
@@ -39,7 +39,7 @@ class Aggregate:
                 profile.update(driver="GTiff")
                 self._output_path.mkdir(parents=True, exist_ok=True)
                 with rio.open(
-                    f"{str(self._output_path)}/{tile}_{agg_function}.tif",
+                    str(Path(self._output_path, f"{tile}_{agg_function}.tif")),
                     "w",
                     **profile,
                 ) as dst:
@@ -47,11 +47,11 @@ class Aggregate:
             images = []
 
     def histogram_matching(self, reference_image: str | None):
-        for root, dirs, files in os.walk(self._input_path, topdown=True):
+        for root, dirs, _ in os.walk(str(self._input_path), topdown=True):
             for directory in dirs:
                 bands = []
                 # TODO: explain the pattern in log or generalize the prefix
-                pattern = re.compile(r"(clipped_T\d\d.*)_(\d+)T(\d+)_(.*)_(.*)\.tif")
+                pattern = re.compile(r"(T\d\d.*)_(\d+)T(\d+)_(.*)_(.*)\.tif")
                 for file in os.listdir(Path(root, directory)):
                     if pattern.match(str(file)):
                         resolution = str(file).rsplit("_", maxsplit=1)[-1]
@@ -69,6 +69,8 @@ class Aggregate:
                             ref_image = reference_image
                         reference = gdal.Open(ref_image, gdal.GA_Update)
                         reference_array = np.array(reference.GetRasterBand(1).ReadAsArray())
+                        # A raster (especially after clipping) might be empty (zero values)
+                        # Do not use it as reference
                         if not np.any(reference_array):
                             del reference_array
                             continue
@@ -85,12 +87,8 @@ class Aggregate:
                                     and resolution == resolution_to_match
                                     and filename_to_match != ref_image
                                 ):
-                                    match_folder = Path(self._input_path, "histogram_matched")
-                                    match_folder.mkdir(parents=True, exist_ok=True)
-                                    current_dir = str(Path(root, directory))
-                                    p = [str(self._input_path), current_dir]
-                                    commonprefix = os.path.commonprefix(p)
-                                    path_to_save = Path(match_folder, current_dir.replace(commonprefix, ""))
+                                    match_folder = Path(self._output_path)
+                                    path_to_save = Path(match_folder, directory)
                                     path_to_save.mkdir(parents=True, exist_ok=True)
                                     self._match_and_save(path_to_save, filename_to_match, reference_array)
                                     if not os.path.isfile(Path(path_to_save, file)):
@@ -102,7 +100,7 @@ class Aggregate:
 
         yearmonth_set = set()
 
-        for root, dirs, files in os.walk(self._input_path, topdown=True):
+        for root, dirs, files in os.walk(str(self._input_path), topdown=True):
             for directory in dirs:
                 for file in os.listdir(Path(root, directory)):
                     if str(file).endswith(".tif") and "dif" not in str(file):
@@ -203,18 +201,19 @@ class Aggregate:
                                         difference_vector, axis=0
                                     ).astype(np.uint8)
                                     self._save_difference_vector(
-                                        str(Path(root, directory, output_path)), str(Path(root, directory, ref_file)), sum_image
+                                        str(Path(root, directory, output_path)), str(Path(root, directory, ref_file)),
+                                        sum_image
                                     )
                 yearmonth_set.clear()
 
     # TODO: need to remove here the look for "reference" in file and histomatch in result. Work with folders
+    # TODO: this is not done. Needs follow up
     def difference_vector(self, reference_image: str | None):
 
         for root, dirs, files in os.walk(self._input_path, topdown=True):
             for file in files:
                 if (
-                    "reference" in file
-                    and str(file).endswith(".tif")
+                    str(file).endswith(".tif")
                     and "dif_vector" not in file
                 ):
                     if reference_image is None:
@@ -226,28 +225,28 @@ class Aggregate:
                 reference_parts = ref_image.split("_")
                 da_ref = rioxarray.open_rasterio(ref_image)
                 difference_vector = []
-                for filename in glob.glob(f"{root}/*.tif"):
-                    filename_parts = filename.split("_")
-                    if (
-                        reference_parts[-1] == filename_parts[-1]
-                        and reference_parts[-2] == filename_parts[-2]
-                        and reference_parts[-4] == filename_parts[-4]
-                        and "reference" not in filename
-                        and "dif_vector" not in filename
-                        and "histomatch" in filename
-                    ):
-                        # Get the normalized difference vector
-                        # Get its power of 2 and store it in the collection
-                        single_difference_vector = self._difference_vector(
-                            da_ref, filename
-                        )
-                        self._save_difference_vector(
-                            root,
-                            ref_image,
-                            single_difference_vector,
-                            filename_parts[-3],
-                        )
-                        difference_vector.append(single_difference_vector)
+                for _, _, filenames in os.walk(root):
+                    for filename in filenames:
+                        if filename.endswith(".tif"):
+                            filename_parts = filename.split("_")
+                            if (
+                                reference_parts[-1] == filename_parts[-1]
+                                and reference_parts[-2] == filename_parts[-2]
+                                and reference_parts[-4] == filename_parts[-4]
+                                and "dif_vector" not in filename
+                            ):
+                                # Get the normalized difference vector
+                                # Get its power of 2 and store it in the collection
+                                single_difference_vector = self._difference_vector(
+                                    da_ref, str(Path(root, filename))
+                                )
+                                self._save_difference_vector(
+                                    root,
+                                    ref_image,
+                                    single_difference_vector,
+                                    filename_parts[-3],
+                                )
+                                difference_vector.append(single_difference_vector)
                 if difference_vector:
                     # Sum all the elements in the array to produce the final output image
                     sum_image = np.sum(difference_vector, axis=0).astype(np.uint8)
@@ -354,10 +353,8 @@ class Aggregate:
         if source_filename_part:
             source_text = source_filename_part
         ref_file = reference_image.split("/")[-1].split("_")
-        output_image = (
-            parent_folder
-            + "/"
-            + ref_file[-4]
+        file_string = (
+            ref_file[-4]
             + "_"
             + ref_file[-3]
             + "_dif_"
@@ -367,6 +364,7 @@ class Aggregate:
             + "_"
             + ref_file[-1]
         )
+        output_image = str(Path(parent_folder, file_string))
         print(output_image)
 
         # Get the metadata from the original image

@@ -87,6 +87,7 @@ def extract(
     click.echo(
         f"Processing files in path {str(input_path)}, storing in {str(output_path)}\n"
     )
+    # TODO the following receives str. Make up your mind
     process = preprocess.Preprocess(input_path, output_path, config_file)
     process.update_config({"simple": simple, "tile_tree": tile_tree})
     process.extract()
