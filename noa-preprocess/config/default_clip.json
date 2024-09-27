@@ -2,5 +2,5 @@
     "raster_suffix_input": ".tif",
     "raster_compression_output": "COG",
     "raster_suffix_output": ".tif",
-    "nodata_custom_value": 9999
+    "nodata_custom_value": 0
 }
