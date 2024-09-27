@@ -43,7 +43,7 @@ def cli(log):
 )
 @click.argument("agg_function", required=True)
 @click.argument("input_path", required=True)
-@click.option("--output_path", default="./output", help="Output path")
+@click.option("--output_path", default="", help="Output path")
 def aggregate(
     agg_function: Argument | str, input_path: Argument | str, output_path: Option | str
 ) -> None:
@@ -57,6 +57,14 @@ def aggregate(
     """
 
     click.echo(f"Processing files in path {input_path}:\n")
+
+    input_path = Path(input_path).resolve()
+
+    if output_path == "":
+        output_path = Path(input_path, "agg_function").resolve()
+    else:
+        output_path = Path(output_path).resolve()
+
     process = postaggregate.Aggregate(input_path, output_path)
     process.from_path(agg_function)
 
@@ -69,7 +77,7 @@ def aggregate(
         "raster from the folder is selected as reference."
     )
 )
-@click.option("--output_path", default="./output", help="Output path")
+@click.option("--output_path", default="", help="Output path")
 @click.argument("input_path", required=True)
 @click.argument("reference_file", required=False)
 def histogram_matching(
@@ -90,6 +98,14 @@ def histogram_matching(
         click.echo("No reference file is given. Will process full path\n")
 
     click.echo(f"Processing files in path {input_path}:\n")
+
+    input_path = Path(input_path).resolve()
+
+    if output_path == "":
+        output_path = Path(input_path, "histogram_matched").resolve()
+    else:
+        output_path = Path(output_path).resolve()
+
     process = postaggregate.Aggregate(input_path, output_path)
     process.histogram_matching(reference_file)
 
@@ -138,6 +154,14 @@ def difference_vector(
         )
 
     click.echo(f"Processing files in path {input_path}:\n")
+
+    input_path = Path(input_path).resolve()
+
+    if output_path == "":
+        output_path = Path(input_path, "dif_vector").resolve()
+    else:
+        output_path = Path(output_path).resolve()
+
     process = postaggregate.Aggregate(input_path, output_path)
     if per_month:
         process.difference_vector_per_month()
