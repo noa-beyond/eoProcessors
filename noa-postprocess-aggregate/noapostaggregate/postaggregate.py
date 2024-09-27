@@ -88,10 +88,7 @@ class Aggregate:
                                     and filename_to_match != ref_image
                                 ):
                                     match_folder = Path(self._output_path)
-                                    current_dir = str(Path(root, directory))
-                                    p = [str(self._input_path), current_dir]
-                                    commonprefix = os.path.commonprefix(p)
-                                    path_to_save = Path(match_folder, current_dir.replace(commonprefix, ""))
+                                    path_to_save = Path(match_folder, directory)
                                     path_to_save.mkdir(parents=True, exist_ok=True)
                                     self._match_and_save(path_to_save, filename_to_match, reference_array)
                                     if not os.path.isfile(Path(path_to_save, file)):
@@ -210,13 +207,13 @@ class Aggregate:
                 yearmonth_set.clear()
 
     # TODO: need to remove here the look for "reference" in file and histomatch in result. Work with folders
+    # TODO: this is not done. Needs follow up
     def difference_vector(self, reference_image: str | None):
 
         for root, dirs, files in os.walk(self._input_path, topdown=True):
             for file in files:
                 if (
-                    "reference" in file
-                    and str(file).endswith(".tif")
+                    str(file).endswith(".tif")
                     and "dif_vector" not in file
                 ):
                     if reference_image is None:
@@ -236,9 +233,7 @@ class Aggregate:
                                 reference_parts[-1] == filename_parts[-1]
                                 and reference_parts[-2] == filename_parts[-2]
                                 and reference_parts[-4] == filename_parts[-4]
-                                and "reference" not in filename
                                 and "dif_vector" not in filename
-                                and "histomatch" in filename
                             ):
                                 # Get the normalized difference vector
                                 # Get its power of 2 and store it in the collection

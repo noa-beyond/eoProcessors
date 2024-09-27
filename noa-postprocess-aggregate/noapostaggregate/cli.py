@@ -167,6 +167,8 @@ def difference_vector(
         process.difference_vector_per_month()
     else:
         # TODO this does not work as intended: it looks for 'reference' files
+        logger.error("Functionality under maintenance.")
+        click.echo("Not currently implemented. Come back later")
         process.difference_vector(reference_file)
 
 
