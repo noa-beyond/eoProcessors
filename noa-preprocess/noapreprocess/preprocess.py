@@ -78,7 +78,9 @@ class Preprocess:
             for file in files:
                 if file.endswith(".shp"):
                     shapefile_path = os.path.join(root, file)
-                    for tif_root, _, tif_files in os.walk(self._input_path):
+                    exclude = self._output_path
+                    for tif_root, dirs, tif_files in os.walk(self._input_path):
+                        dirs[:] = [d for d in dirs if d not in exclude]
                         for raster_file in tif_files:
                             if raster_file.endswith(
                                 self._config["raster_suffix_input"]
