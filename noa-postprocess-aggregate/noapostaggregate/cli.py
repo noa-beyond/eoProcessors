@@ -61,7 +61,7 @@ def aggregate(
     input_path = Path(input_path).resolve()
 
     if output_path == "":
-        output_path = Path(input_path, "agg_function").resolve()
+        output_path = Path(input_path, agg_function).resolve()
     else:
         output_path = Path(output_path).resolve()
 
