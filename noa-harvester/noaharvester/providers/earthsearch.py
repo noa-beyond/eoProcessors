@@ -137,7 +137,7 @@ class Earthsearch(DataProvider):
             collections=[item["collection"]],
             bbox=str(search_terms["box"]),
             datetime=[search_terms["startDate"], search_terms["completionDate"]],
-            query={"eo:cloud_cover": {"lt": search_terms["cloud_cover_lt"]}},
+            query={"eo:cloud_cover": {"lt": search_terms.get("cloud_cover_lt", 100)}},
         ).item_collection()
 
         return results
