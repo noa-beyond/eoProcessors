@@ -14,7 +14,7 @@ from rasterio.mask import mask
 from rio_cogeo.profiles import cog_profiles
 from rio_cogeo.cogeo import cog_translate
 from shapely.geometry import box, shape, mapping
-from shapely.ops import transform
+from shapely.ops import transform, unary_union
 import shapefile
 import pyproj
 
@@ -78,9 +78,8 @@ class Preprocess:
             for file in files:
                 if file.endswith(".shp"):
                     shapefile_path = os.path.join(root, file)
-                    exclude = self._output_path
                     for tif_root, dirs, tif_files in os.walk(self._input_path):
-                        dirs[:] = [d for d in dirs if d not in exclude]
+                        dirs[:] = [d for d in dirs if d not in self._output_path]
                         for raster_file in tif_files:
                             if raster_file.endswith(
                                 self._config["raster_suffix_input"]
@@ -248,10 +247,13 @@ class Preprocess:
 
     def _transform_shapefile_geometry(self, shapefile_path, target_crs):
         source_crs = self._get_shapefile_crs(shapefile_path)
+        geometries = []
         with shapefile.Reader(
             shapefile_path, encoding=self._get_encoding(shapefile_path)
         ) as shp:
-            geom = shape(shp.shape(0).__geo_interface__)
+            for that_shape in shp.shapes():
+                geometries.append(shape(that_shape.__geo_interface__))
+        geom = unary_union(geometries)
 
         project = pyproj.Transformer.from_crs(
             source_crs, target_crs, always_xy=True
