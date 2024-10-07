@@ -15,6 +15,8 @@ from skimage.exposure import match_histograms
 
 
 logger = logging.getLogger(__name__)
+trimesters = [["01", "02", "03"], ["04", "05", "06"], ["07", "08", "09"], ["10", "11", "12"]]
+years = ["2017", "2018", "2019", "2020", "2021", "2022", "2023", "2024"]
 
 
 class Aggregate:
@@ -27,24 +29,31 @@ class Aggregate:
     def from_path(self, agg_function):
 
         for tile in self._get_tiles_list():
-            click.echo(f"Processing tile: {tile}")
-            images, profile = self._get_images_and_profile(tile)
-            logger.debug("Calculating aggregation of tile: %s", tile)
-            aggregated_img = self._get_aggregated_img(agg_function, images, 3).astype(
-                rio.uint8
-            )
+            for year in years:
+                for index, trimester in enumerate(trimesters, start=1):
+                    try:
+                        images = []
+                        click.echo(f"Processing tile: {tile}, for year {year} and trimester {index}")
+                        images, profile = self._get_images_and_profile(tile, year, trimester)
+                        if images:
+                            logger.debug("Calculating aggregation of tile: %s", tile)
+                            aggregated_img = self._get_aggregated_img(agg_function, images, 3).astype(
+                                rio.uint8
+                            )
+                            with rio.Env():
+                                profile.update(driver="GTiff")
+                                self._output_path.mkdir(parents=True, exist_ok=True)
+                                with rio.open(
+                                    str(Path(self._output_path, f"{tile}_{year}_{index}_{agg_function}.tif")),
+                                    "w",
+                                    **profile,
+                                ) as dst:
+                                    dst.write(aggregated_img)
+                            del images
+                            del aggregated_img
+                    except Exception as e:
+                        logger.error("Failed: %s", e)
 
-            with rio.Env():
-                # TODO check output folder (create it first...)
-                profile.update(driver="GTiff")
-                self._output_path.mkdir(parents=True, exist_ok=True)
-                with rio.open(
-                    str(Path(self._output_path, f"{tile}_{agg_function}.tif")),
-                    "w",
-                    **profile,
-                ) as dst:
-                    dst.write(aggregated_img)
-            images = []
 
     def histogram_matching(self, reference_image: str | None):
         for root, dirs, _ in os.walk(str(self._input_path), topdown=True):
@@ -58,11 +67,6 @@ class Aggregate:
                         band = str(file).split("_")[-2]
                         tile = str(file).split("_")[-4]
 
-                        if band not in bands:
-                            bands.append(band)
-                        else:
-                            continue
-
                         if reference_image is None:
                             ref_image = str(Path(root, directory, file))
                         else:
@@ -73,6 +77,11 @@ class Aggregate:
                         # Do not use it as reference
                         if not np.any(reference_array):
                             del reference_array
+                            continue
+
+                        if band not in bands:
+                            bands.append(band)
+                        else:
                             continue
 
                         for file_to_match in os.listdir(Path(root, directory)):
@@ -252,12 +261,18 @@ class Aggregate:
                     sum_image = np.sum(difference_vector, axis=0).astype(np.uint8)
                     self._save_difference_vector(root, ref_image, sum_image)
 
-    def _get_images_and_profile(self, tile):
+    def _get_images_and_profile(self, tile, year, trimester):
         tci_images = []
         profile = None
         for root, _, files in os.walk(self._input_path, topdown=True):
             for fname in files:
-                if fname.endswith(".tif") and fname.split("_")[-5] == tile:
+                if (
+                    fname.endswith(".tif")
+                    and fname.split("_")[-5] == tile
+                    # and fname.split("_")[-6] == "S2A"
+                    and fname.split("_")[-4][:4] == year
+                    and fname.split("_")[-4][4:6] in trimester
+                ):
                     if profile is None:
                         temp_image = rio.open(os.path.join(root, fname))
                         profile = temp_image.profile
@@ -266,6 +281,7 @@ class Aggregate:
                     )
                     img = img.where(img != 0.0, np.nan)
                     tci_images.append(img)
+            break
         return (tci_images, profile)
 
     def _get_aggregated_img(self, agg_function, imgs, no_of_bands):
