@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2024-10-25
+### Changed
+- Bump version of CDSEtool to include bug fix of not just appending .zip (https://github.com/CDSETool/CDSETool/issues/180)
+
 ## [0.6.0] - 2024-09-24
 ### Added
 - Introduced output folder cli option for downloading on Harvester (#32)
