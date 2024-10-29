@@ -8,6 +8,7 @@ import json
 
 from noaharvester.providers import DataProvider, copernicus, earthdata, earthsearch
 from noaharvester import utils
+from noaharvester.db import utils as db_utils
 
 logger = logging.getLogger(__name__)
 
@@ -75,14 +76,40 @@ class Harvester:
         """
         print(uri)
         downloaded_items = []
+        # TODO: this looks at S2 table config
+        db_config = db_utils.load_config()
+
         for single_item in uri:
             download_provider = self._resolve_provider_instance(provider)
-            downloaded_item = download_provider.single_download(single_item)
-            downloaded_items.append(downloaded_item)
-        for downloaded_item in downloaded_items:
-            # TODO insert entry to db (check if needed check is in this part)
-            pass
+            # Check for uuid as passed from request. It should replace uri
+            uuid = None # Test uuid: "83c19de3-e045-40bd-9277-836325b4b64e"
+            result = db_utils.query_uuid(db_config, uuid)
+            if result:
+                logger.debug("Found db entry with uuid: %s", result[0])
+                # TODO result should contain: uuid, uri and title
+                # uri_title = (result[1], result[2])
+                # downloaded_item = download_provider.single_download(uri_title)
+                downloaded_item = download_provider.single_download(single_item)
+                downloaded_items.append(downloaded_item)
+                # TODO updating db value: needs uuid, column name and value
+                # update_result = db_utils.update_uuid(db_config, result[0], "status", 2)
+                # if not update_result:
+                #   logger.error("Could not update uuid: %s", result[0])
+            for downloaded_item in downloaded_items:
+                # TODO do not know if needed
+                # TODO insert entry to db (check if needed check is in this part)
+                pass
 
+    def test_db_connection(self):
+        db_config = db_utils.load_config()
+        db_utils.describe_table(db_config, "products")
+        # db_utils.query_all_items(db_config)
+        uuid = "83c19de3-e045-40bd-9277-836325b4b64e"
+        result = db_utils.query_uuid(db_config, uuid)
+        if result:
+            print(result[0])    
+        else:
+            print("missing")
 
     def query_data(self) -> None:
         """
