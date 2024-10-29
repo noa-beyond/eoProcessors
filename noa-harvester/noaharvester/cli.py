@@ -159,7 +159,8 @@ def from_uri_list(
             verbose=verbose,
             from_uri=True
         )
-        harvest.download_from_uri_list(uri, provider)
+        # harvest.download_from_uri_list(uri, provider)
+        harvest.test_db_connection()
         click.echo("Done.\n")
 
 
