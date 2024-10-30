@@ -1,8 +1,9 @@
+import os
 from pathlib import Path
 from configparser import ConfigParser
 import psycopg
 
-def load_config(filename="database.ini", section="sentinel_status"):
+def get_local_config(filename="database.ini", section="sentinel_status"):
     # TODO: has default section? Does check or not?
     parser = ConfigParser()
     config_path = str(Path(Path(__file__).parent, filename).resolve())
@@ -18,6 +19,18 @@ def load_config(filename="database.ini", section="sentinel_status"):
 
     return config
 
+def get_env_config():
+    # TODO make checks
+    # TODO check if other db access is needed: (like "section" in local config)
+    config = {}
+    config["user"] = os.getenv("DB_USER")
+    config["password"] = os.getenv("DB_PASSWORD")
+    config["host"] = os.getenv("DB_HOST")
+    config["port"] = os.getenv("DB_PORT")
+    config["dbname"] = os.getenv("DB_NAME")
+    if not all(config.values()):
+        return None
+    return config
 
 def describe_table(config, table):
 
@@ -48,10 +61,10 @@ def query_uuid(config, uuid):
             # It should be one...
             return curs.fetchone()
 
-def update_uuid(config, uuid, column, value):
+def update_uuid(config, table, uuid, column, value):
         
     sql = f"""
-        UPDATE products
+        UPDATE {table}
         SET {column} = %s
         WHERE products.id = %s;
     """

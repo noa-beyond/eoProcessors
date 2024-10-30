@@ -77,7 +77,12 @@ class Harvester:
         print(uri)
         downloaded_items = []
         # TODO: this looks at S2 table config
-        db_config = db_utils.load_config()
+        
+        db_config = db_utils.get_env_config()
+        if not db_config:
+            db_config = db_utils.get_local_config()
+        else:
+            logger.error("Not db configuration found, in env vars nor local database.ini file.")
 
         for single_item in uri:
             download_provider = self._resolve_provider_instance(provider)
@@ -92,7 +97,7 @@ class Harvester:
                 downloaded_item = download_provider.single_download(single_item)
                 downloaded_items.append(downloaded_item)
                 # TODO updating db value: needs uuid, column name and value
-                # update_result = db_utils.update_uuid(db_config, result[0], "status", 2)
+                # update_result = db_utils.update_uuid(db_config, "products", result[0], "status", 2)
                 # if not update_result:
                 #   logger.error("Could not update uuid: %s", result[0])
             for downloaded_item in downloaded_items:
@@ -101,7 +106,11 @@ class Harvester:
                 pass
 
     def test_db_connection(self):
-        db_config = db_utils.load_config()
+        db_config = db_utils.get_env_config()
+        if not db_config:
+            db_config = db_utils.get_local_config()
+        else:
+            logger.error("Not db configuration found, in env vars nor local database.ini file.")
         db_utils.describe_table(db_config, "products")
         # db_utils.query_all_items(db_config)
         uuid = "83c19de3-e045-40bd-9277-836325b4b64e"
