@@ -1,6 +1,6 @@
 name: noaharvester
 services:
-  app:
+  noaharvester:
     image: noaharvester:latest
     build:
       context: .
@@ -9,6 +9,11 @@ services:
         - COPERNICUS_PASSWORD
         - EARTHDATA_LOGIN
         - EARTHDATA_PASSWORD
+        - DB_USER
+        - DB_PASSWORD
+        - DB_HOST
+        - DB_PORT
+        - DB_NAME
     working_dir: /app    
     volumes:
       - ./config:/app/config
@@ -24,3 +29,13 @@ secrets:
     environment: EARTHDATA_LOGIN
   EARTHDATA_PASSWORD:
     environment: EARTHDATA_PASSWORD
+  DB_USER:
+    environment: DB_USER
+  DB_PASSWORD:
+    environment: DB_PASSWORD
+  DB_HOST:
+    environment: DB_HOST
+  DB_PORT:
+    environment: DB_PORT
+  DB_NAME:
+    environment: DB_NAME
