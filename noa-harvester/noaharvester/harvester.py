@@ -76,6 +76,7 @@ class Harvester:
         """
         print(uri)
         downloaded_items = []
+        failed_items = []
         # TODO: this looks at S2 table config
         
         db_config = db_utils.get_env_config()
@@ -95,15 +96,17 @@ class Harvester:
                 # uri_title = (result[1], result[2])
                 # downloaded_item = download_provider.single_download(uri_title)
                 downloaded_item = download_provider.single_download(single_item)
-                downloaded_items.append(downloaded_item)
+                # downloaded_items.append(downloaded_item)
                 # TODO updating db value: needs uuid, column name and value
-                # update_result = db_utils.update_uuid(db_config, "products", result[0], "status", 2)
-                # if not update_result:
-                #   logger.error("Could not update uuid: %s", result[0])
-            for downloaded_item in downloaded_items:
-                # TODO do not know if needed
-                # TODO insert entry to db (check if needed check is in this part)
-                pass
+                # update_status = db_utils.update_uuid(db_config, "products", result[0], "status", 2)
+                # TODO needs correct path of download
+                # update_item_path = db_utils.update_uuid(db_config, "products", result[0], "path", self._output_folder)
+                # if update_result:
+                #     downloaded_items.append(result[0])
+                # else:
+                #     failed_items.append(result[0])
+                #     logger.error("Could not update uuid: %s", result[0])
+            return (downloaded_items, failed_items)
 
     def test_db_connection(self):
         db_config = db_utils.get_env_config()
