@@ -157,9 +157,12 @@ def from_uuid_list(
             verbose=verbose,
             from_uri=True
         )
-        # downloaded_uuids, failed_uuids = **harvest.download_from_uuid_list(uuid)
-        harvest.test_db_connection()
+        downloaded_uuids, failed_uuids = harvest.download_from_uuid_list(uuid)
+        if failed_uuids:
+            logger.error("Failed uuids: %s", failed_uuids)
+        # harvest.test_db_connection()
         click.echo("Done.\n")
+        return downloaded_uuids
 
 
 @cli.command(

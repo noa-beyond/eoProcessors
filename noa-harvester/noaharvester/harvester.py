@@ -71,7 +71,7 @@ class Harvester:
                     logger.debug("Appending search item: %s", item)
         logger.debug("Total search items: %s", len(self._search_items))
 
-    def download_from_uuid_list(self, uuid_list) -> None:
+    def download_from_uuid_list(self, uuid_list) -> tuple[list, list]:
         """
         Utilize the minimum provider interface for downloading single items
         """
