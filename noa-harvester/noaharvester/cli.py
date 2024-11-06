@@ -125,15 +125,13 @@ def download(
     is_flag=True,
     help="Shows the progress indicator (for Copernicus only)",
 )
-@click.argument("provider", required=True)
 @click.argument("config_file", required=True)
 @click.option("--output_path", default="./data", help="Output path")
-@click.option("--uri", "-u", multiple=True)
-def from_uri_list(
+@click.option("--uuid", "-u", multiple=True)
+def from_uuid_list(
     config_file: Argument | str,
-    provider: Argument | str,
     output_path: Option | str,
-    uri: Option | tuple[str],
+    uuid: Option | tuple[str],
     verbose: Option | bool,
 ) -> None:
     """
@@ -159,7 +157,7 @@ def from_uri_list(
             verbose=verbose,
             from_uri=True
         )
-        # downloaded_uuids, failed_uuids = **harvest.download_from_uri_list(uri, provider)
+        # downloaded_uuids, failed_uuids = **harvest.download_from_uuid_list(uuid)
         harvest.test_db_connection()
         click.echo("Done.\n")
 

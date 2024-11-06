@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 import click
 
 import earthaccess
@@ -63,10 +64,8 @@ class Earthdata(DataProvider):
         click.echo(f"Available items for {item['collection']}: {len(results)}")
         return item["collection"], len(results)
 
-    def single_download(self, uri: str) -> tuple[str, int]:
+    def single_download(self, url: str, title: str) -> Path:
         logger.error("Not implemented for Earthdata provider")
-        pass
-
 
     def download(self, item: dict) -> tuple[str, int]:
         """

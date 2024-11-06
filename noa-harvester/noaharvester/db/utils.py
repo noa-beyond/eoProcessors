@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 from configparser import ConfigParser
 import psycopg
+from psycopg.rows import dict_row
 # pylint: disable=E1129 # False-positive for psycopg connection context manager
 # TODO: after integration tests, remove helper functions and make
 # table specific functions generic (by posting table name also)
@@ -61,15 +62,15 @@ def describe_table(config, table):
             print("Column names:", columns)
 
 
-def query_uuid(config, uuid):
-    """Get specific uuid from products"""
+def query_uuid(config, uuid) -> dict:
+    """Get row by uuid as a named dictionary"""
     sql = """
         SELECT *
         FROM products
         where products.id=%s
         """
 
-    with psycopg.connect(**config) as conn:
+    with psycopg.connect(**config, row_factory=dict_row) as conn:
         with conn.cursor() as curs:
             curs.execute(sql, (uuid,))
             # It should be one...

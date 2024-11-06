@@ -55,9 +55,8 @@ class Earthsearch(DataProvider):
         click.echo(f"Available items for {item['collection']}: {len(results.items)}")
         return item["collection"], len(results.items)
 
-    def single_download(self, uri: str) -> tuple[str, int]:
+    def single_download(self, url: str, title: str) -> Path:
         logger.error("Not implemented for Earthsearch provider")
-        pass
 
     def download(self, item: dict) -> tuple[str, int]:
         """

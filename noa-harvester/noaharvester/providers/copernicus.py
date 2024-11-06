@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import os
 import sys
 import logging
+from pathlib import Path
 import click
 
 from cdsetool.credentials import Credentials
@@ -87,14 +89,12 @@ class Copernicus(DataProvider):
 
         return collection, list(search_terms)
 
-    def single_download(self, uri: str) -> tuple[str, int]:
+    def single_download(self, url: str, title: str) -> Path:
         """
         Utilize the minimum CSETool interface for downloading single items.
         CDSETool utilizes url and title of the Feature and also some optional
         values from Options.
         """
-        url = uri.split(":")[0]
-        title = uri.split(":")[1]
         feature = {
             "properties": {
                 "title": title,
@@ -112,15 +112,15 @@ class Copernicus(DataProvider):
             "tmpdir": None,
             "monitor": None,
             "credentials": {
-                "username": "",
-                "password": ""
+                "username": os.getenv("COPERNICUS_LOGIN"),
+                "password": os.getenv("COPERNICUS_PASSWORD")
             },
             "proxies": None
         }
 
-        download_feature(feature=feature, path=self._download_path, options=options)
+        filename = download_feature(feature=feature, path=self._download_path, options=options)
+        return Path(self._download_path, filename)
         # TODO Verify checksum
-        # TODO return downloaded path
 
 
     def download(self, item: dict) -> tuple[str, int]:

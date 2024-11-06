@@ -70,42 +70,43 @@ class Harvester:
                     logger.debug("Appending search item: %s", item)
         logger.debug("Total search items: %s", len(self._search_items))
 
-    def download_from_uri_list(self, uri, provider) -> None:
+    def download_from_uuid_list(self, uuid_list) -> None:
         """
         Utilize the minimum provider interface for downloading single items
         """
-        print(uri)
+        print(uuid_list)
         downloaded_items = []
         failed_items = []
         # TODO: this looks at S2 table config
-        
         db_config = db_utils.get_env_config()
         if not db_config:
             db_config = db_utils.get_local_config()
         else:
             logger.error("Not db configuration found, in env vars nor local database.ini file.")
 
-        for single_item in uri:
+        for single_uuid in uuid_list:
+            uuid_db_entry = db_utils.query_uuid(db_config, single_uuid)
+            provider = uuid_db_entry.get("Provider", None)
+            print(provider)
             download_provider = self._resolve_provider_instance(provider)
             # Check for uuid as passed from request. It should replace uri
-            uuid = None # Test uuid: "83c19de3-e045-40bd-9277-836325b4b64e"
-            result = db_utils.query_uuid(db_config, uuid)
-            if result:
-                logger.debug("Found db entry with uuid: %s", result[0])
-                # TODO result should contain: uuid, uri and title
-                # uri_title = (result[1], result[2])
-                # downloaded_item = download_provider.single_download(uri_title)
-                downloaded_item = download_provider.single_download(single_item)
-                # downloaded_items.append(downloaded_item)
-                # TODO updating db value: needs uuid, column name and value
-                # update_status = db_utils.update_uuid(db_config, "products", result[0], "status", 2)
-                # TODO needs correct path of download
-                # update_item_path = db_utils.update_uuid(db_config, "products", result[0], "path", self._output_folder)
-                # if update_result:
-                #     downloaded_items.append(result[0])
-                # else:
-                #     failed_items.append(result[0])
-                #     logger.error("Could not update uuid: %s", result[0])
+            # uuid = None # Test uuid: "83c19de3-e045-40bd-9277-836325b4b64e"
+            if uuid_db_entry:
+                logger.debug("Found db entry with uuid: %s", single_uuid)
+                uri_title = (uuid_db_entry.get("DownloadUrl"), uuid_db_entry.get("Name"))
+                downloaded_item_path = download_provider.single_download(uri_title)
+
+                update_status = db_utils.update_uuid(
+                    db_config, "Products", single_uuid, "Downloaded", "true")
+
+                update_item_path = db_utils.update_uuid(
+                    db_config, "Products", single_uuid, "Path", downloaded_item_path)
+
+                if update_status & update_item_path:
+                    downloaded_items.append(single_uuid)
+                else:
+                    failed_items.append(single_uuid)
+                    logger.error("Could not update uuid: %s", single_uuid)
             return (downloaded_items, failed_items)
 
     def test_db_connection(self):
