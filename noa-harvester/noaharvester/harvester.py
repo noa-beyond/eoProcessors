@@ -5,6 +5,7 @@ from copy import deepcopy
 
 import logging
 import json
+import zipfile
 
 from noaharvester.providers import DataProvider, copernicus, earthdata, earthsearch
 from noaharvester import utils
@@ -95,12 +96,20 @@ class Harvester:
                 logger.debug("Found db entry with uuid: %s", single_uuid)
                 uri_title = (uuid_db_entry.get("DownloadUrl"), uuid_db_entry.get("Name"))
                 downloaded_item_path = download_provider.single_download(uri_title)
-
+                # Unfortunately, need to distinguish cases:
+                # Up to now, Copernicus products are .SAFE zip files, and as such
+                # need to be indexed (after decompressed) to the db
+                # So the following unzip function (instead of calling a "preprocessor"
+                # to perform such a task), needs to be in place.
+                if downloaded_item_path.suffix == ".zip":
+                    with zipfile.ZipFile(str(downloaded_item_path), "r") as archive:
+                        archive.extractall(path=downloaded_item_path.parent)
+                        downloaded_item_path = str(downloaded_item_path).removesuffix(".zip")
                 update_status = db_utils.update_uuid(
                     db_config, "Products", single_uuid, "Downloaded", "true")
 
                 update_item_path = db_utils.update_uuid(
-                    db_config, "Products", single_uuid, "Path", downloaded_item_path)
+                    db_config, "Products", single_uuid, "Path", str(downloaded_item_path))
 
                 if update_status & update_item_path:
                     downloaded_items.append(single_uuid)
@@ -120,7 +129,7 @@ class Harvester:
         uuid = "83c19de3-e045-40bd-9277-836325b4b64e"
         result = db_utils.query_uuid(db_config, uuid)
         if result:
-            print(result[0])    
+            print(result.get("Uuid"))
         else:
             print("missing")
 
