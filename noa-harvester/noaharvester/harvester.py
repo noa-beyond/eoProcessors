@@ -180,16 +180,16 @@ class Harvester:
                 provider = self._resolve_provider_instance(item.get("provider"))
                 provider.describe(item.get("collection"))
 
-    def _resolve_provider_instance(self, provider) -> DataProvider:
+    def _resolve_provider_instance(self, provider: str) -> DataProvider:
         if provider not in self._providers:
             logger.debug(
                 "Provider: %s DataProvider instance not found. Creating new.", provider
             )
-            if provider == "copernicus":
+            if provider.lower == "copernicus":
                 self._providers[provider] = copernicus.Copernicus(self._output_path, self._verbose)
-            elif provider == "earthdata":
+            elif provider.lower == "earthdata":
                 self._providers[provider] = earthdata.Earthdata(self._output_path)
-            elif provider == "earthsearch":
+            elif provider.lower == "earthsearch":
                 self._providers[provider] = earthsearch.Earthsearch(self._output_path)
         else:
             logger.info("Provider: %s DataProvider instance found.", provider)
