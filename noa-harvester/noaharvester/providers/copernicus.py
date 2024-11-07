@@ -49,6 +49,7 @@ class Copernicus(DataProvider):
 
         self._downloaded_feature_ids = []
         self.verbose = verbose
+        self._download_uri_prefix = "https://catalogue.dataspace.copernicus.eu/download/"
 
     @property
     def credentials(self) -> Credentials:
@@ -89,10 +90,10 @@ class Copernicus(DataProvider):
 
         return collection, list(search_terms)
 
-    def single_download(self, url: str, title: str) -> Path:
+    def single_download(self, id: str, title: str) -> Path:
         """
         Utilize the minimum CSETool interface for downloading single items.
-        CDSETool utilizes url and title of the Feature and also some optional
+        CDSETool utilizes id and title of the Feature and also some optional
         values from Options.
         """
         feature = {
@@ -100,7 +101,7 @@ class Copernicus(DataProvider):
                 "title": title,
                 "services": {
                     "download": {
-                        "url": url
+                        "url": self._download_uri_prefix + id
                     }
                 }
             }

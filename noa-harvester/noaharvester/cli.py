@@ -151,6 +151,7 @@ def from_uuid_list(
 
         click.echo("Downloading...\n")
         click.echo(output_path)
+        # TODO put output path
         harvest = harvester.Harvester(
             config_file=config_file,
             output_path=output_path,
@@ -160,6 +161,7 @@ def from_uuid_list(
         downloaded_uuids, failed_uuids = harvest.download_from_uuid_list(uuid)
         if failed_uuids:
             logger.error("Failed uuids: %s", failed_uuids)
+        # TODO The following is a dev test: to be converted to unit tests
         # harvest.test_db_connection()
         click.echo("Done.\n")
         return downloaded_uuids

@@ -62,17 +62,17 @@ def describe_table(config, table):
             print("Column names:", columns)
 
 
-def query_uuid(config, uuid) -> dict:
+def query_all_from_table_column_value(config, table, column, value) -> dict:
     """Get row by uuid as a named dictionary"""
-    sql = """
+    sql = f"""
         SELECT *
-        FROM products
-        where products.id=%s
+        FROM {table}
+        where {table}.{column}=%s
         """
 
     with psycopg.connect(**config, row_factory=dict_row) as conn:
         with conn.cursor() as curs:
-            curs.execute(sql, (uuid,))
+            curs.execute(sql, (value,))
             # It should be one...
             return curs.fetchone()
 
@@ -82,7 +82,7 @@ def update_uuid(config, table, uuid, column, value):
     sql = f"""
         UPDATE {table}
         SET {column} = %s
-        WHERE products.id = %s;
+        WHERE products.uuid = %s;
     """
     if column == "id":
         # Do not explain

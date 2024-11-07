@@ -86,16 +86,22 @@ class Harvester:
             logger.error("Not db configuration found, in env vars nor local database.ini file.")
 
         for single_uuid in uuid_list:
-            uuid_db_entry = db_utils.query_uuid(db_config, single_uuid)
-            provider = uuid_db_entry.get("Provider", None)
+            uuid_db_entry = db_utils.query_all_from_table_column_value(
+                db_config, "products", "uuid", single_uuid)
+            provider = db_utils.query_all_from_table_column_value(
+                db_config, "providers", "id", uuid_db_entry.get("provider_id", None)
+                ).get("name")
+            if provider == "cdse":
+                provider = "copernicus"
             print(provider)
             download_provider = self._resolve_provider_instance(provider)
             # Check for uuid as passed from request. It should replace uri
             # uuid = None # Test uuid: "83c19de3-e045-40bd-9277-836325b4b64e"
             if uuid_db_entry:
                 logger.debug("Found db entry with uuid: %s", single_uuid)
-                uri_title = (uuid_db_entry.get("DownloadUrl"), uuid_db_entry.get("Name"))
-                downloaded_item_path = download_provider.single_download(uri_title)
+                id_title = (single_uuid, uuid_db_entry.get("name"))
+                print(id_title)
+                downloaded_item_path = download_provider.single_download(*id_title)
                 # Unfortunately, need to distinguish cases:
                 # Up to now, Copernicus products are .SAFE zip files, and as such
                 # need to be indexed (after decompressed) to the db
@@ -106,10 +112,10 @@ class Harvester:
                         archive.extractall(path=downloaded_item_path.parent)
                         downloaded_item_path = str(downloaded_item_path).removesuffix(".zip")
                 update_status = db_utils.update_uuid(
-                    db_config, "Products", single_uuid, "Downloaded", "true")
+                    db_config, "products", single_uuid, "downloaded", "true")
 
                 update_item_path = db_utils.update_uuid(
-                    db_config, "Products", single_uuid, "Path", str(downloaded_item_path))
+                    db_config, "products", single_uuid, "path", str(downloaded_item_path))
 
                 if update_status & update_item_path:
                     downloaded_items.append(single_uuid)
@@ -126,10 +132,14 @@ class Harvester:
             logger.error("Not db configuration found, in env vars nor local database.ini file.")
         db_utils.describe_table(db_config, "products")
         # db_utils.query_all_items(db_config)
-        uuid = "83c19de3-e045-40bd-9277-836325b4b64e"
-        result = db_utils.query_uuid(db_config, uuid)
+        # uuid = "83c19de3-e045-40bd-9277-836325b4b64e"
+        uuid = "ef7c4935-4969-43e3-83e4-f9fb15acd81f"
+        uuid = "caf8620d-974d-5841-b315-7489ffdd853b"
+        # db_utils.update_uuid(db_config, "products", uuid, "geo_served", "false")
+        result = db_utils.query_all_from_table_column_value(db_config, "products", "uuid", uuid)
         if result:
-            print(result.get("Uuid"))
+            print(result.get("uuid"))
+            print(result)
         else:
             print("missing")
 
@@ -185,7 +195,7 @@ class Harvester:
             logger.debug(
                 "Provider: %s DataProvider instance not found. Creating new.", provider
             )
-            if provider.lower == "copernicus":
+            if provider == "copernicus":
                 self._providers[provider] = copernicus.Copernicus(self._output_path, self._verbose)
             elif provider.lower == "earthdata":
                 self._providers[provider] = earthdata.Earthdata(self._output_path)
