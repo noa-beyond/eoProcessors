@@ -30,6 +30,9 @@ class TestProviders:
             def describe(self, collection):
                 pass
 
+            def single_download(self, uuid, title):
+                pass
+
         mocked_data_provider = AProvider(output_folder)
 
         mocked_data_provider.download(None)
