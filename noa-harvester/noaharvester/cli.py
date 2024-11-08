@@ -112,6 +112,7 @@ def download(
         click.echo("Done.\n")
 
 
+# TODO v2: integrate functionality in download command
 @cli.command(
     help=(
         "Download data from the provided provider and URI list. "
@@ -141,10 +142,9 @@ def from_uuid_list(
     Parameters:
         config_file (click.Argument | str): config json file listing
             providers, collections and search terms
-        provider (click.Argument | str): provider to download from
         output_path (click.Option | str): where to download to
-        uri (click.Option | tuple[str]): A tuple of uris to download
-        verbose (click.Option | bool): to show download progress indicator or not.
+        uuid (click.Option | tuple[str]): A tuple of uuids to download
+        verbose (click.Option | bool): to show download progress indicator or not
     """
     if config_file:
         logger.debug("Cli download for config file: %s", config_file)
