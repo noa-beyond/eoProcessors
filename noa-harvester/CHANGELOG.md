@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2024-11-08
+### Added
+- Support for uuid list download of CDSE. Gateway CLI support and postgres read/update (#67)
+### Changed
+- Docker compose now also has secrets for db connection
+- Updated python version: 3.12.0
+
 ## [0.7.0] - 2024-10-25
 ### Changed
 - Bump version of CDSEtool to include bug fix of not just appending .zip (https://github.com/CDSETool/CDSETool/issues/180)
