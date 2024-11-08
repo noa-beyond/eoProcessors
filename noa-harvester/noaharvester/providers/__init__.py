@@ -44,6 +44,12 @@ class DataProvider(ABC):
         """
 
     @abstractmethod
+    def single_download(self, uuid, title) -> Path:
+        """
+        Download of a single item, by providing its uuid and title.
+        """
+
+    @abstractmethod
     def describe(self, collection):
         """
         Describe available collection query parameters.

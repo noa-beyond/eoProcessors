@@ -39,46 +39,28 @@ def cli(log):
     logging.basicConfig(level=numeric_level, format="%(asctime)s %(message)s")
 
 
-@cli.command(
-    help=(
-        "Queries for available products according to the config file."
-        "You can also provide (optional) a [SHAPE_FILE] path in order to define "
-        "the bounding box there instead of the config file."
-    )
-)
+@cli.command(help="Describe collection query fields (Copernicus only)")
 @click.argument("config_file", required=True)
-@click.argument("shape_file", required=False)
-@click.option(
-    "--bbox_only",
-    "-bb",
-    is_flag=True,
-    help="Only use multipolygon total bbox, not individual",
-)
-def query(
-    config_file: Argument | str, shape_file: Argument | str, bbox_only: Option | bool
-) -> None:
+def describe(config_file: Argument | str) -> None:
     """
-    Instantiate Harvester class and call query function in order to search for
-    available products for the selected collections.
+    Instantiate Harvester Class and call "describe" for available query terms
+    of the selected collections (only available for Copernicus)
 
     Parameters:
         config_file (click.Argument | str): config json file listing
             providers, collections and search terms
     """
     if config_file:
-        logger.debug("Cli query for config file: %s", config_file)
+        logger.debug("Cli describing for config file: %s", config_file)
 
-        click.echo("Querying providers for products:\n")
-        harvest = harvester.Harvester(
-            config_file, shape_file=shape_file, bbox_only=bbox_only
-        )
-        harvest.query_data()
+        harvest = harvester.Harvester(config_file=config_file)
+        click.echo("Available parameters for selected collections:\n")
+        harvest.describe()
 
 
-# TODO download location as an optional argument for download
 @cli.command(
     help=(
-        "Downloads data from the selected providers and query terms"
+        "Downloads data from the selected providers and query terms. "
         "You can also provide (optional) a [SHAPE_FILE] path in order to define "
         "the bounding box there instead of the config file."
     )
@@ -130,23 +112,94 @@ def download(
         click.echo("Done.\n")
 
 
-@cli.command(help="Describe collection query fields (Copernicus only)")
+# TODO v2: integrate functionality in download command
+@cli.command(
+    help=(
+        "Download data from the provided provider and URI list. "
+        "Command also expects the provider credentials but can also "
+        "get them from the optional config file."
+    )
+)
+@click.option(
+    "--verbose",
+    "-v",
+    is_flag=True,
+    help="Shows the progress indicator (for Copernicus only)",
+)
 @click.argument("config_file", required=True)
-def describe(config_file: Argument | str) -> None:
+@click.option("--output_path", default="./data", help="Output path")
+@click.option("--uuid", "-u", multiple=True, help="Uuid. Can be set multiple times")
+def from_uuid_list(
+    config_file: Argument | str,
+    output_path: Option | str,
+    uuid: Option | tuple[str],
+    verbose: Option | bool,
+) -> None:
     """
-    Instantiate Harvester Class and call "describe" for available query terms
-    of the selected collections (only available for Copernicus)
+    Instantiate Harvester class and call download function.
+    Downloads all relevant data as defined in the config file.
+
+    Parameters:
+        config_file (click.Argument | str): config json file listing
+            providers, collections and search terms
+        output_path (click.Option | str): where to download to
+        uuid (click.Option | tuple[str]): A tuple of uuids to download
+        verbose (click.Option | bool): to show download progress indicator or not
+    """
+    if config_file:
+        logger.debug("Cli download for config file: %s", config_file)
+
+        click.echo(f"Downloading at: {output_path}\n")
+        harvest = harvester.Harvester(
+            config_file=config_file,
+            output_path=output_path,
+            verbose=verbose,
+            from_uri=True
+        )
+        downloaded_uuids, failed_uuids = harvest.download_from_uuid_list(uuid)
+        if failed_uuids:
+            logger.error("Failed uuids: %s", failed_uuids)
+        # TODO The following is a dev test: to be converted to unit tests
+        # harvest.test_db_connection()
+        print(downloaded_uuids)
+        click.echo("Done.\n")
+        return downloaded_uuids
+
+
+@cli.command(
+    help=(
+        "Queries for available products according to the config file."
+        "You can also provide (optional) a [SHAPE_FILE] path in order to define "
+        "the bounding box there instead of the config file."
+    )
+)
+@click.argument("config_file", required=True)
+@click.argument("shape_file", required=False)
+@click.option(
+    "--bbox_only",
+    "-bb",
+    is_flag=True,
+    help="Only use multipolygon total bbox, not individual",
+)
+def query(
+    config_file: Argument | str, shape_file: Argument | str, bbox_only: Option | bool
+) -> None:
+    """
+    Instantiate Harvester class and call query function in order to search for
+    available products for the selected collections.
 
     Parameters:
         config_file (click.Argument | str): config json file listing
             providers, collections and search terms
     """
     if config_file:
-        logger.debug("Cli describing for config file: %s", config_file)
+        logger.debug("Cli query for config file: %s", config_file)
 
-        harvest = harvester.Harvester(config_file=config_file)
-        click.echo("Available parameters for selected collections:\n")
-        harvest.describe()
+        click.echo("Querying providers for products:\n")
+        harvest = harvester.Harvester(
+            config_file, shape_file=shape_file, bbox_only=bbox_only
+        )
+        harvest.query_data()
 
 
 if __name__ == "__main__":  # pragma: no cover

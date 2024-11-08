@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import sys
 import logging
+from pathlib import Path
 import click
 
 from cdsetool.credentials import Credentials
 from cdsetool.monitor import StatusMonitor
 from cdsetool.query import query_features, describe_collection
-from cdsetool.download import download_features
+from cdsetool.download import download_features, download_feature
 
 from noaharvester.providers import DataProvider
 
@@ -47,6 +48,7 @@ class Copernicus(DataProvider):
 
         self._downloaded_feature_ids = []
         self.verbose = verbose
+        self._download_uri_prefix = "https://catalogue.dataspace.copernicus.eu/download/"
 
     @property
     def credentials(self) -> Credentials:
@@ -86,6 +88,33 @@ class Copernicus(DataProvider):
         click.echo(f"{collection}:\n {search_terms}\n")
 
         return collection, list(search_terms)
+
+    def single_download(self, uuid: str, title: str) -> Path:
+        """
+        Utilize the minimum CSETool interface for downloading single items.
+        CDSETool utilizes id and title of the Feature and also some optional
+        values from Options.
+        """
+        feature = {
+            "properties": {
+                "title": title,
+                "services": {
+                    "download": {
+                        "url": self._download_uri_prefix + uuid
+                    }
+                }
+            }
+        }
+
+        options = {
+            "monitor": StatusMonitor() if self.verbose else False,
+            "credentials": self.credentials,
+            "logger": logger
+        }
+
+        filename = download_feature(feature=feature, path=self._download_path, options=options)
+        return Path(self._download_path, filename)
+        # TODO Verify checksum
 
     def download(self, item: dict) -> tuple[str, int]:
         """
