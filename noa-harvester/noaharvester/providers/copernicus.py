@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import sys
 import logging
 from pathlib import Path
@@ -107,19 +106,15 @@ class Copernicus(DataProvider):
             }
         }
 
-        # TODO decide what to do with credentials
         options = {
-            "logger": None,
-            "tmpdir": None,
-            "monitor": None,
+            "monitor": StatusMonitor() if self.verbose else False,
             "credentials": self.credentials,
-            "proxies": None
+            "logger": logger
         }
 
         filename = download_feature(feature=feature, path=self._download_path, options=options)
         return Path(self._download_path, filename)
         # TODO Verify checksum
-
 
     def download(self, item: dict) -> tuple[str, int]:
         """

@@ -149,9 +149,7 @@ def from_uuid_list(
     if config_file:
         logger.debug("Cli download for config file: %s", config_file)
 
-        click.echo("Downloading...\n")
-        click.echo(output_path)
-        # TODO put output path
+        click.echo(f"Downloading at: {output_path}\n")
         harvest = harvester.Harvester(
             config_file=config_file,
             output_path=output_path,
@@ -163,6 +161,7 @@ def from_uuid_list(
             logger.error("Failed uuids: %s", failed_uuids)
         # TODO The following is a dev test: to be converted to unit tests
         # harvest.test_db_connection()
+        print(downloaded_uuids)
         click.echo("Done.\n")
         return downloaded_uuids
 
