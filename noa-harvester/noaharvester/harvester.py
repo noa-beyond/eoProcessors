@@ -75,6 +75,7 @@ class Harvester:
         """
         Utilize the minimum provider interface for downloading single items
         """
+        # TODO make db connection optional. One could want to download per uuid without the db interface
         print(uuid_list)
         downloaded_items = []
         failed_items = []
@@ -195,11 +196,11 @@ class Harvester:
             logger.debug(
                 "Provider: %s DataProvider instance not found. Creating new.", provider
             )
-            if provider == "copernicus":
+            if provider.lower() == "copernicus":
                 self._providers[provider] = copernicus.Copernicus(self._output_path, self._verbose)
-            elif provider.lower == "earthdata":
+            elif provider.lower() == "earthdata":
                 self._providers[provider] = earthdata.Earthdata(self._output_path)
-            elif provider.lower == "earthsearch":
+            elif provider.lower() == "earthsearch":
                 self._providers[provider] = earthsearch.Earthsearch(self._output_path)
         else:
             logger.info("Provider: %s DataProvider instance found.", provider)
