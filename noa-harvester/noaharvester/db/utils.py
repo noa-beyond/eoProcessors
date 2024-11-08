@@ -10,7 +10,7 @@ from psycopg.rows import dict_row
 # table specific functions generic (by posting table name also)
 
 
-def get_local_config(filename="database.ini", section="sentinel_status"):
+def get_local_config(filename="database.ini", section="sentinel_products"):
     """
     Gets local config, found by default in database.ini
      of the same path as utils
