@@ -99,9 +99,9 @@ class Harvester:
             # uuid = None # Test uuid: "83c19de3-e045-40bd-9277-836325b4b64e"
             if uuid_db_entry:
                 logger.debug("Found db entry with uuid: %s", single_uuid)
-                id_title = (single_uuid, uuid_db_entry.get("name"))
-                print(id_title)
-                downloaded_item_path = download_provider.single_download(*id_title)
+                uuid_title = (single_uuid, uuid_db_entry.get("name"))
+                print(uuid_title)
+                downloaded_item_path = download_provider.single_download(*uuid_title)
                 # Unfortunately, need to distinguish cases:
                 # Up to now, Copernicus products are .SAFE zip files, and as such
                 # need to be indexed (after decompressed) to the db

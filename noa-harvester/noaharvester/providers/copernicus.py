@@ -90,7 +90,7 @@ class Copernicus(DataProvider):
 
         return collection, list(search_terms)
 
-    def single_download(self, id: str, title: str) -> Path:
+    def single_download(self, uuid: str, title: str) -> Path:
         """
         Utilize the minimum CSETool interface for downloading single items.
         CDSETool utilizes id and title of the Feature and also some optional
@@ -101,7 +101,7 @@ class Copernicus(DataProvider):
                 "title": title,
                 "services": {
                     "download": {
-                        "url": self._download_uri_prefix + id
+                        "url": self._download_uri_prefix + uuid
                     }
                 }
             }
@@ -112,10 +112,7 @@ class Copernicus(DataProvider):
             "logger": None,
             "tmpdir": None,
             "monitor": None,
-            "credentials": {
-                "username": os.getenv("COPERNICUS_LOGIN"),
-                "password": os.getenv("COPERNICUS_PASSWORD")
-            },
+            "credentials": self.credentials,
             "proxies": None
         }
 

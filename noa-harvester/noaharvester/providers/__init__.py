@@ -44,9 +44,9 @@ class DataProvider(ABC):
         """
 
     @abstractmethod
-    def single_download(self, url, title) -> Path:
+    def single_download(self, uuid, title) -> Path:
         """
-        Download of a single item, by providing its url and title.
+        Download of a single item, by providing its uuid and title.
         """
 
     @abstractmethod

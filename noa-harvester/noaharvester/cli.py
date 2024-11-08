@@ -127,7 +127,7 @@ def download(
 )
 @click.argument("config_file", required=True)
 @click.option("--output_path", default="./data", help="Output path")
-@click.option("--uuid", "-u", multiple=True)
+@click.option("--uuid", "-u", multiple=True, help="Uuid. Can be set multiple times")
 def from_uuid_list(
     config_file: Argument | str,
     output_path: Option | str,
