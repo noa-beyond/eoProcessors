@@ -10,7 +10,7 @@ authors = [
     {name = "NOA - Beyond"}
 ]
 description = "Ingest geospatial data by creating STAC Items"
-requires-python = ">=3.11.8"
+requires-python = ">=3.12"
 dependencies = [
     "build>=1.1.1",
     "click>=8.1.7",
@@ -24,7 +24,7 @@ keywords = [
 license = {text = "AGPL-3.0"}
 classifiers = [
     "Development Status :: 4 - Beta",
-    "Programming Language :: Python :: 3.11.8",
+    "Programming Language :: Python :: 3.12",
 ]
 dynamic = ["readme", "version"]
 

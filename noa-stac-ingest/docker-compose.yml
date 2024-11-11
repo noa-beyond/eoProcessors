@@ -1,0 +1,29 @@
+name: noastacingest
+services:
+  noaharvester:
+    image: noastacingest:latest
+    build:
+      context: .
+      secrets:
+        - DB_USER
+        - DB_PASSWORD
+        - DB_HOST
+        - DB_PORT
+        - DB_NAME
+    working_dir: /app    
+    volumes:
+      - ./config:/app/config
+      - ./data:/app/data
+    command: python /app/noastacingest/cli.py --help
+
+secrets:
+  DB_USER:
+    environment: DB_USER
+  DB_PASSWORD:
+    environment: DB_PASSWORD
+  DB_HOST:
+    environment: DB_HOST
+  DB_PORT:
+    environment: DB_PORT
+  DB_NAME:
+    environment: DB_NAME
