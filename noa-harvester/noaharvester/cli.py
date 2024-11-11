@@ -163,7 +163,7 @@ def from_uuid_list(
         # harvest.test_db_connection()
         print(downloaded_uuids)
         click.echo("Done.\n")
-        return downloaded_uuids
+        return downloaded_uuids, failed_uuids
 
 
 @cli.command(

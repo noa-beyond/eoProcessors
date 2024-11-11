@@ -117,7 +117,7 @@ class Harvester:
 
                 update_item_path = db_utils.update_uuid(
                     db_config, "products", single_uuid, "path", str(downloaded_item_path))
-
+                # TODO delete order_id
                 if update_status & update_item_path:
                     downloaded_items.append(single_uuid)
                 else:
