@@ -1,4 +1,4 @@
-# Use the official Python 3.10 image as the base image
+# Use the official Python 3.12 image as the base image
 FROM python:3.12.0-slim
 
 RUN pip install --upgrade pip setuptools
