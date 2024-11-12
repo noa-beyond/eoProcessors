@@ -26,7 +26,7 @@ class Ingest:
         if config:
             self._config = config
 
-    def single_item(self, path: Path):
+    def single_item(self, path: Path, catalog: str | None):
         """
         Just an item
         """

@@ -38,11 +38,17 @@ def cli(log):
     logging.basicConfig(level=numeric_level, format="%(asctime)s %(message)s")
 
 
-@cli.command(help="Create STAC Item from SAFE filename")
+@cli.command(help="Create STAC Item from SAFE path")
 @click.argument("input_path", required=True)
 @click.argument("config", required=False)
-@click.option("--recursive", "-r", is_flag=True, help="Ingest all files under path")
-def create_item(input_path: Argument | str, config: Argument | str, recursive: Option | bool) -> None:
+@click.option("--catalog", "-c", help="[optional] Catalog for item(s) to be child of")
+@click.option("--recursive", "-r", is_flag=True, help="Ingest all (SAFE) directories under path")
+def create_item_from_path(
+    input_path: Argument | str,
+    config: Argument | str,
+    catalog: Option | str | None,
+    recursive: Option | bool
+    ) -> None:
     """
     Instantiate Ingest Class and call "create_item"
 
@@ -50,6 +56,8 @@ def create_item(input_path: Argument | str, config: Argument | str, recursive: O
         input (click.Argument | str): Input filename path
         config_file (click.Argument | str) - optional: config json file
             selecting file types etc
+        catalog (click.Option | str | None): Catalog id of which the new Item will be child of
+        recursive (click.Option | bool): To ingest all (SAFE) directories under input (for multiple item creation)
     """
     if config:
         logger.debug("Cli STAC creation using config file: %s", config)
@@ -61,10 +69,10 @@ def create_item(input_path: Argument | str, config: Argument | str, recursive: O
         for single_item in os.listdir(input_path):
             item = Path(input_path, single_item)
             if item.is_dir():
-                ingestor.single_item(item)
+                ingestor.single_item(item, catalog)
     else:
-        click.echo("Ingesting single item from file\n")
-        ingestor.single_item(Path(input_path))
+        click.echo("Ingesting single item from path\n")
+        ingestor.single_item(Path(input_path), catalog)
 
 
 if __name__ == "__main__":  # pragma: no cover
