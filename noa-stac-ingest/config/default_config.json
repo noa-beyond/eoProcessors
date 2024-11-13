@@ -1,6 +1,5 @@
-[
-    {   
-        "catalog_path": "/mnt/data/dev/STAC/catalogues/",
-        "output_path": "stac"
-    }
-]
+{   
+    "catalog_path": "/mnt/data/dev/STAC/catalog/",
+    "collection_path": "/mnt/data/dev/STAC/catalog/collections/",
+    "output_path": "/mnt/data/dev/STAC/catalog/items/"
+}

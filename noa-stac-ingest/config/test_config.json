@@ -1,0 +1,5 @@
+{   
+    "catalog_path": "/tmp/data/dev/STAC/catalog/",
+    "collection_path": "/tmp/data/dev/STAC/catalog/collections/",
+    "output_path": "/tmp/data/dev/STAC/catalog/items/"
+}
