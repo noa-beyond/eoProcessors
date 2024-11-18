@@ -128,7 +128,7 @@ def download(
 )
 @click.argument("config_file", required=True)
 @click.option("--output_path", default="./data", help="Output path")
-@click.option("--uuid", "-u", multiple=True, help="Uuid. Can be set multiple times")
+@click.option("--uuid", "-u", multiple=True, help="Id field of products table. Can be set multiple times")
 def from_uuid_list(
     config_file: Argument | str,
     output_path: Option | str,
@@ -137,7 +137,7 @@ def from_uuid_list(
 ) -> None:
     """
     Instantiate Harvester class and call download function.
-    Downloads all relevant data as defined in the config file.
+    Downloads all ids from Products table, based on the --uuid multiple option.
 
     Parameters:
         config_file (click.Argument | str): config json file listing

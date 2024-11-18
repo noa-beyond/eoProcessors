@@ -82,7 +82,7 @@ def update_uuid(config, table, uuid, column, value):
     sql = f"""
         UPDATE {table}
         SET {column} = %s
-        WHERE products.uuid = %s;
+        WHERE products.id = %s;
     """
     if column == "id":
         # Do not explain

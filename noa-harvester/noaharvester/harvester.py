@@ -88,10 +88,11 @@ class Harvester:
 
         for single_uuid in uuid_list:
             uuid_db_entry = db_utils.query_all_from_table_column_value(
-                db_config, "products", "uuid", single_uuid)
+                db_config, "products", "id", single_uuid)
             provider = db_utils.query_all_from_table_column_value(
                 db_config, "providers", "id", uuid_db_entry.get("provider_id", None)
                 ).get("name")
+            # TODO coupling of db with module
             if provider == "cdse":
                 provider = "copernicus"
             print(provider)
@@ -99,8 +100,8 @@ class Harvester:
             # Check for uuid as passed from request. It should replace uri
             # uuid = None # Test uuid: "83c19de3-e045-40bd-9277-836325b4b64e"
             if uuid_db_entry:
-                logger.debug("Found db entry with uuid: %s", single_uuid)
-                uuid_title = (single_uuid, uuid_db_entry.get("name"))
+                logger.debug("Found db entry in Products table with id: %s", single_uuid)
+                uuid_title = (uuid_db_entry.get("uuid"), uuid_db_entry.get("name"))
                 print(uuid_title)
                 downloaded_item_path = download_provider.single_download(*uuid_title)
                 # Unfortunately, need to distinguish cases:
