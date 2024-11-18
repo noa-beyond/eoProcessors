@@ -237,13 +237,13 @@ docker run -it \
 noaharvester describe config/config.json
 ```
 
-* Download (with download indicator) from Copernicus providing a uuid list and store in mnt point:
+* Download (with download indicator) from Copernicus providing an id list (which corresponds to an entry in Products db table) and store in mnt point:
 
 ```
 docker run -it \
--v ./config/config.json:/app/config/config.json \
+-v ./config/config.json:/app/config/config_from_id.json \
 -v /mnt/data:/app/data \
-noaharvester from-uuid-list -v -u caf8620d-974d-5841-b315-7489ffdd853b config/config.json
+noaharvester from-uuid-list -v -u caf8620d-974d-5841-b315-7489ffdd853b config/config_from_id.json
 ```
 
 
