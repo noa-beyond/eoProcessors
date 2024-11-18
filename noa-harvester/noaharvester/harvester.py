@@ -3,6 +3,7 @@
 from __future__ import annotations
 from copy import deepcopy
 
+import os
 import logging
 import json
 import zipfile
@@ -124,6 +125,12 @@ class Harvester:
                 else:
                     failed_items.append(single_uuid)
                     logger.error("Could not update uuid: %s", single_uuid)
+
+            kafka_succeeded_topic = os.environ.get('KAFKA_INPUT_TOPIC', 'harvester.download.succeeded')
+            kafka_failed_topic = os.environ.get('KAFKA_INPUT_TOPIC', 'harvester.download.failed')
+            utils.send_kafka_message(kafka_succeeded_topic, downloaded_items)
+            utils.send_kafka_message(kafka_failed_topic, failed_items)
+
             return (downloaded_items, failed_items)
 
     def test_db_connection(self):
