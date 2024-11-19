@@ -16,6 +16,7 @@ It can be used as a standalone cli application or be built in a Docker container
 The noaharvester processor can be executed as:
 - Standalone [**Cli application**](#standalone-cli-execution) or
 - Inside a [**Container**](#docker-execution)
+- As a container, inside a Kubernetes environment with kafka, with a postgres database. This is a Beyond specific setup, where a user can instantiate Harvester and request the download of Products, based on an id from the postgres Products table. This table includes a uuid and a title fields, necessary to construct the request to CDSE (for now). Then, it updates the products table for the downloaded path, while it posts to a kafka topic the result for each of these ids.
 
 In either case, a user must have credentials for accessing one or more data hubs:
 - [Copernicus]
@@ -200,7 +201,7 @@ Cli can be executed with the following:
 
 - Commands
     * `download` - The main option. Downloads according with the config file parameters.
-    * `from-uuid-list` - Download from uuid (e.g. id in Sentinel 2 metadata products) list. Needs to be combined with -u option. Necessary a db connection (TODO: optional)
+    * `from-uuid-list` - Download from uuid db list. Needs to be combined with -u option. Necessary a db connection (TODO: optional)
     * `query` - Queries the collection(s) for products according to the parameters present in the config file.
     * `describe` (Copernicus only) - Describes the available query parameters for the collections as defined in the config file.
 - Options
@@ -224,7 +225,7 @@ The necessary env vars are:
 `DB_PORT`
 `DB_NAME`
 
-Moreover, Harvester will query the db to get the UUID (to query based on the input uuid) and Title of the product to be downloaded (it does not query CDSE for metadata - it only downloads).
+Moreover, Harvester will query the db to get the UUID of the Product to be downloaded, and Title (it does not query CDSE for metadata - it only downloads).
 So make sure that a postgres with a table named "Products", includes at least a `uuid` field and a `name` field.
 
 ## Examples

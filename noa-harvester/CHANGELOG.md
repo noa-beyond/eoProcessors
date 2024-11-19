@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2024-11-19
+### Added
+- Added publishing to kafka topic the successful/failed id lists (#75)
+
+### Changed
+- Downloading from id (products table, column id) now returns successful and failed lists (#75)
+
 ## [0.8.0] - 2024-11-08
 ### Added
 - Support for uuid list download of CDSE. Gateway CLI support and postgres read/update (#67)
