@@ -62,19 +62,10 @@ def get_bbox_from_shp(shp_path: str, bbox_only: bool) -> list:
     return bboxes
 
 
-def send_kafka_message(topic, message):
-    item_count = 0
+def send_kafka_message(topic, succeeded, failed):
     schema_def = Message.schema()
-
     bootstrap_servers = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
-    p = KafkaProducer(bootstrap_servers=bootstrap_servers, schema=schema_def)
-    items = [
-        {'transaction-id': '', 'payload': {'message': message}},
-        {'transaction-id': '', 'payload': {'message': message}}
-    ]
 
-    for item in items:
-        key_id = 'ID' + str(item_count)
-        item['transaction-id'] = key_id
-        p.send(topic=topic, key=key_id, value=item)
-        item_count = item_count + 1
+    producer = KafkaProducer(bootstrap_servers=bootstrap_servers, schema=schema_def)
+    kafka_message = {"succeeded": succeeded, "failed": failed}
+    producer.send(topic=topic, value=kafka_message)

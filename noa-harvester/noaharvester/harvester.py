@@ -126,10 +126,12 @@ class Harvester:
                     failed_items.append(single_uuid)
                     logger.error("Could not update uuid: %s", single_uuid)
 
-            kafka_succeeded_topic = os.environ.get('KAFKA_INPUT_TOPIC', 'harvester.download.succeeded')
-            kafka_failed_topic = os.environ.get('KAFKA_INPUT_TOPIC', 'harvester.download.failed')
-            utils.send_kafka_message(kafka_succeeded_topic, downloaded_items)
-            utils.send_kafka_message(kafka_failed_topic, failed_items)
+            kafka_topic = os.environ.get("KAFKA_INPUT_TOPIC", "harvester.order.completed")
+            try:
+                utils.send_kafka_message(kafka_topic, downloaded_items, failed_items)
+                logger.info("Kafka message sent")
+            except Exception as e:
+                logger.error(f"Error sending kafka message: {e}")
 
             return (downloaded_items, failed_items)
 

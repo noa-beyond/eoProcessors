@@ -3,19 +3,25 @@ class Message:
     Defines the message.
     """
     _schema_def = {
-        "namespace": "harvester.message.types",
+        "namespace": "noa.harvester.order",
         "type": "object",
         "properties": {
-            "transaction-id": {"type": "string"},
-            "payload": {
-                "type": "object",
-                "properties": {
-                    "message": {"type": "string", "const": "undefined"}
-                },
-                "required": ["message"]
+            "succeded": {
+                "type": "array",
+                "items": {
+                    "type": "string",
+                    "uniqueItems": True,
+                }
+            },
+            "failed": {
+                "type": "array",
+                "items": {
+                    "type": "string",
+                    "uniqueItems": True,
+                }
             }
         },
-        "required": ["transaction-id", "payload"]
+        "required": ["succeeded", "failed"]
     }
 
     @staticmethod
