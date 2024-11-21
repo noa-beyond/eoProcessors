@@ -15,7 +15,7 @@ from pathlib import Path
 
 import click
 from click import Argument, Option
-from kafka3 import KafkaConsumer as k_KafkaConsumer
+from kafka import KafkaConsumer as k_KafkaConsumer
 # Appending the module path in order to have a kind of cli "dry execution"
 sys.path.append(str(Path(__file__).parent / ".."))
 

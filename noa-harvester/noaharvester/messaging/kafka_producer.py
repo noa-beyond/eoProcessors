@@ -3,7 +3,7 @@ Simple kafka producer schema
 """
 
 import json
-from kafka3 import KafkaProducer as k_KafkaProducer
+from kafka import KafkaProducer as k_KafkaProducer
 
 from noaharvester import messaging as noa_messaging
 

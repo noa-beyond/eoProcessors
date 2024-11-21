@@ -3,8 +3,8 @@ Simple kafka producer schema
 """
 
 import json
-from kafka3 import KafkaConsumer as k_KafkaConsumer
-from kafka3.admin import KafkaAdminClient, NewTopic
+from kafka import KafkaConsumer as k_KafkaConsumer
+from kafka.admin import KafkaAdminClient, NewTopic
 
 from noaharvester import messaging as noa_messaging
 
