@@ -63,7 +63,7 @@ def get_bbox_from_shp(shp_path: str, bbox_only: bool) -> list:
 
 
 def send_kafka_message(topic, succeeded, failed):
-    schema_def = Message.schema()
+    schema_def = Message.schema_response()
     bootstrap_servers = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
 
     producer = KafkaProducer(bootstrap_servers=bootstrap_servers, schema=schema_def)

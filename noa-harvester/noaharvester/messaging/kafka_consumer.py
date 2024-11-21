@@ -13,7 +13,7 @@ class KafkaConsumer(noa_messaging.AbstractConsumer):
     """
     Kafka Consumer using https://kafka-python.readthedocs.io/ with JSON deserialization.
     """
-    def __init__(self, bootstrap_servers: list, group_id: str, topics: list, schema: dict) -> None:
+    def __init__(self, bootstrap_servers: list, group_id: str, topics: list, schema: dict) -> k_KafkaConsumer:
         """
         Create the Consumer instance.
         """

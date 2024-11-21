@@ -27,12 +27,12 @@ class Harvester:
 
     def __init__(
         self,
-        config_file: str,
+        config_file: str = None,
         output_path: str = None,
         shape_file: str = None,
         verbose: bool = False,
         bbox_only: bool = False,
-        from_uri: bool = False
+        is_service: bool = False
     ) -> Harvester:
         """
         Harvester class. Constructor reads and loads the search items json file.
@@ -42,6 +42,7 @@ class Harvester:
             shape_file (str - Optional): Read and use shapefile instead of config coordinates.
             verbose (bool - Optional): Indicate if Copernicus download progress is verbose.
         """
+        self._config = {}
         self._config_filename = config_file
         self._output_path = output_path
         self._verbose = verbose
@@ -57,7 +58,7 @@ class Harvester:
         with open(config_file, encoding="utf8") as f:
             self._config = json.load(f)
 
-        if from_uri:
+        if is_service:
             pass
         else:
             for item in self._config:
@@ -72,7 +73,7 @@ class Harvester:
                     logger.debug("Appending search item: %s", item)
         logger.debug("Total search items: %s", len(self._search_items))
 
-    def download_from_uuid_list(self, uuid_list) -> tuple[list, list]:
+    def download_from_uuid_list(self, uuid_list: list[str]) -> tuple[list, list]:
         """
         Utilize the minimum provider interface for downloading single items
         """
