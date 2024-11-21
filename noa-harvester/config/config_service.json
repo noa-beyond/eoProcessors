@@ -1,0 +1,6 @@
+{
+    "group_id": "harvester-group-request",
+    "topics": ["harvester.order.requested"],
+    "num_partitions": 2,
+    "replication_factor": 3
+}

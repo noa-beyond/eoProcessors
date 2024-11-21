@@ -1,8 +1,12 @@
 """Utility functions"""
+import os
 import logging
 
 from pyproj import Transformer, CRS
 import shapefile
+
+from noaharvester.messaging.kafka_producer import KafkaProducer
+from noaharvester.messaging.message import Message
 
 logger = logging.getLogger(__name__)
 
@@ -56,3 +60,12 @@ def get_bbox_from_shp(shp_path: str, bbox_only: bool) -> list:
             bboxes.append([west, south, east, north])
 
     return bboxes
+
+
+def send_kafka_message(topic, succeeded, failed):
+    schema_def = Message.schema_response()
+    bootstrap_servers = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+
+    producer = KafkaProducer(bootstrap_servers=bootstrap_servers, schema=schema_def)
+    kafka_message = {"succeeded": succeeded, "failed": failed}
+    producer.send(topic=topic, value=kafka_message)

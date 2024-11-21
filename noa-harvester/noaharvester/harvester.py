@@ -3,6 +3,7 @@
 from __future__ import annotations
 from copy import deepcopy
 
+import os
 import logging
 import json
 import zipfile
@@ -26,12 +27,12 @@ class Harvester:
 
     def __init__(
         self,
-        config_file: str,
+        config_file: str = None,
         output_path: str = None,
         shape_file: str = None,
         verbose: bool = False,
         bbox_only: bool = False,
-        from_uri: bool = False
+        is_service: bool = False
     ) -> Harvester:
         """
         Harvester class. Constructor reads and loads the search items json file.
@@ -41,6 +42,7 @@ class Harvester:
             shape_file (str - Optional): Read and use shapefile instead of config coordinates.
             verbose (bool - Optional): Indicate if Copernicus download progress is verbose.
         """
+        self._config = {}
         self._config_filename = config_file
         self._output_path = output_path
         self._verbose = verbose
@@ -56,7 +58,7 @@ class Harvester:
         with open(config_file, encoding="utf8") as f:
             self._config = json.load(f)
 
-        if from_uri:
+        if is_service:
             pass
         else:
             for item in self._config:
@@ -71,7 +73,7 @@ class Harvester:
                     logger.debug("Appending search item: %s", item)
         logger.debug("Total search items: %s", len(self._search_items))
 
-    def download_from_uuid_list(self, uuid_list) -> tuple[list, list]:
+    def download_from_uuid_list(self, uuid_list: list[str]) -> tuple[list, list]:
         """
         Utilize the minimum provider interface for downloading single items
         """
@@ -88,10 +90,11 @@ class Harvester:
 
         for single_uuid in uuid_list:
             uuid_db_entry = db_utils.query_all_from_table_column_value(
-                db_config, "products", "uuid", single_uuid)
+                db_config, "products", "id", single_uuid)
             provider = db_utils.query_all_from_table_column_value(
                 db_config, "providers", "id", uuid_db_entry.get("provider_id", None)
                 ).get("name")
+            # TODO coupling of db with module
             if provider == "cdse":
                 provider = "copernicus"
             print(provider)
@@ -99,8 +102,8 @@ class Harvester:
             # Check for uuid as passed from request. It should replace uri
             # uuid = None # Test uuid: "83c19de3-e045-40bd-9277-836325b4b64e"
             if uuid_db_entry:
-                logger.debug("Found db entry with uuid: %s", single_uuid)
-                uuid_title = (single_uuid, uuid_db_entry.get("name"))
+                logger.debug("Found db entry in Products table with id: %s", single_uuid)
+                uuid_title = (uuid_db_entry.get("uuid"), uuid_db_entry.get("name"))
                 print(uuid_title)
                 downloaded_item_path = download_provider.single_download(*uuid_title)
                 # Unfortunately, need to distinguish cases:
@@ -117,12 +120,20 @@ class Harvester:
 
                 update_item_path = db_utils.update_uuid(
                     db_config, "products", single_uuid, "path", str(downloaded_item_path))
-
+                # TODO delete order_id
                 if update_status & update_item_path:
                     downloaded_items.append(single_uuid)
                 else:
                     failed_items.append(single_uuid)
                     logger.error("Could not update uuid: %s", single_uuid)
+
+            kafka_topic = os.environ.get("KAFKA_INPUT_TOPIC", "harvester.order.completed")
+            try:
+                utils.send_kafka_message(kafka_topic, downloaded_items, failed_items)
+                logger.info("Kafka message sent")
+            except Exception as e:
+                logger.error(f"Error sending kafka message: {e}")
+
             return (downloaded_items, failed_items)
 
     def test_db_connection(self):

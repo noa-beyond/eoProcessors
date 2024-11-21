@@ -1,6 +1,7 @@
 cdsetool==0.2.13
 click==8.1.7
 earthaccess==0.9.0
+kafka-python-ng==2.2.3
 psycopg==3.2.3
 pyproj==3.6.1
 pyshp==2.3.1
