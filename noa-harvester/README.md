@@ -17,6 +17,7 @@ The noaharvester processor can be executed as:
 - Standalone [**Cli application**](#standalone-cli-execution) or
 - Inside a [**Container**](#docker-execution)
 - As a container, inside a Kubernetes environment with kafka, with a postgres database. This is a Beyond specific setup, where a user can instantiate Harvester and request the download of Products, based on an id from the postgres Products table. This table includes a uuid and a title fields, necessary to construct the request to CDSE (for now). Then, it updates the products table for the downloaded path, while it posts to a kafka topic the result for each of these ids.
+- As a microservice inside a Kubernetes environment with kafka, with a postgres database. Same as above, but now it can be deployed as a service: always listening to the appointed kafka topic for uuid lists, inside a specific message.
 
 In either case, a user must have credentials for accessing one or more data hubs:
 - [Copernicus]
@@ -202,11 +203,13 @@ Cli can be executed with the following:
 - Commands
     * `download` - The main option. Downloads according with the config file parameters.
     * `from-uuid-list` - Download from uuid db list. Needs to be combined with -u option. Necessary a db connection (TODO: optional)
+    * `noa_harvester_service` - Deploy a service always listening to a specific kafka topic (can also be defined in config file - look at config/config_service.json).
     * `query` - Queries the collection(s) for products according to the parameters present in the config file.
     * `describe` (Copernicus only) - Describes the available query parameters for the collections as defined in the config file.
 - Options
     * `--output_path` (download only) Custom download location. Default is `.data`
-    * `-u, --uuid` [**multiple**] (from-uuid-list only). Multiple option of uuids. 
+    * `-u, --uuid` [**multiple**] (from-uuid-list only). Multiple option of uuids.
+    * `-t, --test` **Service only**: testing kafka consumer functionality.
     * `-bb, --bbox_only` Draw total bbox, not individual polygons in multipolygon shapefile.
     * `-v`, `--verbose` Shows the progress indicator when downloading (Copernicus - only for download command)
     * `--log LEVEL (INFO, DEBUG, WARNING, ERROR)` Shows the logs depending on the selected `LEVEL`
@@ -247,6 +250,14 @@ docker run -it \
 noaharvester from-uuid-list -v -u caf8620d-974d-5841-b315-7489ffdd853b config/config_from_id.json
 ```
 
+* Deploying Harvester as a service (for kafka testing - if you do not want to test, omit flag -t):
+
+```
+docker run -it \
+-v ./config/config.json:/app/config/config_service.json \
+-v /mnt/data:/app/data \
+noaharvester noa-harvester-service -v -t config/config_service.json
+```
 
 * Download (with download indicator) from Copernicus and Earthdata as defined in the config file, for an area provided by the shapefile files (`area.shp` and `area.prj`) located in folder `/home/user/project/strange_area`:
 

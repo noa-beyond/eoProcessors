@@ -7,9 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.9.0] - 2024-11-19
+## [0.9.0] - 2024-11-21
 ### Added
 - Added publishing to kafka topic the successful/failed id lists (#75)
+- Added consuming from kafka topic, getting id lists for download (#75)
+- Added new cli command (noa_harvester_service) (#75)
 
 ### Changed
 - Downloading from id (products table, column id) now returns successful and failed lists (#75)
