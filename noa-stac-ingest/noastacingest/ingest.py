@@ -9,47 +9,8 @@ from stactools.sentinel1.slc.stac import create_item as create_item_s1_slc
 from stactools.sentinel2.commands import create_item as create_item_s2
 from stactools.sentinel3.commands import create_item as create_item_s3
 
-from pystac import Catalog
+from pystac import Catalog, Collection
 
-
-# The STATIC, noa INTERNAL catalog id:
-NOAINTERNAL = "noa-internal"
-"""
-To create new Catalog (or collection, since it is a subclass of Catalog):
-
-from pystac import (
-    Catalog,
-    CatalogType,
-    Collection,
-    Extent,
-    SpatialExtent,
-    TemporalExtent
-)
-
-catalog_path = "/tmp/data/dev/STAC/catalog/catalog.json"
-catalog = Catalog(id="test", description="test1")
-catalog.normalize_hrefs("THE PATH OF CATALOG [root?]")
-catalog.make_all_asset_hrefs_absolute()
-catalog.save(CatalogType.ABSOLUTE_PUBLISHED, catalog_path)
-
-Then, to load:
-catalog = Catalog.from_file("/tmp/data/dev/STAC/catalog/catalog.json")
-
-
-For Collection:
-DEFAULT_EXTENT = Extent(
-    SpatialExtent([[-180, -90, 180, 90]]),
-    TemporalExtent([[datetime.datetime.now(datetime.timezone.utc), None]]),
-)
-
-l2a_collection = Collection(
-    id="sentinel2-l2a",
-    description="Internal downloaded Sentinel2 L2A data",
-    extent=DEFAULT_EXTENT,
-)
-
-# catalog.add_children([l2a_collection])
-"""
 
 FILETYPES = ("SAFE", "SEN3")
 
@@ -73,7 +34,7 @@ class Ingest:
         self._output_path = self._config["output_path"]
         Path(self._output_path).mkdir(parents=True, exist_ok=True)
 
-        self._catalog = Catalog.from_file(Path(self._config["catalog_path"], "catalog.json"))
+        self._catalog = Catalog.from_file(Path(self._config["catalog_path"], self._config["catalog_filename"]))
 
     def single_item(self, path: Path, collection: str | None):
         """
@@ -109,17 +70,19 @@ class Ingest:
             # self: self ref (file. it seems that there is no .json extension in other collections. ask how it is served)
             # collection: specific collection
 
+            item.save_object(include_self_link=True, dest_href=json_file_path)
+
             if collection:
                 collection_instance = self._catalog.get_child(collection)
                 collection_instance.add_item(item)
                 collection_instance.update_extent_from_items()
+                collection_instance.normalize_hrefs()
+                collection_instance.make_all_asset_hrefs_absolute()
                 collection_instance.save()
-
-            item.save_object(include_self_link=True, dest_href=json_file_path)
 
             # TODO see where this is needed
             self._catalog.normalize_hrefs()
 
-            self._catalog.make_all_asset_hrefs_relative()
-            self._catalog.make_all_asset_hrefs_absolute
+            # self._catalog.make_all_asset_hrefs_relative()
+            self._catalog.make_all_asset_hrefs_absolute()
             self._catalog.save()

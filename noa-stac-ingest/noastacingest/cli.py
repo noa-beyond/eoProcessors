@@ -41,7 +41,7 @@ def cli(log):
 @cli.command(help="Create STAC Item from SAFE path")
 @click.argument("input_path", required=True)
 @click.argument("config", required=False)
-@click.option("--collection", "-c", help="[optional] Collection for item(s) to be child of")
+@click.option("--collection", "-c", help="Collection for item(s) to be child of")
 @click.option("--recursive", "-r", is_flag=True, help="Ingest all (SAFE) directories under path")
 def create_item_from_path(
     input_path: Argument | str,
