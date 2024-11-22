@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STAC Browser</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            height: 100vh;
+        }
+
+        #sidebar {
+            width: 25%;
+            background: #f8f9fa;
+            overflow-y: auto;
+            border-right: 1px solid #ddd;
+            padding: 10px;
+        }
+
+        #map {
+            width: 75%;
+            height: 100%;
+        }
+
+        .item {
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #f1f1f1;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+
+        .item h3 {
+            margin: 0;
+            font-size: 1em;
+            color: #007bff;
+        }
+
+        .tags {
+            margin-top: 5px;
+        }
+
+        .tag {
+            display: inline-block;
+            margin-right: 5px;
+            margin-bottom: 5px;
+            padding: 5px 10px;
+            font-size: 0.9em;
+            color: white;
+            background-color: #007bff;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <h2>Items</h2>
+        <div id="items"></div>
+    </div>
+    <div id="map"></div>
+    
+    <!-- Embed items as JSON -->
+    <script>
+    const items = JSON.parse('{{ items_json|escapejs }}');
+</script>
+
+    <script>
+        const sidebar = document.getElementById('items');
+        const map = L.map('map').setView([0, 0], 2);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+        }).addTo(map);
+
+        items.forEach(item => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'item';
+        
+            const title = document.createElement('h3');
+            title.textContent = `Item ID: ${item.id}`;
+            itemDiv.appendChild(title);
+
+            const tagsDiv = document.createElement('div');
+            tagsDiv.className = 'tags';
+
+            const sensingDateTag = document.createElement('div');
+            sensingDateTag.className = 'tag';
+            sensingDateTag.style.backgroundColor = '#28a745'; // Green
+            sensingDateTag.textContent = `Sensing Date: ${item.properties.datetime}`;
+            tagsDiv.appendChild(sensingDateTag);
+
+            for (const [key, value] of Object.entries(item.assets)) {
+                const bandTag = document.createElement('div');
+                bandTag.className = 'tag';
+                bandTag.style.backgroundColor = '#007bff'; // Blue
+                bandTag.textContent = `Band: ${key}`;
+                tagsDiv.appendChild(bandTag);
+            }
+
+            itemDiv.appendChild(tagsDiv);
+
+            itemDiv.onclick = () => {
+                map.eachLayer(layer => {
+                    if (layer instanceof L.GeoJSON) map.removeLayer(layer);
+                });
+
+                try {
+                    const geometry = typeof item.geometry === 'string' 
+                        ? JSON.parse(item.geometry) 
+                        : item.geometry;
+
+                    const geoJsonLayer = L.geoJSON(geometry).addTo(map);
+                    map.fitBounds(geoJsonLayer.getBounds());
+                } catch (error) {
+                    console.error('Error adding GeoJSON layer:', error);
+                    alert('Failed to display item geometry!');
+                }
+            };
+
+        const plusButton = document.createElement('button');
+        plusButton.textContent = '+';
+        plusButton.style.backgroundColor = '#007bff';
+        plusButton.style.color = '#fff';
+        plusButton.style.border = 'none';
+        plusButton.style.borderRadius = '50%';
+        plusButton.style.width = '30px';
+        plusButton.style.height = '30px';
+        plusButton.style.cursor = 'pointer';
+        plusButton.style.marginTop = '10px';
+
+        plusButton.onclick = () => {
+            try {
+                const geometry = typeof item.geometry === 'string' 
+                    ? JSON.parse(item.geometry) 
+                    : item.geometry;
+
+                const geoJsonLayer = L.geoJSON(geometry).addTo(map);
+                map.fitBounds(geoJsonLayer.getBounds());
+            } catch (error) {
+                console.error('Error adding GeoJSON layer:', error);
+                alert('Failed to add item geometry to the map!');
+            }
+        };
+
+        itemDiv.appendChild(plusButton);
+
+            sidebar.appendChild(itemDiv);
+        });
+    </script>
+</body>
+</html>
