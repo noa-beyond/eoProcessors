@@ -40,7 +40,7 @@ def cli(log):
 
 @cli.command(help="Create STAC Item from SAFE path")
 @click.argument("input_path", required=True)
-@click.argument("config", required=False)
+@click.argument("config", required=True)
 @click.option("--collection", "-c", help="Collection for item(s) to be child of")
 @click.option("--recursive", "-r", is_flag=True, help="Ingest all (SAFE) directories under path")
 def create_item_from_path(
@@ -56,7 +56,7 @@ def create_item_from_path(
         input (click.Argument | str): Input filename path
         config_file (click.Argument | str) - optional: config json file
             selecting file types etc
-        collection (click.Option | str | None): Collection id of which the new Item will be child of
+        collection (click.Option | str | None): Collection id of which the new Item will be an Item of
         recursive (click.Option | bool): To ingest all (SAFE) directories under input (for multiple item creation)
     """
     if config:

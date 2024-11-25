@@ -4,11 +4,9 @@
     "catalog_filename": "catalog.json",
     "catalog_description": "DEV - National Observatory of Athens internal STAC Catalog - DEV",
     "collection_path": "/tmp/data/dev/STAC/catalog/collections/",
-    "output_path": "/tmp/data/dev/STAC/catalog/items/",
-    "collections": [
-        {
-            "id": "sentinel2-l2a",
+    "collections": {
+        "sentinel2-l2a": {
             "description": "Internal downloaded Sentinel2 L2A data"
-        }
-    ]
+        }   
+    }
 }

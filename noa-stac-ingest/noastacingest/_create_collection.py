@@ -11,6 +11,10 @@ from pystac import (
     Catalog,
     Collection,
     Extent,
+    Link,
+    RelType,
+    MediaType,
+    CatalogType,
     SpatialExtent,
     TemporalExtent,
 )
@@ -32,18 +36,21 @@ def main(config_file):
         TemporalExtent([[datetime.datetime.now(datetime.timezone.utc), None]]),
     )
     # TODO complete rest of fields like license etc
+    l2a_collection_id = "sentinel2-l2a"
     l2a_collection = Collection(
-        id=config["collections"][0]["id"],
-        href=str(config["collection_path"] + config["collections"][0]["id"] + "/" + "collection.json"),
-        description=config["collections"][0]["description"],
+        id=l2a_collection_id,
+        href=str(config["collection_path"] + l2a_collection_id + "/" + "collection.json"),
+        description=config["collections"][l2a_collection_id]["description"],
         extent=DEFAULT_EXTENT,
     )
-    l2a_collection.normalize_hrefs(str(config["collection_path"] + config["collections"][0]["id"] + "/"))
-    l2a_collection.make_all_asset_hrefs_absolute()
-    if not os.path.exists(str(config["collection_path"] + config["collections"][0]["id"] + "/" + "collection.json")):
-        l2a_collection.save(dest_href=str(config["collection_path"] + config["collections"][0]["id"]))
+    l2a_collection.add_link(Link(rel=RelType.ITEMS, target=str(config["collection_path"] + l2a_collection_id + "/items/", media_type=MediaType.JSON)))
 
-    catalog.add_children([l2a_collection], AsIsLayoutStrategy())
+    l2a_collection.normalize_hrefs(str(config["collection_path"] + l2a_collection_id + "/"))
+    l2a_collection.make_all_asset_hrefs_absolute()
+    if not os.path.exists(str(config["collection_path"] + l2a_collection_id + "/" + "collection.json")):
+        l2a_collection.save(dest_href=str(config["collection_path"] + l2a_collection_id))
+
+    catalog.add_child(l2a_collection, config["collections"][l2a_collection_id]["description"], AsIsLayoutStrategy())
     catalog.save()
 
 

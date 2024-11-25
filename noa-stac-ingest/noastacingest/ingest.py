@@ -10,7 +10,7 @@ from stactools.sentinel2.commands import create_item as create_item_s2
 from stactools.sentinel3.commands import create_item as create_item_s3
 
 from pystac import Catalog, Collection
-
+from pystac.layout import AsIsLayoutStrategy
 
 FILETYPES = ("SAFE", "SEN3")
 
@@ -31,8 +31,6 @@ class Ingest:
         with open(config, encoding="utf8") as f:
             self._config = json.load(f)
         print(self._config)
-        self._output_path = self._config["output_path"]
-        Path(self._output_path).mkdir(parents=True, exist_ok=True)
 
         self._catalog = Catalog.from_file(Path(self._config["catalog_path"], self._config["catalog_filename"]))
 
@@ -56,10 +54,13 @@ class Ingest:
                             item = create_item_s1_slc(str(path))
                 case "S2":
                     item = create_item_s2(str(path))
+                    collection = "sentinel2-l2a"
                 case "S3":
                     item = create_item_s3(str(path))
             # TODO: item should be under collection path not in generic
-            json_file_path = str(Path(self._output_path, str(path.name) + ".STAC.json"))
+            item_path = self._config.get("collection_path") + collection + "/items/" + item.id
+            json_file_path = str(Path(item_path, item.id + ".json"))
+            # json_file_path = str(Path(self._output_path, str(path.name) + ".STAC.json"))
             print(json_file_path)
 
             # Save the item as a JSON file
@@ -70,19 +71,26 @@ class Ingest:
             # self: self ref (file. it seems that there is no .json extension in other collections. ask how it is served)
             # collection: specific collection
 
+            # item.save_object(include_self_link=True, dest_href=json_file_path)
+            item.make_asset_hrefs_absolute()
             item.save_object(include_self_link=True, dest_href=json_file_path)
 
+            #feature_collection = {
+            #    "type": "FeatureCollection",
+            #    "features": [item.to_dict() for item in collection_instance.get_all_items()]
+            #}
             if collection:
                 collection_instance = self._catalog.get_child(collection)
                 collection_instance.add_item(item)
                 collection_instance.update_extent_from_items()
-                collection_instance.normalize_hrefs()
-                collection_instance.make_all_asset_hrefs_absolute()
-                collection_instance.save()
+                collection_instance.normalize_and_save(self._config.get("collection_path") + collection + "/")
+                # collection_instance.normalize_hrefs(self._config.get("collection_path") + collection + "/")
+                # collection_instance.make_all_asset_hrefs_absolute()
+                # collection_instance.save()
 
             # TODO see where this is needed
-            self._catalog.normalize_hrefs()
+            # self._catalog.normalize_hrefs()
 
             # self._catalog.make_all_asset_hrefs_relative()
-            self._catalog.make_all_asset_hrefs_absolute()
-            self._catalog.save()
+            # self._catalog.make_all_asset_hrefs_absolute()
+            # self._catalog.save()
