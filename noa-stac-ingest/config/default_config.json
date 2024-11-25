@@ -1,11 +1,14 @@
 {   
-    "catalog_path": "/mnt/data/dev/STAC/catalog/catalog.json",
-    "catalog_filename": "catalog.json",
     "catalog_id": "noa-beyond-internal",
+    "catalog_path": "/mnt/data/dev/STAC/catalog/",
+    "catalog_filename": "catalog.json",
     "catalog_description": "National Observatory of Athens internal STAC Catalog",
-    "collection_path": "/mnt/data/dev/STAC/catalog/collection/",
+    "collection_path": "/mnt/data/dev/STAC/catalog/collections/",
     "output_path": "/mnt/data/dev/STAC/catalog/items/",
     "collections": [
-        "sentinel2-l2a"
+        {
+            "id": "sentinel2-l2a",
+            "description": "Internal downloaded Sentinel2 L2A data"
+        }
     ]
 }

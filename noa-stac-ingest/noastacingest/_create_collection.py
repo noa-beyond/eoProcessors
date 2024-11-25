@@ -2,6 +2,7 @@
 Warning! This might be a destructive action, if a Catalog/Collection
 with the same name exists
 """
+import os
 import sys
 import json
 import datetime
@@ -11,8 +12,9 @@ from pystac import (
     Collection,
     Extent,
     SpatialExtent,
-    TemporalExtent
+    TemporalExtent,
 )
+from pystac.layout import AsIsLayoutStrategy
 
 def main(config_file):
 
@@ -32,15 +34,17 @@ def main(config_file):
     # TODO complete rest of fields like license etc
     l2a_collection = Collection(
         id=config["collections"][0]["id"],
-        href=str(config["collection_path"] + config["collections"][0]["id"]),
+        href=str(config["collection_path"] + config["collections"][0]["id"] + "/" + "collection.json"),
         description=config["collections"][0]["description"],
         extent=DEFAULT_EXTENT,
     )
-    l2a_collection.normalize_hrefs(str(config["collection_path"] + config["collections"][0]["id"]))
+    l2a_collection.normalize_hrefs(str(config["collection_path"] + config["collections"][0]["id"] + "/"))
     l2a_collection.make_all_asset_hrefs_absolute()
-    l2a_collection.save(dest_href=str(config["collection_path"] + config["collections"][0]["id"]))
-    # catalog.add_children([l2a_collection])
-    # catalog.save()
+    if not os.path.exists(str(config["collection_path"] + config["collections"][0]["id"] + "/" + "collection.json")):
+        l2a_collection.save(dest_href=str(config["collection_path"] + config["collections"][0]["id"]))
+
+    catalog.add_children([l2a_collection], AsIsLayoutStrategy())
+    catalog.save()
 
 
 if __name__ == "__main__":  # pragma: no cover
