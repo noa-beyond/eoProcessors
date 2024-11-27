@@ -6,6 +6,7 @@ import os
 import sys
 import json
 import datetime
+from pathlib import Path
 
 from pystac import (
     Catalog,
@@ -43,13 +44,28 @@ def main(config_file):
         description=config["collections"][l2a_collection_id]["description"],
         extent=DEFAULT_EXTENT,
     )
-    l2a_collection.add_link(Link(rel=RelType.ITEMS, target=str(config["collection_path"] + l2a_collection_id + "/items/", media_type=MediaType.JSON)))
+    items_path = Path(config["collection_path"], l2a_collection_id, "items")
+    if not os.path.exists(str(items_path)):
+        items_path.mkdir(parents=True, exist_ok=True)
+    l2a_collection.add_link(
+        Link(
+            rel=RelType.ITEMS,
+            target=str(config["collection_path"] + l2a_collection_id + "/items/"),
+            media_type=MediaType.JSON
+        )
+    )
 
     l2a_collection.normalize_hrefs(str(config["collection_path"] + l2a_collection_id + "/"))
     l2a_collection.make_all_asset_hrefs_absolute()
     if not os.path.exists(str(config["collection_path"] + l2a_collection_id + "/" + "collection.json")):
         l2a_collection.save(dest_href=str(config["collection_path"] + l2a_collection_id))
 
+    catalog.add_link(Link(
+            rel="data",
+            target=config["collection_path"],
+            media_type=MediaType.JSON
+        )
+    )
     catalog.add_child(l2a_collection, config["collections"][l2a_collection_id]["description"], AsIsLayoutStrategy())
     catalog.save()
 

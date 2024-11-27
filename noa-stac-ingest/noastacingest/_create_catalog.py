@@ -23,9 +23,6 @@ def main(config_file):
     catalog.make_all_asset_hrefs_absolute()
     catalog.save(CatalogType.ABSOLUTE_PUBLISHED, config["catalog_path"])
 
-    # Then, to load:
-    # catalog = Catalog.from_file(config["catalog_path"] + config["catalog_filename"])
-
 if __name__ == "__main__":  # pragma: no cover
     if len(sys.argv) != 2:
         print("Usage: python _create_catalog.py <config_file_path>")

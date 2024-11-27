@@ -57,40 +57,20 @@ class Ingest:
                     collection = "sentinel2-l2a"
                 case "S3":
                     item = create_item_s3(str(path))
-            # TODO: item should be under collection path not in generic
             item_path = self._config.get("collection_path") + collection + "/items/" + item.id
             json_file_path = str(Path(item_path, item.id + ".json"))
-            # json_file_path = str(Path(self._output_path, str(path.name) + ".STAC.json"))
             print(json_file_path)
-
-            # Save the item as a JSON file
+            
             # TODO add to item:
-            # collection: text (e.g. SENTINEL-2 - either local, or from source: SAFE S2 files do not have one (obviously), so maybe local)
-            # links:
-            # root: NOA Catalog (has all collections)
-            # self: self ref (file. it seems that there is no .json extension in other collections. ask how it is served)
-            # collection: specific collection
-
-            # item.save_object(include_self_link=True, dest_href=json_file_path)
-            item.make_asset_hrefs_absolute()
-            item.save_object(include_self_link=True, dest_href=json_file_path)
-
             #feature_collection = {
             #    "type": "FeatureCollection",
             #    "features": [item.to_dict() for item in collection_instance.get_all_items()]
             #}
             if collection:
+                item.set_root(self._catalog)
                 collection_instance = self._catalog.get_child(collection)
-                collection_instance.add_item(item)
-                collection_instance.update_extent_from_items()
+                item.set_collection(collection_instance)
                 collection_instance.normalize_and_save(self._config.get("collection_path") + collection + "/")
-                # collection_instance.normalize_hrefs(self._config.get("collection_path") + collection + "/")
-                # collection_instance.make_all_asset_hrefs_absolute()
-                # collection_instance.save()
 
-            # TODO see where this is needed
-            # self._catalog.normalize_hrefs()
-
-            # self._catalog.make_all_asset_hrefs_relative()
-            # self._catalog.make_all_asset_hrefs_absolute()
-            # self._catalog.save()
+            item.set_self_href(json_file_path)
+            item.save_object(include_self_link=True)
