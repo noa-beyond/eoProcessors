@@ -118,7 +118,7 @@ def query_all_items(config):
                 print(row)
 
 def load_stac_items_to_pgstac(item_path: str, collection: bool = False):
-    connection_string = f"postgresql://{os.getenv('STACDB_ADMIN_USERNAME')}:{os.getenv('STACDB_ADMIN_PASSWORD')}@{os.getenv('STACDB_URI')}'/{os.getenv('STACDB_DBNAME')}"
+    connection_string = f"postgresql://{os.getenv('STACDB_ADMIN_USERNAME')}:{os.getenv('STACDB_ADMIN_PASSWORD')}@{os.getenv('STACDB_URI')}/{os.getenv('STACDB_DBNAME')}"
     stac_db = pgdb.PgstacDB(connection_string)
     stac_loader = Loader(stac_db)
     if collection:
