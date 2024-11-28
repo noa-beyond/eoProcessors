@@ -14,8 +14,14 @@ requires-python = ">=3.12"
 dependencies = [
     "build>=1.1.1",
     "click>=8.1.7",
-    "pyproj>=3.6.1",
-    "stactools>=0.5.3"
+    "pypgstac>=0.9.1",
+    "pypgstac[psycopg]",
+    "stactools>=0.5.3",
+    "stactools-sentinel1>=0.8.0",
+    "stactools-sentinel2>=0.6.4",
+    "stactools-sentinel3>=0.4.0",
+    "stactools-modis>=0.3.0a0",
+    "stactools-landsat>=0.5.0"
 ]
 keywords = [
     "data pipelines",

@@ -11,7 +11,6 @@ from stactools.sentinel3.commands import create_item as create_item_s3
 
 from pystac import Catalog, Collection
 from pystac.layout import AsIsLayoutStrategy
-
 FILETYPES = ("SAFE", "SEN3")
 
 
