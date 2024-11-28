@@ -10,7 +10,9 @@ from stactools.sentinel2.commands import create_item as create_item_s2
 from stactools.sentinel3.commands import create_item as create_item_s3
 
 from pystac import Catalog, Collection
-from pystac.layout import AsIsLayoutStrategy
+from noastacingest.db import utils as db_utils
+
+
 FILETYPES = ("SAFE", "SEN3")
 
 
@@ -26,14 +28,14 @@ class Ingest:
         """
         Ingest main class implementing single and batch item creation.
         """
-        self._config = None
+        self._config = {}
         with open(config, encoding="utf8") as f:
             self._config = json.load(f)
         print(self._config)
 
         self._catalog = Catalog.from_file(Path(self._config["catalog_path"], self._config["catalog_filename"]))
 
-    def single_item(self, path: Path, collection: str | None):
+    def single_item(self, path: Path, collection: str | None, update_db: bool):
         """
         Just an item
         """
@@ -47,15 +49,24 @@ class Ingest:
                     match sensor:
                         case "GRD":
                             item = create_item_s1_grd(str(path))
+                            if not collection:
+                                collection = "sentinel1-grd"
                         case "RTC":
                             item = create_item_s1_rtc(str(path))
+                            if not collection:
+                                collection = "sentinel1-rtc"
                         case "SLC":
                             item = create_item_s1_slc(str(path))
+                            if not collection:
+                                collection = "sentinel1-slc"
                 case "S2":
                     item = create_item_s2(str(path))
-                    collection = "sentinel2-l2a"
+                    if not collection:
+                        collection = "sentinel2-l2a"
                 case "S3":
                     item = create_item_s3(str(path))
+                    if not collection:
+                        collection = "sentinel3"
             item_path = self._config.get("collection_path") + collection + "/items/" + item.id
             json_file_path = str(Path(item_path, item.id + ".json"))
             print(json_file_path)
@@ -70,6 +81,18 @@ class Ingest:
                 collection_instance = self._catalog.get_child(collection)
                 item.set_collection(collection_instance)
                 collection_instance.normalize_and_save(self._config.get("collection_path") + collection + "/")
+                if update_db:
+                    # Loading again the catalog and collection, just in case. There has to be a better way though
+                    db_utils.load_stac_items_to_pgstac(
+                        (self._config["catalog_path"], self._config["catalog_filename"]),
+                        collection=True
+                    )
+                    db_utils.load_stac_items_to_pgstac(
+                        self._config.get("collection_path") + collection + "/" + "collection.json",
+                        collection=True
+                    )
 
             item.set_self_href(json_file_path)
             item.save_object(include_self_link=True)
+            if update_db:
+                db_utils.load_stac_items_to_pgstac(json_file_path)

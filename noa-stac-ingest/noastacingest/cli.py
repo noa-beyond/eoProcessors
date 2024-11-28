@@ -43,11 +43,13 @@ def cli(log):
 @click.argument("config", required=True)
 @click.option("--collection", "-c", help="Collection for item(s) to be child of")
 @click.option("--recursive", "-r", is_flag=True, help="Ingest all (SAFE) directories under path")
+@click.option("--update_db", "-udb", is_flag=True, help="Update STAC db, ingesting(upsert) new items")
 def create_item_from_path(
     input_path: Argument | str,
     config: Argument | str,
     collection: Option | str | None,
-    recursive: Option | bool
+    recursive: Option | bool,
+    update_db: Option | bool
 ) -> None:
     """
     Instantiate Ingest Class and call "create_item"
@@ -58,7 +60,9 @@ def create_item_from_path(
             selecting file types etc
         collection (click.Option | str | None): Collection id of which the new Item will be an Item of
         recursive (click.Option | bool): To ingest all (SAFE) directories under input (for multiple item creation)
+        update_db (click.Option | bool): Update STAC db (pgstac) for new items, using upsert. It also updates the collections
     """
+    # TODO needs refactor. Updating and creating items can be done in batches, especially in db
     if config:
         logger.debug("Cli STAC creation using config file: %s", config)
 
@@ -69,10 +73,10 @@ def create_item_from_path(
         for single_item in os.listdir(input_path):
             item = Path(input_path, single_item)
             if item.is_dir():
-                ingestor.single_item(item, collection)
+                ingestor.single_item(item, collection, update_db)
     else:
         click.echo("Ingesting single item from path\n")
-        ingestor.single_item(Path(input_path), collection)
+        ingestor.single_item(Path(input_path), collection, update_db)
 
 
 if __name__ == "__main__":  # pragma: no cover
