@@ -9,7 +9,7 @@ from stactools.sentinel1.slc.stac import create_item as create_item_s1_slc
 from stactools.sentinel2.commands import create_item as create_item_s2
 from stactools.sentinel3.commands import create_item as create_item_s3
 
-from pystac import Catalog, Collection
+from pystac import Catalog
 from noastacingest.db import utils as db_utils
 
 
@@ -33,7 +33,12 @@ class Ingest:
             self._config = json.load(f)
         print(self._config)
 
-        self._catalog = Catalog.from_file(Path(self._config["catalog_path"], self._config["catalog_filename"]))
+        self._catalog = Catalog.from_file(
+            Path(
+                self._config["catalog_path"],
+                self._config["catalog_filename"]
+            )
+        )
 
     def single_item(self, path: Path, collection: str | None, update_db: bool):
         """
@@ -70,29 +75,30 @@ class Ingest:
             item_path = self._config.get("collection_path") + collection + "/items/" + item.id
             json_file_path = str(Path(item_path, item.id + ".json"))
             print(json_file_path)
-            
+
             # TODO add to item:
-            #feature_collection = {
-            #    "type": "FeatureCollection",
-            #    "features": [item.to_dict() for item in collection_instance.get_all_items()]
-            #}
+            # feature_collection = {
+            #     "type": "FeatureCollection",
+            #     "features": [item.to_dict() for item in collection_instance.get_all_items()]
+            # }
             if collection:
                 item.set_root(self._catalog)
                 collection_instance = self._catalog.get_child(collection)
                 item.set_collection(collection_instance)
-                collection_instance.normalize_and_save(self._config.get("collection_path") + collection + "/")
+                # TODO most providers do not have a direct collection/items relation
+                # Rather, they provide an items link, where all items are present
+                # e.g. https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items
+                # Like so, I do not know if an "extent" property is needed. If it is, update it:
+                # collection_instance.update_extent_from_items()
+                collection_instance.normalize_and_save(
+                    self._config.get("collection_path") + collection + "/"
+                )
                 if update_db:
-                    # Loading again the catalog and collection, just in case. There has to be a better way though
                     db_utils.load_stac_items_to_pgstac(
-                        (self._config["catalog_path"], self._config["catalog_filename"]),
-                        collection=True
-                    )
-                    db_utils.load_stac_items_to_pgstac(
-                        self._config.get("collection_path") + collection + "/" + "collection.json",
-                        collection=True
+                        [collection_instance.to_dict()], collection=True
                     )
 
             item.set_self_href(json_file_path)
             item.save_object(include_self_link=True)
             if update_db:
-                db_utils.load_stac_items_to_pgstac(json_file_path)
+                db_utils.load_stac_items_to_pgstac([item.to_dict()])

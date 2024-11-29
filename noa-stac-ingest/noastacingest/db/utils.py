@@ -8,6 +8,7 @@ from psycopg.rows import dict_row
 # pylint: disable=E1129 # False-positive for psycopg connection context manager
 # TODO: after integration tests, remove helper functions and make
 # table specific functions generic (by posting table name also)
+
 from pypgstac import db as pgdb
 from pypgstac.load import Loader, Methods
 
@@ -95,7 +96,7 @@ def update_uuid(config, table, uuid, column, value):
             curs.execute(sql, (value, uuid))
             conn.commit()
 
-            # If updated succesfully, return True
+            # If updated successfully, return True
             if curs.rowcount > 0:
                 return True
             return False
@@ -117,7 +118,9 @@ def query_all_items(config):
             for row in results:
                 print(row)
 
+
 def load_stac_items_to_pgstac(item_path: str, collection: bool = False):
+    """ Connect to pgSTAC and populate item"""
     connection_string = f"postgresql://{os.getenv('STACDB_ADMIN_USERNAME')}:{os.getenv('STACDB_ADMIN_PASSWORD')}@{os.getenv('STACDB_URI')}/{os.getenv('STACDB_DBNAME')}"
     stac_db = pgdb.PgstacDB(connection_string)
     stac_loader = Loader(stac_db)
