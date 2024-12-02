@@ -3,10 +3,13 @@ Simple kafka producer schema
 """
 
 import json
+import logging
 from kafka import KafkaConsumer as k_KafkaConsumer
 from kafka.admin import KafkaAdminClient, NewTopic
 
 from noaharvester import messaging as noa_messaging
+
+logger = logging.getLogger(__name__)
 
 
 class KafkaConsumer(noa_messaging.AbstractConsumer):
@@ -42,8 +45,9 @@ class KafkaConsumer(noa_messaging.AbstractConsumer):
                 admin_client.create_topics(new_topics=[t], validate_only=False)
                 topic_list.append(t)
             # Ignore the error when the Topic already exists.
-            except:
-                pass
+            except RuntimeWarning:
+                logging.warning("Topic %s exists. Just a warning", topic)
+                continue
 
         return topic_list
 
@@ -51,5 +55,4 @@ class KafkaConsumer(noa_messaging.AbstractConsumer):
         """
         Read messages from the configured Kafka Topics.
         """
-        for message in self.consumer:
-            yield message
+        yield from self.consumer

@@ -68,4 +68,4 @@ def send_kafka_message(topic, succeeded, failed):
 
     producer = KafkaProducer(bootstrap_servers=bootstrap_servers, schema=schema_def)
     kafka_message = {"succeeded": succeeded, "failed": failed}
-    producer.send(topic=topic, value=kafka_message)
+    producer.send(topic=topic, key=None, value=kafka_message)
