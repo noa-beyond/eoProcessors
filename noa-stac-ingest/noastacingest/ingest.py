@@ -2,6 +2,7 @@
 from __future__ import annotations
 from pathlib import Path
 import json
+import logging
 
 from stactools.sentinel1.grd.stac import create_item as create_item_s1_grd
 from stactools.sentinel1.rtc.stac import create_item as create_item_s1_rtc
@@ -14,6 +15,7 @@ from noastacingest.db import utils as db_utils
 
 
 FILETYPES = ("SAFE", "SEN3")
+logger = logging.getLogger(__name__)
 
 
 class Ingest:
@@ -39,6 +41,11 @@ class Ingest:
                 self._config["catalog_filename"]
             )
         )
+
+    @property
+    def config(self):
+        """Get config"""
+        return self._config
 
     def single_item(self, path: Path, collection: str | None, update_db: bool):
         """
@@ -102,3 +109,30 @@ class Ingest:
             item.save_object(include_self_link=True)
             if update_db:
                 db_utils.load_stac_items_to_pgstac([item.to_dict()])
+
+    def from_uuid_db_list(self, uuid_list, collection, db_ingest):
+        """ Get from products table the paths to ingest"""
+        ingested_items = []
+        failed_items = []
+        # TODO: this looks at S2 table config
+        db_config = db_utils.get_env_config()
+        if not db_config:
+            db_config = db_utils.get_local_config()
+        else:
+            logger.error("Not db configuration found, in env vars nor local database.ini file.")
+            failed_items.append(uuid_list)
+            return ingested_items, failed_items
+
+        for single_uuid in uuid_list:
+            item_path = db_utils.query_all_from_table_column_value(
+                db_config, "products", "id", single_uuid
+            ).get("path")
+            # For production the two options should be "None, True"
+            try:
+                self.single_item(Path(item_path), collection, db_ingest)
+                ingested_items.append(single_uuid)
+            except RuntimeWarning:
+                logger.warning("Item could not be ingested to pgSTAC: %s", single_uuid)
+                failed_items.append(single_uuid)
+                continue
+        return ingested_items, failed_items

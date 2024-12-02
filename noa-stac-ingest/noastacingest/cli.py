@@ -7,16 +7,23 @@ from various data sources.
 from __future__ import annotations
 import os
 import sys
+from time import sleep
+from datetime import datetime
+import json
 import logging
 from pathlib import Path
 
 import click
 from click import Argument, Option
+from kafka import KafkaConsumer as k_KafkaConsumer
 
 # Appending the module path in order to have a kind of cli "dry execution"
 sys.path.append(str(Path(__file__).parent / ".."))
 
 from noastacingest import ingest  # noqa:402 pylint:disable=wrong-import-position
+from noastacingest.messaging.message import Message # noqa:402 pylint:disable=wrong-import-position
+from noastacingest.messaging import AbstractConsumer # noqa:402 pylint:disable=wrong-import-position
+from noastacingest.messaging.kafka_consumer import KafkaConsumer # noqa:402 pylint:disable=wrong-import-position
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +67,7 @@ def create_item_from_path(
             selecting file types etc
         collection (click.Option | str | None): Collection id of which the new Item will be an Item of
         recursive (click.Option | bool): To ingest all (SAFE) directories under input (for multiple item creation)
-        update_db (click.Option | bool): Update STAC db (pgstac) for new items, using upsert. It also updates the collections
+        update_db (click.Option | bool): Update pgstac for new items, using upsert. It also updates the collections
     """
     # TODO needs refactor. Updating and creating items can be done in batches, especially in db
     if config:
@@ -77,6 +84,122 @@ def create_item_from_path(
     else:
         click.echo("Ingesting single item from path\n")
         ingestor.single_item(Path(input_path), collection, update_db)
+
+
+@cli.command(
+    help=(
+        """
+        Microservice facilitating EO data STAC db ingestion.
+        Implemented using a kafka producer/consumer pattern.
+        """
+    )
+)
+@click.option(
+    "--test",
+    "-t",
+    is_flag=True,
+    help="Testing kafka receiving requests. No other functionality",
+)
+@click.option(
+    "--db_ingest",
+    "-db",
+    is_flag=True,
+    help="Ingesting to pgSTAC, not only creating STAC Items. Should be enabled",
+)
+@click.option(
+    "--collection",
+    "-col",
+    help="""
+        Explicit collection name to ingest to.
+        If not set, ingestor will try to derive it from path name
+    """,
+)
+@click.argument("config_file", required=True)
+def noa_stac_ingest_service(
+    config_file: Argument | str,
+    collection: Option | str,
+    test: Option | bool,
+    db_ingest: Option | bool
+) -> None:
+    """
+    Instantiate Ingest class, activating service, listening to kafka topic.
+    When triggered, it creates, stores and populates pgstac with Items,
+    looking for input paths from ids from Products table,
+    based on the list argument from kafka message.
+
+    Parameters:
+        config_file (click.Argument | str): config file with necessary parameters
+        collection (click.Option | str): Ingest to specific collection
+        test (click.Option | bool): for kafka testing purposes
+        db_ingest (click.Option | bool): Ingest Item to db. Should be set to true for production
+    """
+    # if config_file:
+    logger.debug("Starting NOA-STAC-Ingest service...")
+
+    ingestor = ingest.Ingest(config=config_file)
+
+    consumer: AbstractConsumer | k_KafkaConsumer = None
+
+    # Warning: topics is a list, even if there is only one topic
+    topics = [ingestor.config.get(
+        "topics", os.environ.get(
+            "KAFKA_INPUT_TOPIC", "stacingest.order.requested"
+        )
+    )]
+    schema_def = Message.schema_request()
+    num_partitions = int(ingestor.config.get(
+        "num_partitions", os.environ.get(
+            "KAFKA_NUM_PARTITIONS", 2
+        )
+    ))
+    replication_factor = int(ingestor.config.get(
+        "replication_factor", os.environ.get(
+            "KAFKA_REPLICATION_FACTOR", 3
+        )
+    ))
+
+    while consumer is None:
+        consumer = KafkaConsumer(
+            bootstrap_servers=os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"),
+            group_id=ingestor.config.get("group_id", "stacingest-group-request"),
+            # Topics are none in the constructor, and then it subscribes/
+            # If harvester is responsible for also creating them,
+            # it should be done here.
+            # topics=None,
+            topics=topics,
+            schema=schema_def
+        )
+        consumer.create_topics(
+            topics=topics, num_partitions=num_partitions, replication_factor=replication_factor)
+        if consumer is None:
+            sleep(5)
+
+    # consumer.subscribe(topics=topics)
+    click.echo("NOA-STACIngest service started.\n")
+    if not db_ingest:
+        logger.warning("Items will not be ingested to pgSTAC. Did you enable the -db flag?")
+    while True:
+        for message in consumer.read():
+            item = message.value
+            now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            msg = f"Digesting Item from Topic {message.topic} ({now_time})..."
+            msg += "\n> Item: " + json.dumps(item)
+            logger.debug(msg)
+            click.echo("Received list to ingest")
+            if test:
+                ingested = "Some ingested ids"
+                failed = "Some failed to ingest ids"
+            else:
+                uuid_list = json.loads(item)
+                ingested, failed = ingestor.from_uuid_db_list(
+                    uuid_list["uuid"],
+                    collection,
+                    db_ingest
+                )
+            logger.debug("Ingested items: %s", ingested)
+            if failed:
+                logger.error("Failed uuids: %s", failed)
+        sleep(1)
 
 
 if __name__ == "__main__":  # pragma: no cover
