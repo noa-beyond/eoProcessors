@@ -1,3 +1,4 @@
+kafka-python-ng==2.2.3
 pypgstac[psycopg]
 stactools==0.5.3
 stactools-sentinel1==0.8.0
