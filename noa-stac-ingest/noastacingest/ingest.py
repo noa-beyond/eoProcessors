@@ -1,5 +1,7 @@
 """Main Ingest module."""
 from __future__ import annotations
+import os
+
 from pathlib import Path
 import json
 import logging
@@ -11,6 +13,8 @@ from stactools.sentinel2.commands import create_item as create_item_s2
 from stactools.sentinel3.commands import create_item as create_item_s3
 
 from pystac import Catalog
+
+from noastacingest import utils
 from noastacingest.db import utils as db_utils
 
 
@@ -135,4 +139,12 @@ class Ingest:
                 logger.warning("Item could not be ingested to pgSTAC: %s", single_uuid)
                 failed_items.append(single_uuid)
                 continue
+
+        kafka_topic = os.environ.get("KAFKA_INPUT_TOPIC", "stacingest.order.completed")
+        try:
+            utils.send_kafka_message(kafka_topic, ingested_items, failed_items)
+            logger.info("Kafka message sent")
+        except BrokenPipeError as e:
+            logger.error("Error sending kafka message: %s", e)
+
         return ingested_items, failed_items
