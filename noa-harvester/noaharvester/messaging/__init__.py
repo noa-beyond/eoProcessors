@@ -1,4 +1,4 @@
-class AbstractProducer(object):
+class AbstractProducer():
     """
     Abstract Kafka Producer doing nothing.
     """
@@ -14,7 +14,7 @@ class AbstractProducer(object):
         Send the specified Value to a Kafka Topic.
         """
 
-class AbstractConsumer(object):
+class AbstractConsumer():
     """
     Abstract Kafka Consumer doing nothing.
     """

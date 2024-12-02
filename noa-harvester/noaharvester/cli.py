@@ -7,7 +7,7 @@ from various data providers: Copernicus and Earthdata.
 from __future__ import annotations
 import os
 import sys
-import datetime
+from datetime import datetime
 import json
 from time import sleep
 import logging
@@ -20,9 +20,9 @@ from kafka import KafkaConsumer as k_KafkaConsumer
 sys.path.append(str(Path(__file__).parent / ".."))
 
 from noaharvester import harvester  # noqa:402 pylint:disable=wrong-import-position
-from noaharvester.utils import Message
-from noaharvester.messaging import AbstractConsumer
-from noaharvester.messaging.kafka_consumer import KafkaConsumer
+from noaharvester.messaging.message import Message  # noqa:402 pylint:disable=wrong-import-position
+from noaharvester.messaging import AbstractConsumer  # noqa:402 pylint:disable=wrong-import-position
+from noaharvester.messaging.kafka_consumer import KafkaConsumer  # noqa:402 pylint:disable=wrong-import-position
 
 logger = logging.getLogger(__name__)
 
@@ -121,10 +121,10 @@ def download(
 
 @cli.command(
     help=(
-    """
-    Microservice facilitating EO data downloads. Implemented by
-    using a kafka producer/consumer pattern.
-    """
+        """
+        Microservice facilitating EO data downloads. Implemented by
+        using a kafka producer/consumer pattern.
+        """
     )
 )
 @click.option(
@@ -169,18 +169,18 @@ def noa_harvester_service(
     consumer: AbstractConsumer | k_KafkaConsumer = None
 
     # Warning: topics is a list, even if there is only one topic
-    topics = [harvest._config.get(
+    topics = [harvest.config.get(
         "topics", os.environ.get(
             "KAFKA_INPUT_TOPIC", "harvester.order.requested"
         )
     )]
     schema_def = Message.schema_request()
-    num_partitions = int(harvest._config.get(
+    num_partitions = int(harvest.config.get(
         "num_partitions", os.environ.get(
             "KAFKA_NUM_PARTITIONS", 2
         )
     ))
-    replication_factor = int(harvest._config.get(
+    replication_factor = int(harvest.config.get(
         "replication_factor", os.environ.get(
             "KAFKA_REPLICATION_FACTOR", 3
         )
@@ -189,7 +189,7 @@ def noa_harvester_service(
     while consumer is None:
         consumer = KafkaConsumer(
             bootstrap_servers=os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"),
-            group_id=harvest._config.get("group_id", "harvester-group-request"),
+            group_id=harvest.config.get("group_id", "harvester-group-request"),
             # Topics are none in the constructor, and then it subscribes/
             # If harvester is responsible for also creating them,
             # it should be done here.
@@ -241,13 +241,18 @@ def noa_harvester_service(
 )
 @click.argument("config_file", required=True)
 @click.option("--output_path", default="./data", help="Output path")
-@click.option("--uuid", "-u", multiple=True, help="Id field of products table. Can be set multiple times")
+@click.option(
+    "--uuid",
+    "-u",
+    multiple=True,
+    help="Id field of products table. Can be set multiple times"
+)
 def from_uuid_list(
     config_file: Argument | str,
     output_path: Option | str,
     uuid: Option | tuple[str],
     verbose: Option | bool,
-) -> None:
+) -> tuple:
     """
     Instantiate Harvester class and call download function.
     Downloads all ids from Products table, based on the --uuid multiple option.
@@ -259,26 +264,26 @@ def from_uuid_list(
         uuid (click.Option | tuple[str]): A tuple of uuids to download
         verbose (click.Option | bool): to show download progress indicator or not
     """
-    if config_file:
-        logger.debug("Cli download for config file: %s", config_file)
 
-        click.echo(f"Downloading at: {output_path}\n")
-        harvest = harvester.Harvester(
-            config_file=config_file,
-            output_path=output_path,
-            verbose=verbose,
-            # TODO is not a service, but needs refactoring of Harvester and logic
-            # since we have changed the functionality
-            is_service=True
-        )
-        downloaded_uuids, failed_uuids = harvest.download_from_uuid_list(uuid)
-        if failed_uuids:
-            logger.error("Failed uuids: %s", failed_uuids)
-        # TODO The following is a dev test: to be converted to unit tests
-        # harvest.test_db_connection()
-        print(downloaded_uuids)
-        click.echo("Done.\n")
-        return downloaded_uuids, failed_uuids
+    logger.debug("Cli download for config file: %s", config_file)
+
+    click.echo(f"Downloading at: {output_path}\n")
+    harvest = harvester.Harvester(
+        config_file=config_file,
+        output_path=output_path,
+        verbose=verbose,
+        # TODO is not a service, but needs refactoring of Harvester and logic
+        # since we have changed the functionality
+        is_service=True
+    )
+    downloaded_uuids, failed_uuids = harvest.download_from_uuid_list(uuid)
+    if failed_uuids:
+        logger.error("Failed uuids: %s", failed_uuids)
+    # TODO The following is a dev test: to be converted to unit tests
+    # harvest.test_db_connection()
+    print(downloaded_uuids)
+    click.echo("Done.\n")
+    return downloaded_uuids, failed_uuids
 
 
 @cli.command(

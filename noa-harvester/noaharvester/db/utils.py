@@ -93,7 +93,7 @@ def update_uuid(config, table, uuid, column, value):
             curs.execute(sql, (value, uuid))
             conn.commit()
 
-            # If updated succesfully, return True
+            # If updated successfully, return True
             if curs.rowcount > 0:
                 return True
             return False

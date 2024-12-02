@@ -73,6 +73,11 @@ class Harvester:
                     logger.debug("Appending search item: %s", item)
         logger.debug("Total search items: %s", len(self._search_items))
 
+    @property
+    def config(self):
+        """Get config"""
+        return self._config
+
     def download_from_uuid_list(self, uuid_list: list[str]) -> tuple[list, list]:
         """
         Utilize the minimum provider interface for downloading single items
@@ -131,12 +136,13 @@ class Harvester:
             try:
                 utils.send_kafka_message(kafka_topic, downloaded_items, failed_items)
                 logger.info("Kafka message sent")
-            except Exception as e:
-                logger.error(f"Error sending kafka message: {e}")
+            except BrokenPipeError as e:
+                logger.error("Error sending kafka message: %s ", e)
 
             return (downloaded_items, failed_items)
 
     def test_db_connection(self):
+        """Out of place Testing"""
         db_config = db_utils.get_env_config()
         if not db_config:
             db_config = db_utils.get_local_config()

@@ -28,5 +28,5 @@ class KafkaProducer(noa_messaging.AbstractProducer):
         """
         Send the specified Value to a Kafka Topic.
         """
-        self.producer.send(topic, value)
+        self.producer.send(topic, key=key, value=value)
         self.producer.flush()
