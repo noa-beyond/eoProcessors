@@ -1,0 +1,71 @@
+# PEP-518 https://peps.python.org/pep-0518/
+[build-system]
+# Minimum requirements for the build system to execute.
+requires = ["setuptools>=69.1.1"]  # PEP 508 specifications.
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "noastacingest"
+authors = [
+    {name = "NOA - Beyond"}
+]
+description = "Ingest geospatial data by creating STAC Items"
+requires-python = ">=3.12"
+dependencies = [
+    "build>=1.1.1",
+    "click>=8.1.7",
+    "kafka-python-ng==2.2.3",
+    "pypgstac>=0.9.1",
+    "pypgstac[psycopg]",
+    "stactools>=0.5.3",
+    "stactools-sentinel1>=0.8.0",
+    "stactools-sentinel2>=0.6.4",
+    "stactools-sentinel3>=0.4.0",
+    "stactools-modis>=0.3.0a0",
+    "stactools-landsat>=0.5.0"
+]
+keywords = [
+    "data pipelines",
+    "data engineering",
+]
+license = {text = "AGPL-3.0"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3.12",
+]
+dynamic = ["readme", "version"]
+
+[project.optional-dependencies]
+test = [
+    "black>=24.2.0",
+    "coverage>=7.4.3",
+    "flake8>=7.0.0",
+    "pytest>=8.1.1",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.12.0",
+]
+
+[project.scripts]
+noastacingest = "noastacingest:cli"
+
+[tool.setuptools.packages.find]
+include = ["noastacingest*"]
+
+[tool.setuptools.dynamic]
+readme = {file = "README.md", content-type = "text/markdown"}
+version = {attr = "noastacingest.__version__"}
+
+[tool.pytest.ini_options]
+addopts="""
+--cov-context test  \
+--cov-config pyproject.toml \
+--cov-report xml:coverage.xml \
+--cov-report term-missing \
+--cov noastacingest \
+--cov tests \
+--no-cov-on-fail \
+-ra \
+-W ignore"""
+testpaths = [
+  "tests"
+]
