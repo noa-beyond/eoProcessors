@@ -12,7 +12,7 @@ from stactools.sentinel1.slc.stac import create_item as create_item_s1_slc
 from stactools.sentinel2.commands import create_item as create_item_s2
 from stactools.sentinel3.commands import create_item as create_item_s3
 
-from pystac import Catalog
+from pystac import Catalog, Provider, ProviderRole
 
 from noastacingest import utils
 from noastacingest.db import utils as db_utils
@@ -51,10 +51,24 @@ class Ingest:
         """Get config"""
         return self._config
 
-    def single_item(self, path: Path, collection: str | None, update_db: bool):
+    def single_item(
+            self,
+            path: Path,
+            collection: str | None,
+            update_db: bool,
+            noa_product_id: str | None = None
+        ):
         """
         Just an item
         """
+        # TODO: provide more provider roles when "processor"
+        noa_provider = Provider(
+            name="NOA-Beyond",
+            description="National Observatory of Athens - 'Beyond' center of EO Research",
+            roles=ProviderRole.HOST,
+            url="https://beyond-eocenter.eu/"   
+        )
+
         if path.name.endswith(FILETYPES):
             platform = str(path.name).split("_", maxsplit=1)[0]
             satellite = platform[:2]
@@ -68,7 +82,10 @@ class Ingest:
                             if not collection:
                                 collection = "sentinel1-grd"
                         case "RTC":
-                            item = create_item_s1_rtc(str(path))
+                            item = create_item_s1_rtc(
+                                granule_href=str(path),
+                                additional_providers=noa_provider
+                            )
                             if not collection:
                                 collection = "sentinel1-rtc"
                         case "SLC":
@@ -76,13 +93,17 @@ class Ingest:
                             if not collection:
                                 collection = "sentinel1-slc"
                 case "S2":
-                    item = create_item_s2(str(path))
+                    item = create_item_s2(
+                        granule_href=str(path),
+                        additional_providers=noa_provider
+                    )
                     if not collection:
                         collection = "sentinel2-l2a"
                 case "S3":
                     item = create_item_s3(str(path))
                     if not collection:
                         collection = "sentinel3"
+            item["properties"]["noa_product_id"] = noa_product_id
             item_path = self._config.get("collection_path") + collection + "/items/" + item.id
             json_file_path = str(Path(item_path, item.id + ".json"))
             print(json_file_path)
@@ -128,12 +149,13 @@ class Ingest:
             return ingested_items, failed_items
 
         for single_uuid in uuid_list:
-            item_path = db_utils.query_all_from_table_column_value(
+            item = db_utils.query_all_from_table_column_value(
                 db_config, "products", "id", single_uuid
-            ).get("path")
+            )
+            item_path = item.get("path")
             # For production the two options should be "None, True"
             try:
-                self.single_item(Path(item_path), collection, db_ingest)
+                self.single_item(Path(item_path), collection, db_ingest, item.get("id"))
                 ingested_items.append(single_uuid)
             except RuntimeWarning:
                 logger.warning("Item could not be ingested to pgSTAC: %s", single_uuid)
