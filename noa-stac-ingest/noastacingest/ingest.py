@@ -155,11 +155,11 @@ class Ingest:
             item_path = item.get("path")
             # For production the two options should be "None, True"
             try:
-                self.single_item(Path(item_path), collection, db_ingest, item.get("id"))
-                ingested_items.append(single_uuid)
+                self.single_item(Path(item_path), collection, db_ingest, str(item.get("id")))
+                ingested_items.append(str(single_uuid))
             except RuntimeWarning:
-                logger.warning("Item could not be ingested to pgSTAC: %s", single_uuid)
-                failed_items.append(single_uuid)
+                logger.warning("Item could not be ingested to pgSTAC: %s", str(single_uuid))
+                failed_items.append(str(single_uuid))
                 continue
 
         kafka_topic = os.environ.get("KAFKA_INPUT_TOPIC", "stacingest.order.completed")

@@ -108,9 +108,10 @@ class Harvester:
             # uuid = None # Test uuid: "83c19de3-e045-40bd-9277-836325b4b64e"
             if uuid_db_entry:
                 logger.debug("Found db entry in Products table with id: %s", single_uuid)
-                uuid_title = (uuid_db_entry.get("uuid"), uuid_db_entry.get("name"))
-                print(uuid_title)
-                downloaded_item_path = download_provider.single_download(*uuid_title)
+                downloaded_item_path = download_provider.single_download(
+                    str(uuid_db_entry.get("uuid")),
+                    uuid_db_entry.get("name")
+                )
                 # Unfortunately, need to distinguish cases:
                 # Up to now, Copernicus products are .SAFE zip files, and as such
                 # need to be indexed (after decompressed) to the db
@@ -138,7 +139,7 @@ class Harvester:
                 logger.info("Kafka message sent")
             except BrokenPipeError as e:
                 logger.error("Error sending kafka message: %s ", e)
-
+                pass
             return (downloaded_items, failed_items)
 
     def test_db_connection(self):
