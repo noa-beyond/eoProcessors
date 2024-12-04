@@ -169,11 +169,12 @@ def noa_harvester_service(
     consumer: AbstractConsumer | k_KafkaConsumer = None
 
     # Warning: topics is a list, even if there is only one topic
-    topics = [harvest.config.get(
+    # So it should be set as a list in the config file
+    topics = harvest.config.get(
         "topics", os.environ.get(
             "KAFKA_INPUT_TOPIC", "harvester.order.requested"
         )
-    )]
+    )
     schema_def = Message.schema_request()
     num_partitions = int(harvest.config.get(
         "num_partitions", os.environ.get(

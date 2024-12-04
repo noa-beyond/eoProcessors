@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## [0.10.1] - 2024-12-04
+### Fixed
+- Pass kafka topics as a list, not as a nested list (#82)
+
 ## [0.10.0] - 2024-12-02
 ### Fixed
 - Some minor hot-fixes (#77)
