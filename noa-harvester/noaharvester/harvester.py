@@ -139,8 +139,8 @@ class Harvester:
                 logger.info("Kafka message sent")
             except BrokenPipeError as e:
                 logger.error("Error sending kafka message: %s ", e)
-                pass
-            return (downloaded_items, failed_items)
+                continue
+        return (downloaded_items, failed_items)
 
     def test_db_connection(self):
         """Out of place Testing"""

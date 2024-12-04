@@ -2,6 +2,8 @@
 import os
 import logging
 
+from kafka.errors import NoBrokersAvailable
+
 from pyproj import Transformer, CRS
 import shapefile
 
@@ -66,6 +68,10 @@ def send_kafka_message(topic, succeeded, failed):
     schema_def = Message.schema_response()
     bootstrap_servers = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
 
-    producer = KafkaProducer(bootstrap_servers=bootstrap_servers, schema=schema_def)
-    kafka_message = {"succeeded": succeeded, "failed": failed}
-    producer.send(topic=topic, key=None, value=kafka_message)
+    try:
+        producer = KafkaProducer(bootstrap_servers=bootstrap_servers, schema=schema_def)
+        kafka_message = {"succeeded": succeeded, "failed": failed}
+        producer.send(topic=topic, key=None, value=kafka_message)
+    except NoBrokersAvailable as e:
+        logger.warning("No brokers available. Continuing without Kafka. Error: %s", e)
+        producer = None
