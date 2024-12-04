@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## [0.10.2] - 2024-12-04
+### Fixed
+- UUID to str bug (#84)
+
 ## [0.10.1] - 2024-12-04
 ### Fixed
 - Pass kafka topics as a list, not as a nested list (#82)
