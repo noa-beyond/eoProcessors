@@ -141,11 +141,12 @@ def noa_stac_ingest_service(
     consumer: AbstractConsumer | k_KafkaConsumer = None
 
     # Warning: topics is a list, even if there is only one topic
-    topics = [ingestor.config.get(
+    # So it should be defined as a list in the config json file
+    topics = ingestor.config.get(
         "topics", os.environ.get(
             "KAFKA_INPUT_TOPIC", "stacingest.order.requested"
         )
-    )]
+    )
     schema_def = Message.schema_request()
     num_partitions = int(ingestor.config.get(
         "num_partitions", os.environ.get(
