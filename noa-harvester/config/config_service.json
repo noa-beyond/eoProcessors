@@ -1,6 +1,7 @@
 {
     "group_id": "harvester-group-request",
-    "topics": ["harvester.order.requested"],
+    "topics_consumer": ["harvester.order.requested"],
+    "topic_producer": "harvester.order.completed",
     "num_partitions": 2,
     "replication_factor": 3
 }
