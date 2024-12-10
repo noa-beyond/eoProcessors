@@ -16,6 +16,14 @@ from pathlib import Path
 import click
 from click import Argument, Option
 from kafka import KafkaConsumer as k_KafkaConsumer
+from kafka.errors import (
+    TopicAlreadyExistsError,
+    TopicAuthorizationFailedError,
+    InvalidTopicError,
+    UnknownTopicOrPartitionError,
+    UnsupportedForMessageFormatError,
+    InvalidMessageError
+)
 # Appending the module path in order to have a kind of cli "dry execution"
 sys.path.append(str(Path(__file__).parent / ".."))
 
@@ -171,8 +179,8 @@ def noa_harvester_service(
     # Warning: topics is a list, even if there is only one topic
     # So it should be set as a list in the config file
     topics = harvest.config.get(
-        "topics", os.environ.get(
-            "KAFKA_INPUT_TOPIC", "harvester.order.requested"
+        "topics_consumer", os.environ.get(
+            "KAFKA_INPUT_TOPICS", ["harvester.order.requested"]
         )
     )
     schema_def = Message.schema_request()
@@ -198,32 +206,49 @@ def noa_harvester_service(
             topics=topics,
             schema=schema_def
         )
-        consumer.create_topics(
-            topics=topics, num_partitions=num_partitions, replication_factor=replication_factor)
+        try:
+            consumer.subscribe_to_topics(topics)
+        except (UnknownTopicOrPartitionError, TopicAuthorizationFailedError, InvalidTopicError) as e:
+            logger.warning("[NOA-Harvester] Kafka Error on Topic subscription: %s", e)
+            logger.warning("[NOA-Harvester] Trying to create it:")
+            try:
+                consumer.create_topics(
+                    topics=topics, num_partitions=num_partitions, replication_factor=replication_factor)
+            except (TopicAlreadyExistsError,
+                    UnknownTopicOrPartitionError,
+                    TopicAuthorizationFailedError,
+                    InvalidTopicError) as g:
+                logger.error("[NOA-Harvester] Kafka: Could not subscribe or create producer topic: %s", g)
+                return
         if consumer is None:
             sleep(5)
 
     # consumer.subscribe(topics=topics)
-    click.echo(f"NOA-Harvester service started. Output path: {output_path}\n")
+    click.echo(f"[NOA-Harvester] NOA-Harvester service started. Output path: {output_path}\n")
 
     while True:
-        for message in consumer.read():
-            item = message.value
-            now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            msg = f"Digesting Item from Topic {message.topic} ({now_time})..."
-            msg += "\n> Item: " + json.dumps(item)
-            logger.debug(msg)
-            click.echo("Received list to download")
-            if test:
-                downloaded_uuids = "Some downloaded ids"
-                failed_uuids = "Some failed ids"
-            else:
-                uuid_list = json.loads(item)
-                downloaded_uuids, failed_uuids = harvest.download_from_uuid_list(uuid_list["uuid"])
-            logger.debug("Downloaded items: %s", downloaded_uuids)
-            if failed_uuids:
-                logger.error("Failed uuids: %s", failed_uuids)
-        sleep(1)
+        try:
+            for message in consumer.read():
+                item = message.value
+                now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                msg = f"[NOA-Harvester] Digesting Item from Topic {message.topic} ({now_time})..."
+                msg += "\n> Item: " + json.dumps(item)
+                logger.debug(msg)
+                click.echo("[NOA-Harvester] Received list to download")
+                if test:
+                    downloaded_uuids = "Some downloaded ids"
+                    failed_uuids = "Some failed ids"
+                else:
+                    uuid_list = json.loads(item)
+                    downloaded_uuids, failed_uuids = harvest.download_from_uuid_list(uuid_list["uuid"])
+                logger.debug("[NOA-Harvester] Downloaded items: %s", downloaded_uuids)
+                if failed_uuids:
+                    click.echo(f"[NOA-Harvester] Failed items: {failed_uuids}")
+                    logger.error("[NOA-Harvester] Failed uuids: %s", failed_uuids)
+            sleep(1)
+        except (UnsupportedForMessageFormatError, InvalidMessageError) as e:
+            logger.error("[NOA-Harvester] Error in reading kafka message: %s", e)
+            continue
 
 
 # TODO v2: integrate functionality in download command
