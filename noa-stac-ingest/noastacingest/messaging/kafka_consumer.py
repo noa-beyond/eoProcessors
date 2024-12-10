@@ -28,6 +28,9 @@ class KafkaConsumer(noa_messaging.AbstractConsumer):
             value_deserializer=lambda x: json.loads(x.decode('utf-8'))
         )
 
+    def subscribe_to_topics(self, topics: list):
+        self.consumer.subscribe(topics=topics)
+
     def create_topics(self, topics: list, num_partitions: int = 2, replication_factor: int = 1):
         """
         Create the specified list of Topics.
