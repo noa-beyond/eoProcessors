@@ -16,6 +16,14 @@ from pathlib import Path
 import click
 from click import Argument, Option
 from kafka import KafkaConsumer as k_KafkaConsumer
+from kafka.errors import (
+    TopicAlreadyExistsError,
+    TopicAuthorizationFailedError,
+    InvalidTopicError,
+    UnknownTopicOrPartitionError,
+    UnsupportedForMessageFormatError,
+    InvalidMessageError
+)
 
 # Appending the module path in order to have a kind of cli "dry execution"
 sys.path.append(str(Path(__file__).parent / ".."))
@@ -143,8 +151,8 @@ def noa_stac_ingest_service(
     # Warning: topics is a list, even if there is only one topic
     # So it should be defined as a list in the config json file
     topics = ingestor.config.get(
-        "topics", os.environ.get(
-            "KAFKA_INPUT_TOPIC", "stacingest.order.requested"
+        "topics_consumer", os.environ.get(
+            "KAFKA_INPUT_TOPICS", ["stacingest.order.requested"]
         )
     )
     schema_def = Message.schema_request()
@@ -170,8 +178,20 @@ def noa_stac_ingest_service(
             topics=topics,
             schema=schema_def
         )
-        consumer.create_topics(
-            topics=topics, num_partitions=num_partitions, replication_factor=replication_factor)
+        try:
+            consumer.subscribe_to_topics(topics)
+        except (UnknownTopicOrPartitionError, TopicAuthorizationFailedError, InvalidTopicError) as e:
+            logger.warning("[NOA-STACIngest] Kafka Error on Topic subscription: %s", e)
+            logger.warning("[NOA-STACIngest] Trying to create it:")
+            try:
+                consumer.create_topics(
+                    topics=topics, num_partitions=num_partitions, replication_factor=replication_factor)
+            except (TopicAlreadyExistsError,
+                    UnknownTopicOrPartitionError,
+                    TopicAuthorizationFailedError,
+                    InvalidTopicError) as g:
+                logger.error("[NOA-STACIngest] Kafka: Could not subscribe or create producer topic: %s", g)
+                return
         if consumer is None:
             sleep(5)
 
@@ -180,27 +200,31 @@ def noa_stac_ingest_service(
     if not db_ingest:
         logger.warning("Items will not be ingested to pgSTAC. Did you enable the -db flag?")
     while True:
-        for message in consumer.read():
-            item = message.value
-            now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            msg = f"Digesting Item from Topic {message.topic} ({now_time})..."
-            msg += "\n> Item: " + json.dumps(item)
-            logger.debug(msg)
-            click.echo("Received list to ingest")
-            if test:
-                ingested = "Some ingested ids"
-                failed = "Some failed to ingest ids"
-            else:
-                uuid_list = json.loads(item)
-                ingested, failed = ingestor.from_uuid_db_list(
-                    uuid_list["uuid"],
-                    collection,
-                    db_ingest
-                )
-            logger.debug("Ingested items: %s", ingested)
-            if failed:
-                logger.error("Failed uuids: %s", failed)
-        sleep(1)
+        try:
+            for message in consumer.read():
+                item = message.value
+                now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                msg = f"[NOA-STACIngest] Digesting Item from Topic {message.topic} ({now_time})..."
+                msg += "\n> Item: " + json.dumps(item)
+                logger.debug(msg)
+                click.echo("[NOA-STACIngest] Received list to ingest")
+                if test:
+                    ingested = "Some ingested ids"
+                    failed = "Some failed to ingest ids"
+                else:
+                    uuid_list = json.loads(item)
+                    ingested, failed = ingestor.from_uuid_db_list(
+                        uuid_list["uuid"],
+                        collection,
+                        db_ingest
+                    )
+                logger.debug("[NOA-STACIngest] Ingested items: %s", ingested)
+                if failed:
+                    logger.error("[NOA-STACIngest] Failed uuids: %s", failed)
+            sleep(1)
+        except (UnsupportedForMessageFormatError, InvalidMessageError) as e:
+            logger.error("[NOA-Harvester] Error in reading kafka message: %s", e)
+            continue
 
 
 if __name__ == "__main__":  # pragma: no cover
