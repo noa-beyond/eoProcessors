@@ -169,7 +169,12 @@ class Ingest:
                 "KAFKA_OUTPUT_TOPIC", "stacingest.order.completed")
         )
         try:
-            utils.send_kafka_message(kafka_topic, ingested_items, failed_items)
+            bootstrap_servers = self.config.get(
+                "kafka_bootstrap_servers", os.getenv(
+                    "KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"
+                )
+            )
+            utils.send_kafka_message(bootstrap_servers, kafka_topic, ingested_items, failed_items)
             logger.info("Kafka message sent")
         except BrokenPipeError as e:
             logger.error("Error sending kafka message: %s", e)

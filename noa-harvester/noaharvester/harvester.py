@@ -139,7 +139,12 @@ class Harvester:
             )
             
             try:
-                utils.send_kafka_message(kafka_topic, downloaded_items, failed_items)
+                bootstrap_servers = self.config.get(
+                    "kafka_bootstrap_servers", os.getenv(
+                        "KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"
+                    )
+                )
+                utils.send_kafka_message(bootstrap_servers, kafka_topic, downloaded_items, failed_items)
                 logger.info("Kafka message sent")
             except BrokenPipeError as e:
                 logger.error("Error sending kafka message: %s ", e)
