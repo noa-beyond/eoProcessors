@@ -3,5 +3,7 @@
     "topics_consumer": ["harvester.order.requested"],
     "topic_producer": "harvester.order.completed",
     "num_partitions": 2,
-    "replication_factor": 3
+    "replication_factor": 3,
+    "kafka_bootstrap_servers": "kafka1:9092,kafka2:9092,kafka3:9092",
+    "kafka_request_group_id": "stacingest-group-request"
 }
