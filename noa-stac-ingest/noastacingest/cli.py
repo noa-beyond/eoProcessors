@@ -195,7 +195,6 @@ def noa_stac_ingest_service(
         if consumer is None:
             sleep(5)
 
-    # consumer.subscribe(topics=topics)
     click.echo("NOA-STACIngest service started.\n")
     if not db_ingest:
         logger.warning("Items will not be ingested to pgSTAC. Did you enable the -db flag?")
@@ -214,7 +213,7 @@ def noa_stac_ingest_service(
                 else:
                     uuid_list = json.loads(item)
                     ingested, failed = ingestor.from_uuid_db_list(
-                        uuid_list["uuid"],
+                        uuid_list["Ids"],
                         collection,
                         db_ingest
                     )

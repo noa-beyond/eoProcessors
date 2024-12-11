@@ -7,7 +7,7 @@ class Message:
         "namespace": "noa.stacingest.order",
         "type": "object",
         "properties": {
-            "uuid": {
+            "Ids": {
                 "type": "array",
                 "items": {
                     "type": "string",
@@ -19,7 +19,7 @@ class Message:
     }
 
     _schema_response_def = {
-        "namespace": "noa.stacingest.order",
+        "namespace": "noa.stacingest.response",
         "type": "object",
         "properties": {
             "succeeded": {

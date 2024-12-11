@@ -223,7 +223,6 @@ def noa_harvester_service(
         if consumer is None:
             sleep(5)
 
-    # consumer.subscribe(topics=topics)
     click.echo(f"[NOA-Harvester] NOA-Harvester service started. Output path: {output_path}\n")
 
     while True:
@@ -240,7 +239,7 @@ def noa_harvester_service(
                     failed_uuids = "Some failed ids"
                 else:
                     uuid_list = json.loads(item)
-                    downloaded_uuids, failed_uuids = harvest.download_from_uuid_list(uuid_list["uuid"])
+                    downloaded_uuids, failed_uuids = harvest.download_from_uuid_list(uuid_list["Ids"])
                 logger.debug("[NOA-Harvester] Downloaded items: %s", downloaded_uuids)
                 if failed_uuids:
                     click.echo(f"[NOA-Harvester] Failed items: {failed_uuids}")
