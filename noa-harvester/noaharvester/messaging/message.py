@@ -19,7 +19,7 @@ class Message:
     }
 
     _schema_response_def = {
-        "namespace": "noa.harvester.order",
+        "namespace": "noa.harvester.response",
         "type": "object",
         "properties": {
             "succeeded": {
