@@ -1,5 +1,4 @@
 """Utility functions"""
-import os
 import logging
 
 from kafka.errors import NoBrokersAvailable
@@ -64,9 +63,8 @@ def get_bbox_from_shp(shp_path: str, bbox_only: bool) -> list:
     return bboxes
 
 
-def send_kafka_message(topic, succeeded, failed):
+def send_kafka_message(bootstrap_servers, topic, succeeded, failed):
     schema_def = Message.schema_response()
-    bootstrap_servers = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
 
     try:
         producer = KafkaProducer(bootstrap_servers=bootstrap_servers, schema=schema_def)

@@ -7,7 +7,7 @@ class Message:
         "namespace": "noa.harvester.order",
         "type": "object",
         "properties": {
-            "uuid": {
+            "Ids": {
                 "type": "array",
                 "items": {
                     "type": "string",
@@ -15,11 +15,11 @@ class Message:
                 }
             }
         },
-        "required": ["uuid"]
+        "required": ["Ids"]
     }
 
     _schema_response_def = {
-        "namespace": "noa.harvester.order",
+        "namespace": "noa.harvester.response",
         "type": "object",
         "properties": {
             "succeeded": {

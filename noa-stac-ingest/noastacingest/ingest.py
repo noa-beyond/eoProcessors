@@ -68,6 +68,7 @@ class Ingest:
             roles=ProviderRole.HOST,
             url="https://beyond-eocenter.eu/"   
         )
+        additional_providers = [noa_provider]
 
         if path.name.endswith(FILETYPES):
             platform = str(path.name).split("_", maxsplit=1)[0]
@@ -84,7 +85,7 @@ class Ingest:
                         case "RTC":
                             item = create_item_s1_rtc(
                                 granule_href=str(path),
-                                additional_providers=noa_provider
+                                additional_providers=additional_providers
                             )
                             if not collection:
                                 collection = "sentinel1-rtc"
@@ -95,7 +96,7 @@ class Ingest:
                 case "S2":
                     item = create_item_s2(
                         granule_href=str(path),
-                        additional_providers=noa_provider
+                        additional_providers=additional_providers
                     )
                     if not collection:
                         collection = "sentinel2-l2a"
@@ -121,7 +122,7 @@ class Ingest:
                 # Rather, they provide an items link, where all items are present
                 # e.g. https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items
                 # Like so, I do not know if an "extent" property is needed. If it is, update it:
-                # collection_instance.update_extent_from_items()
+                collection_instance.update_extent_from_items()
                 collection_instance.normalize_and_save(
                     self._config.get("collection_path") + collection + "/"
                 )
@@ -133,6 +134,7 @@ class Ingest:
             item.set_self_href(json_file_path)
             item.save_object(include_self_link=True)
             if update_db:
+                db_utils.load_stac_items_to_pgstac([collection_instance.to_dict()], True)
                 db_utils.load_stac_items_to_pgstac([item.to_dict()])
 
     def from_uuid_db_list(self, uuid_list, collection, db_ingest):
@@ -162,9 +164,17 @@ class Ingest:
                 failed_items.append(str(single_uuid))
                 continue
 
-        kafka_topic = os.environ.get("KAFKA_INPUT_TOPIC", "stacingest.order.completed")
+        kafka_topic = self.config.get(
+            "topic_producer", os.environ.get(
+                "KAFKA_OUTPUT_TOPIC", "stacingest.order.completed")
+        )
         try:
-            utils.send_kafka_message(kafka_topic, ingested_items, failed_items)
+            bootstrap_servers = self.config.get(
+                "kafka_bootstrap_servers", os.getenv(
+                    "KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"
+                )
+            )
+            utils.send_kafka_message(bootstrap_servers, kafka_topic, ingested_items, failed_items)
             logger.info("Kafka message sent")
         except BrokenPipeError as e:
             logger.error("Error sending kafka message: %s", e)

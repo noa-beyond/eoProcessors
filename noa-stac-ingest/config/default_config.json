@@ -9,5 +9,10 @@
         "sentinel2-l2a": {
             "description": "Internal downloaded Sentinel2 L2A data"
         }   
-    }
+    },
+    "group_id": "harvester-group-request",
+    "topics_consumer": ["stacingest.order.requested"],
+    "topic_producer": "stacingest.order.completed",
+    "num_partitions": 2,
+    "replication_factor": 3
 }
