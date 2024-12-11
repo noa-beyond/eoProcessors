@@ -197,12 +197,22 @@ def noa_harvester_service(
 
     while consumer is None:
         consumer = KafkaConsumer(
-            bootstrap_servers=os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"),
-            group_id=harvest.config.get("group_id", "harvester-group-request"),
-            # Topics are none in the constructor, and then it subscribes/
-            # If harvester is responsible for also creating them,
-            # it should be done here.
-            # topics=None,
+            bootstrap_servers=harvest.config.get(
+                "kafka_bootstrap_servers",
+                (
+                    os.getenv("KAFKA_BOOTSTRAP_SERVERS",
+                              "localhost:9092"
+                            )
+                )
+            ),
+            group_id=harvest.config.get(
+                "kafka_request_group_id",
+                (
+                        os.getenv("KAFKA_REQUEST_GROUP_ID",
+                                "harvester-group-request"
+                                )
+                )
+            ),
             topics=topics,
             schema=schema_def
         )

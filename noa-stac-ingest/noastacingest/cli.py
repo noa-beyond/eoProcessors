@@ -169,12 +169,22 @@ def noa_stac_ingest_service(
 
     while consumer is None:
         consumer = KafkaConsumer(
-            bootstrap_servers=os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"),
-            group_id=ingestor.config.get("group_id", "stacingest-group-request"),
-            # Topics are none in the constructor, and then it subscribes/
-            # If harvester is responsible for also creating them,
-            # it should be done here.
-            # topics=None,
+            bootstrap_servers=ingestor.config.get(
+                "kafka_bootstrap_servers",
+                (
+                    os.getenv("KAFKA_BOOTSTRAP_SERVERS",
+                              "localhost:9092"
+                            )
+                )
+            ),
+            group_id=ingestor.config.get(
+                "kafka_request_group_id",
+                (
+                        os.getenv("KAFKA_REQUEST_GROUP_ID",
+                                "stacingest-group-request"
+                                )
+                )
+            ),
             topics=topics,
             schema=schema_def
         )
