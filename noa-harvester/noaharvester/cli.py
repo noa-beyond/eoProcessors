@@ -243,13 +243,14 @@ def noa_harvester_service(
                 msg = f"[NOA-Harvester] Digesting Item from Topic {message.topic} ({now_time})..."
                 msg += "\n> Item: " + json.dumps(item)
                 logger.debug(msg)
-                click.echo("[NOA-Harvester] Received list to download")
+                click.echo("[NOA-Harvester] Received list to download:")
+                click.echo(item)
                 if test:
                     downloaded_uuids = "Some downloaded ids"
                     failed_uuids = "Some failed ids"
                 else:
-                    uuid_list = json.loads(item)
-                    downloaded_uuids, failed_uuids = harvest.download_from_uuid_list(uuid_list["Ids"])
+                    uuid_list = item["Ids"]
+                    downloaded_uuids, failed_uuids = harvest.download_from_uuid_list(uuid_list)
                 logger.debug("[NOA-Harvester] Downloaded items: %s", downloaded_uuids)
                 if failed_uuids:
                     click.echo(f"[NOA-Harvester] Failed items: {failed_uuids}")

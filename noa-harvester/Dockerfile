@@ -31,3 +31,7 @@ RUN pip install -r requirements.txt --no-cache-dir
 
 # Command to run the script when the container starts
 ENTRYPOINT ["python", "noaharvester/cli.py"]
+
+LABEL org.opencontainers.image.source=https://github.com/noa-beyond/eoProcessors/
+LABEL org.opencontainers.image.description="National Observatory of Athens - EO Data Harvester"
+LABEL org.opencontainers.image.licenses="GNU Affero General Public License v3.0"
