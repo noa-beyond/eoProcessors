@@ -10,6 +10,10 @@ services:
         - DB_HOST
         - DB_PORT
         - DB_NAME
+        - STACDB_ADMIN_USERNAME
+        - STACDB_ADMIN_PASSWORD
+        - STACDB_DBNAME
+        - STACDB_URI
     working_dir: /app    
     volumes:
       - ./config:/app/config
@@ -27,3 +31,11 @@ secrets:
     environment: DB_PORT
   DB_NAME:
     environment: DB_NAME
+  STACDB_ADMIN_USERNAME:
+    environment: STACDB_ADMIN_USERNAME
+  STACDB_ADMIN_PASSWORD:
+    environment: STACDB_ADMIN_PASSWORD
+  STACDB_DBNAME:
+    environment: STACDB_DBNAME
+  STACDB_URI:
+    environment: STACDB_URI

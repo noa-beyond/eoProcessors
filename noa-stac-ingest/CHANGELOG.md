@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## [0.2.5] - 2024-12-13
+### Fixed
+- Fixed access to STAC properties (#92)
+
+### Added
+- pgSTAC credentials to docker compose (#92)
+
 ## [0.2.4] - 2024-12-11
 ### Fixed
 - External bug: read proper key (#90)

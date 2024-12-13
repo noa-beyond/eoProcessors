@@ -104,7 +104,7 @@ class Ingest:
                     item = create_item_s3(str(path))
                     if not collection:
                         collection = "sentinel3"
-            item["properties"]["noa_product_id"] = noa_product_id
+            item.properties["noa_product_id"] = noa_product_id
             item_path = self._config.get("collection_path") + collection + "/items/" + item.id
             json_file_path = str(Path(item_path, item.id + ".json"))
             print(json_file_path)
