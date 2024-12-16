@@ -56,8 +56,8 @@ You can now either execute the processor as a [standalone cli application](#stan
         - Install conda (https://docs.conda.io/projects/conda/en/latest/user-guide/install/linux.html)
     - **Common**:
         - Create the environment:
-            - Execute `conda create -n noaharvester_env python==3.12`
-            - Execute `conda activate noaharvester_env`
+            - Execute `conda create -n noa-harvester_env python==3.12`
+            - Execute `conda activate noa-harvester_env`
 4. Then:
 
 ```
@@ -105,7 +105,7 @@ Moreover, a `-v` parameter is available to print verbose download progress bar f
 3. Then:
 
 ```
-docker build -t noaharvester \
+docker build -t noa-harvester \
 --secret id=COPERNICUS_LOGIN \
 --secret id=COPERNICUS_PASSWORD \
 --secret id=EARTHDATA_LOGIN \
@@ -114,7 +114,7 @@ docker build -t noaharvester \
 
 Please note that you **should not** replace the above command with your already set environmental variables.
 
-You now have a local container named noaharvester.
+You now have a local container named noa-harvester.
 
 
 4. Edit `config/config.json` (or create a new one)
@@ -126,7 +126,7 @@ docker run -it \
 -v [./data]:/app/data \
 -v [./config/config.json]:/app/config/config.json \
 --entrypoint /bin/bash \
-noaharvester
+noa-harvester
 ```
 
 to enter into the container and execute the cli application from there:
@@ -138,7 +138,7 @@ to enter into the container and execute the cli application from there:
 docker run -it \
 -v [./data]:/app/data \
 -v [./config/config.json]:/app/config/config.json \
-noaharvester download -v config/config.json
+noa-harvester download -v config/config.json
 ```
 
 Please note that in the aforementioned commands you can replace:
@@ -238,16 +238,18 @@ So make sure that a postgres with a table named "Products", includes at least a 
 ```
 docker run -it \
 -v ./config/config_test_copernicus.json:/app/config/config.json \
-noaharvester describe config/config.json
+noa-harvester describe config/config.json
 ```
 
-* Download (with download indicator) from Copernicus providing an id list (which corresponds to an entry in Products db table) and store in mnt point:
+* Download (with download indicator) from Copernicus providing an id list (which corresponds to an entry in Products db table) and store in mnt point.
+Also, mount local .netrc file for Credentials, to container .netrc:
 
 ```
 docker run -it \
--v ./config/config.json:/app/config/config_from_id.json \
+-v /home/user/local_harvester_configs/config.json:/app/config/config_from_id.json \
 -v /mnt/data:/app/data \
-noaharvester from-uuid-list -v -u caf8620d-974d-5841-b315-7489ffdd853b config/config_from_id.json
+-v /home/user/.netrc:/root/.netrc
+noa-harvester from-uuid-list -v -u caf8620d-974d-5841-b315-7489ffdd853b config/config_from_id.json
 ```
 
 * Deploying Harvester as a service (for kafka testing - if you do not want to test, omit flag -t):
@@ -256,7 +258,7 @@ noaharvester from-uuid-list -v -u caf8620d-974d-5841-b315-7489ffdd853b config/co
 docker run -it \
 -v ./config/config.json:/app/config/config_service.json \
 -v /mnt/data:/app/data \
-noaharvester noa-harvester-service -v -t config/config_service.json
+noa-harvester noa-harvester-service -v -t config/config_service.json
 ```
 
 * Download (with download indicator) from Copernicus and Earthdata as defined in the config file, for an area provided by the shapefile files (`area.shp` and `area.prj`) located in folder `/home/user/project/strange_area`:
@@ -266,7 +268,7 @@ docker run -it \
 -v ./config/config.json:/app/config/config.json \
 -v /home/user/project/strange_area:/app/shapes/strange_area/ \
 -v /home/user/project/data:/app/data \
-noaharvester download -v config/config.json shapes/strange_area/area
+noa-harvester download -v config/config.json shapes/strange_area/area
 ```
 
 ## Tests
@@ -280,7 +282,7 @@ on  `eoProcessors/noa-harvester`  folder
 or
 
 ```
-docker run -it --entrypoint pytest noaharvester
+docker run -it --entrypoint pytest noa-harvester
 ```
 
 for the container
