@@ -88,8 +88,11 @@ class Harvester:
         db_config = db_utils.get_env_config()
         if not db_config:
             db_config = db_utils.get_local_config()
+
+        if db_config:
+            logger.info("[NOA-Harvester] Products db found.")
         else:
-            logger.error("Not db configuration found, in env vars nor local database.ini file.")
+            logger.error("[NOA-Harvester] Not db configuration found, in env vars nor local database.ini file.")
 
         for single_uuid in uuid_list:
             uuid_db_entry = db_utils.query_all_from_table_column_value(
@@ -105,7 +108,7 @@ class Harvester:
             # Check for uuid as passed from request. It should replace uri
             # uuid = None # Test uuid: "83c19de3-e045-40bd-9277-836325b4b64e"
             if uuid_db_entry:
-                logger.debug("Found db entry in Products table with id: %s", single_uuid)
+                logger.info("[NOA-Harvester] Found db entry in Products table with id: %s", single_uuid)
                 downloaded_item_path = download_provider.single_download(
                     str(uuid_db_entry.get("uuid")),
                     uuid_db_entry.get("name")
@@ -135,7 +138,7 @@ class Harvester:
                 "topic_producer", os.environ.get(
                     "KAFKA_OUTPUT_TOPIC", "harvester.order.completed")
             )
-            
+            logger.info("[NOA-Harvester] Downloaded %s. Sending kafka message.", single_uuid)
             try:
                 bootstrap_servers = self.config.get(
                     "kafka_bootstrap_servers", os.getenv(
@@ -143,9 +146,9 @@ class Harvester:
                     )
                 )
                 utils.send_kafka_message(bootstrap_servers, kafka_topic, downloaded_items, failed_items)
-                logger.info("Kafka message sent")
+                logger.info("[NOA-Harvester] Kafka message of Product downloading sent")
             except BrokenPipeError as e:
-                logger.error("Error sending kafka message: %s ", e)
+                logger.warning("Error sending kafka message: %s ", e)
                 continue
         return (downloaded_items, failed_items)
 
