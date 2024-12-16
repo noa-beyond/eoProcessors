@@ -58,9 +58,7 @@ class Harvester:
         with open(config_file, encoding="utf8") as f:
             self._config = json.load(f)
 
-        if is_service:
-            pass
-        else:
+        if not is_service:
             for item in self._config:
                 if self._shape_file_bbox_list:
                     for bbox in self._shape_file_bbox_list:
