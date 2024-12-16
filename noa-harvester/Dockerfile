@@ -25,6 +25,9 @@ WORKDIR /app
 COPY requirements.txt .
 COPY . .
 
+# Create a default Products download dir
+RUN mkdir -p /mnt/data/dev/products
+
 # Install the required Python packages specified in a requirements.txt file
 # If you don't have a requirements.txt, you'll need to create one with the necessary packages
 RUN pip install -r requirements.txt --no-cache-dir

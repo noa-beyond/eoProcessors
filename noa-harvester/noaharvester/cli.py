@@ -254,10 +254,11 @@ def noa_harvester_service(
                 logger.debug("[NOA-Harvester] Downloaded items: %s", downloaded_uuids)
                 if failed_uuids:
                     click.echo(f"[NOA-Harvester] Failed items: {failed_uuids}")
-                    logger.error("[NOA-Harvester] Failed uuids: %s", failed_uuids)
+                    logger.warning("[NOA-Harvester] Failed uuids: %s", failed_uuids)
+                click.echo(f"[NOA-Harvester] Consumed download message and downloaded {downloaded_uuids}")
             sleep(1)
         except (UnsupportedForMessageFormatError, InvalidMessageError) as e:
-            logger.error("[NOA-Harvester] Error in reading kafka message: %s", e)
+            logger.warning("[NOA-Harvester] Error in reading kafka message: %s", e)
             continue
 
 
