@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 import logging
 from pathlib import Path
@@ -44,7 +45,10 @@ class Copernicus(DataProvider):
 
         # From .netrc
         logger.debug("Checking Copernicus credentials - trying to acquire token")
-        self._credentials = Credentials()
+        self._credentials = Credentials(
+            username=os.getenv("COPERNICUS_LOGIN"),
+            password=os.getenv("COPERNICUS_PASSWORD")
+        )
 
         self._downloaded_feature_ids = []
         self.verbose = verbose
