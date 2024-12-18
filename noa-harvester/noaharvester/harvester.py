@@ -130,26 +130,31 @@ class Harvester:
                 # TODO delete order_id
                 if update_status & update_item_path:
                     downloaded_items.append(single_uuid)
+                    logger.info("[NOA-Harvester] Downloaded %s", single_uuid)
                 else:
                     failed_items.append(single_uuid)
-                    logger.error("Could not update uuid: %s", single_uuid)
-
-            kafka_topic = self.config.get(
-                "topic_producer", os.environ.get(
-                    "KAFKA_OUTPUT_TOPIC", "harvester.order.completed")
-            )
-            logger.info("[NOA-Harvester] Downloaded %s. Sending kafka message.", single_uuid)
-            try:
-                bootstrap_servers = self.config.get(
-                    "kafka_bootstrap_servers", os.getenv(
-                        "KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"
-                    )
-                )
-                utils.send_kafka_message(bootstrap_servers, kafka_topic, downloaded_items, failed_items)
-                logger.info("[NOA-Harvester] Kafka message of Product downloading sent")
-            except BrokenPipeError as e:
-                logger.warning("Error sending kafka message: %s ", e)
+                    logger.error("[NOA-Harvester] Could not update uuid: %s. Download might have failed.", single_uuid)
+            else:
+                logger.warning("[NOA-Harvester] Could not find id %s in Products db", single_uuid)
+                print(f"Warning! Could not find id {single_uuid} in Products db")
                 continue
+
+        kafka_topic = self.config.get(
+            "topic_producer", os.environ.get(
+                "KAFKA_OUTPUT_TOPIC", "harvester.order.completed")
+        )
+        logger.info("[NOA-Harvester] Downloaded list. Sending kafka message")
+        try:
+            bootstrap_servers = self.config.get(
+                "kafka_bootstrap_servers", os.getenv(
+                    "KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"
+                )
+            )
+            utils.send_kafka_message(bootstrap_servers, kafka_topic, downloaded_items, failed_items)
+            print(f"[NOA-Harvester] Kafka message of Product(s) downloading sent to: {kafka_topic}")
+        except BrokenPipeError as e:
+            print(f"[NOA-Harvester] Error sending kafka message to: {kafka_topic}")
+            logger.warning("Error sending kafka message: %s ", e)
         return (downloaded_items, failed_items)
 
     def test_db_connection(self):
