@@ -9,7 +9,7 @@ https://github.com/radiantearth/stac-spec
 ```
 docker run -it \
 -v ./config/config.json:/app/config/default_config.json \
--v /mnt/data:/mnt/data \
+-v /mnt/data/dev/:/mnt/data/dev/ \
 noastacingest noa-stac-ingest-service -db config/default_config.json
 ```
 

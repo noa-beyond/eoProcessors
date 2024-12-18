@@ -17,7 +17,7 @@ services:
     working_dir: /app    
     volumes:
       - ./config:/app/config
-      - ./data:/app/data
+      - /mnt/data/dev:/mnt/data/dev
     command: python /app/noastacingest/cli.py --help
 
 secrets:

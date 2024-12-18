@@ -15,6 +15,9 @@ COPY . .
 # If you don't have a requirements.txt, you'll need to create one with the necessary packages
 RUN pip install -r requirements.txt --no-cache-dir
 
+# Create a default Products download dir
+RUN mkdir -p /mnt/data/dev/
+
 # Command to run the script when the container starts
 ENTRYPOINT ["python", "noastacingest/cli.py"]
 

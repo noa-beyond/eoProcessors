@@ -216,14 +216,14 @@ def noa_stac_ingest_service(
                 msg = f"[NOA-STACIngest] Digesting Item from Topic {message.topic} ({now_time})..."
                 msg += "\n> Item: " + json.dumps(item)
                 logger.debug(msg)
-                click.echo("[NOA-STACIngest] Received list to ingest")
+                click.echo(f"[NOA-STACIngest] Received list to ingest: {item}")
                 if test:
                     ingested = "Some ingested ids"
                     failed = "Some failed to ingest ids"
                 else:
-                    uuid_list = json.loads(item)
+                    uuid_list = item["Ids"]
                     ingested, failed = ingestor.from_uuid_db_list(
-                        uuid_list["Ids"],
+                        uuid_list,
                         collection,
                         db_ingest
                     )
