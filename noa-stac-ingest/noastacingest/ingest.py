@@ -146,6 +146,7 @@ class Ingest:
         if not db_config:
             db_config = db_utils.get_local_config()
         else:
+            print("[NOA-STACIngest] ERROR - no db config")
             logger.error("Not db configuration found, in env vars nor local database.ini file.")
             failed_items.append(uuid_list)
             return ingested_items, failed_items
@@ -159,6 +160,7 @@ class Ingest:
             try:
                 self.single_item(Path(item_path), collection, db_ingest, str(item.get("id")))
                 ingested_items.append(str(single_uuid))
+                print(f"Ingested from {item_path}")
             except RuntimeWarning:
                 logger.warning("Item could not be ingested to pgSTAC: %s", str(single_uuid))
                 failed_items.append(str(single_uuid))
