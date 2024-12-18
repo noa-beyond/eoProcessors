@@ -37,13 +37,14 @@
       <!-- Include Navbar -->
     {% include 'navbar.html' %}
     <div id="floating-form">
-        <form method="post" action="/search/">
+        <form method="post" action="/browser/results/">
         {% csrf_token %}
-        <h5>Search Sentinel Data</h5>
+        <h5>Sentinel Data Ingester</h5>
 
         <!-- Data Source -->
         <div class="form-group mb-3">
-            <label for="dataSource" class="form-label">Data Source</label>
+            <label for="dataSource" class="badge text-bg-success form-label">Data Source</label>
+            <br>
             <select id="dataSource" name="data_source" class="form-select">
                 <option value="Sentinel-1">Sentinel-1</option>
                 <option value="Sentinel-2" selected>Sentinel-2</option>
@@ -52,13 +53,13 @@
 
         <!-- Max Cloud Coverage (Sentinel-2 only) -->
         <div id="cloudCoverageDiv" class="form-group mb-3">
-            <label for="cloudCoverage" class="form-label">Max Cloud Coverage (%)</label>
+            <label for="cloudCoverage" class="badge text-bg-success form-label">Max Cloud Coverage (%)</label>
             <input type="range" id="cloudCoverage" name="cloud_coverage" min="0" max="100" value="50" class="form-range">
         </div>
 
         <!-- Product Type (Sentinel-1 only) -->
         <div id="productTypeDiv" class="form-group mb-3 d-none">
-            <label for="productType" class="form-label">Product Type</label>
+            <label for="productType" class="badge text-bg-success form-label">Product Type</label>
             <select id="productType" name="product_type" class="form-select">
                 <option value="GRD">GRD</option>
                 <option value="SLC">SLC</option>
@@ -68,20 +69,20 @@
 
         <!-- Relative Orbit (Sentinel-1 only) -->
         <div id="relativeOrbitDiv" class="form-group mb-3 d-none">
-            <label for="relativeOrbit" class="form-label">Relative Orbit</label>
+            <label for="relativeOrbit" class="badge text-bg-success form-label">Relative Orbit</label>
             <input type="number" id="relativeOrbit" name="relative_orbit" class="form-control" placeholder="Enter Relative Orbit">
         </div>
 
         <!-- Time Range -->
         <div class="form-group mb-3">
-            <label for="timeRange" class="form-label">Time Range</label>
+            <label for="timeRange" class="badge text-bg-success form-label">Time Range</label>
             <input type="date" id="startDate" name="start_date" class="form-control mb-2">
             <input type="date" id="endDate" name="end_date" class="form-control">
         </div>
 
         <!-- Bounding Box -->
         <div class="form-group mb-3">
-            <label for="bbox" class="form-label">Bounding Box</label>
+            <label for="bbox" class="badge text-bg-success form-label">Bounding Box</label>
             <input type="text" id="bbox" name="bbox" class="form-control" readonly>
         </div>
 
