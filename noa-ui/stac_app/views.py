@@ -50,7 +50,6 @@ def items_page(request, collection_id=None):
             items.append({
                 'id': item_id,
                 'geometry': geometry,
-                'properties': content.get('properties', {}),
                 'assets': content.get('assets', {}),
             })
 
