@@ -199,19 +199,11 @@ def noa_harvester_service(
         consumer = KafkaConsumer(
             bootstrap_servers=harvest.config.get(
                 "kafka_bootstrap_servers",
-                (
-                    os.getenv("KAFKA_BOOTSTRAP_SERVERS",
-                              "localhost:9092"
-                            )
-                )
+                (os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"))
             ),
             group_id=harvest.config.get(
                 "kafka_request_group_id",
-                (
-                        os.getenv("KAFKA_REQUEST_GROUP_ID",
-                                "harvester-group-request"
-                                )
-                )
+                (os.getenv("KAFKA_REQUEST_GROUP_ID", "harvester-group-request"))
             ),
             topics=topics,
             schema=schema_def
@@ -258,6 +250,7 @@ def noa_harvester_service(
                 click.echo(f"[NOA-Harvester] Consumed download message and downloaded {downloaded_uuids}")
             sleep(1)
         except (UnsupportedForMessageFormatError, InvalidMessageError) as e:
+            click.echo(f"[NOA-Harvester] Error in reading kafka message: {item}")
             logger.warning("[NOA-Harvester] Error in reading kafka message: %s", e)
             continue
 
