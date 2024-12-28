@@ -103,7 +103,7 @@ def results(request):
         with connection.cursor() as cursor:
             cursor.execute(query, params)
             rows = cursor.fetchall()
-            
+            unique_names = []
             for row in rows:
                 item_id = row[0]
                 geometry = json.loads(row[1]) 
@@ -118,7 +118,18 @@ def results(request):
                     "assets": content.get('assets', {}),
                 })
 
-        return render(request, 'results.html', {"items": {"available_items": existing_items, "not_available_items":all_products}})
+                unique_names.append(content.get('properties').get('s2:product_uri'))
+        
+        not_available = [] 
+        
+        for product in all_products:
+            
+            if product['name'] in unique_names:
+                continue
+            
+            not_available.append(product)
+
+        return render(request, 'results.html', {"items": {"available_items": existing_items, "not_available_items":not_available}})
 
     return render(request, 'base.html')
 
@@ -145,12 +156,11 @@ def _collect_existing_products(start_date, end_date, bbox, cloud_cover=100, prov
         
         for result in results:
             result['tile'] = result['name'].split('_')[5]
+            result['sensing_date'] = result['name'].split('_')[2][:4] + '-' + result['name'].split('_')[2][4:6] + '-' + result['name'].split('_')[2][6:8]
             result['quicklook'] = f"https://datahub.creodias.eu/odata/v1/Assets({result['uuid']})/$value"
         return results
     except requests.RequestException as e:
         return JsonResponse({"error": f"API request failed: {str(e)}"}, status=500)
-
-
 
 def _bbox_to_polygon(xmin, ymin, xmax, ymax):
     polygon = {
@@ -160,7 +170,7 @@ def _bbox_to_polygon(xmin, ymin, xmax, ymax):
             [xmax, ymin],  
             [xmax, ymax],  
             [xmin, ymax], 
-            [xminyyyyyyyyyyyyyyyy, ymin]  
+            [xmin, ymin]  
         ]]
     }
     return polygon
