@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+
+    <style>
+         /* Top Navigation Bar */
+         .navbar {
+            background-color: #004080; /* Dark Blue */
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .navbar .title {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .navbar .nav-links {
+            display: flex;
+            gap: 20px;
+        }
+
+        .navbar .nav-links a {
+            text-decoration: none;
+            color: white;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: color 0.2s ease;
+            cursor: not-allowed; /* Inactive links */
+            opacity: 0.6;
+        }
+
+        .navbar .nav-links a:hover {
+            color: white; /* No change on hover since links are inactive */
+        }
+
+    </style>
+
+</head>
+<body>
+      <!-- Top Navigation Bar -->
+      <div class="navbar">
+        <div class="title">Beyond Centre of EO Research and Satellite Remote Sensing</div>
+        <div class="nav-links">
+            <a href="#">Login</a>
+            <a href="#">Browser</a>
+            <a href="#">Dashboard</a>
+        </div>
+    </div>
+
+    <div class="container my-5">
+        <h1 class="text-center mb-4">User Dashboard</h1>
+
+        <table class="table table-striped table-bordered">
+            <thead class="table-dark">
+                <tr>
+                    <th scope="col">Order ID</th>
+                    <th scope="col">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in order_statuses %}
+                <tr>
+                    <td>{{ order.order_id }}</td>
+                    <td>
+                        {% if order.status == "Downloaded" %}
+                        <span class="badge bg-success">{{ order.status }}</span>
+                        {% elif order.status == "Processing" %}
+                        <span class="badge bg-warning text-dark">{{ order.status }}</span>
+                        {% else %}
+                        <span class="badge bg-danger">{{ order.status }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

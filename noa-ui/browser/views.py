@@ -191,6 +191,7 @@ def submit_order(request):
             response = requests.post(api_url, json=payload, headers={"Content-Type": "application/json"})
 
             if response.status_code == 200:
+                print("Response JSON:", response.json())
                 return JsonResponse({"message": "Order successfully submitted", "data": response.json()})
             
             else:
@@ -202,3 +203,27 @@ def submit_order(request):
         except requests.exceptions.RequestException as e:
             return JsonResponse({"error": str(e)}, status=500)
     
+
+def user_dashboard(request):
+    user_orders = ['dbb98151-d790-467b-bc15-9e53fcf0e340'] 
+    
+    api_base_url = "http://10.201.40.192:30080/api/Orders/"
+
+    order_statuses = []
+
+    for order_id in user_orders:
+        try:
+            response = requests.get(f"{api_base_url}{order_id}")
+            response.raise_for_status()
+            status = response.json()  # Parse JSON response
+            order_statuses.append({
+                "order_id": order_id,
+                "status": "Downloaded" if status else "Not Downloaded Yet"
+            })
+        except requests.RequestException as e:
+            order_statuses.append({
+                "order_id": order_id,
+                "status": f"Error fetching status {e}"
+            })
+
+    return render(request, "dashboard.html", {"order_statuses": order_statuses})
