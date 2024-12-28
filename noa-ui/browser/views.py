@@ -1,6 +1,7 @@
 import requests
 from datetime import datetime
 import json
+import os
 
 from django.shortcuts import render
 from django.http import JsonResponse
@@ -191,7 +192,10 @@ def submit_order(request):
             response = requests.post(api_url, json=payload, headers={"Content-Type": "application/json"})
 
             if response.status_code == 200:
-                print("Response JSON:", response.json())
+                order_id = response.json()
+                
+                update_json_file(order_id, item_ids)
+                
                 return JsonResponse({"message": "Order successfully submitted", "data": response.json()})
             
             else:
@@ -214,8 +218,11 @@ def user_dashboard(request):
     for order_id in user_orders:
         try:
             response = requests.get(f"{api_base_url}{order_id}")
+            
             response.raise_for_status()
-            status = response.json()  # Parse JSON response
+            
+            status = response.json() 
+
             order_statuses.append({
                 "order_id": order_id,
                 "status": "Downloaded" if status else "Not Downloaded Yet"
@@ -227,3 +234,30 @@ def user_dashboard(request):
             })
 
     return render(request, "dashboard.html", {"order_statuses": order_statuses})
+
+
+def update_json_file(response_data, custom_text, file_path="responses.json"):
+    """
+    Updates a JSON file with new key-value pairs. If the file doesn't exist, it creates one.
+    
+    :param response_data: The key (e.g., response data) to add to the JSON.
+    :param custom_text: The value (e.g., custom text) to associate with the key.
+    :param file_path: The path to the JSON file (default is 'responses.json').
+    """
+    data = {}
+    
+    if os.path.exists(file_path):
+
+        with open(file_path, "r") as json_file:
+            try:
+                data = json.load(json_file)
+            
+            except json.JSONDecodeError:
+                print("Existing JSON file is empty or corrupted. Starting fresh.")
+
+    data[response_data] = custom_text
+
+    with open(file_path, "w") as json_file:
+        json.dump(data, json_file, indent=4)
+
+    print(f"Updated JSON file: {file_path}")
