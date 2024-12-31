@@ -5,6 +5,7 @@ __pycache__
 # tools
 .vscode
 .ipynb_checkpoints
+.idea
 
 # project specific files
 .env.list.local
