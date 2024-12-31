@@ -21,6 +21,6 @@ RUN mkdir -p /mnt/data/dev/
 # Command to run the script when the container starts
 ENTRYPOINT ["python", "noastacingest/cli.py"]
 
-LABEL org.opencontainers.image.source=https://github.com/noa-beyond/tree/main/noa-stac-ingest/
+LABEL org.opencontainers.image.source=https://github.com/noa-beyond/eoProcessors/
 LABEL org.opencontainers.image.description="National Observatory of Athens - EO Data to STAC"
 LABEL org.opencontainers.image.licenses="GNU Affero General Public License v3.0"
