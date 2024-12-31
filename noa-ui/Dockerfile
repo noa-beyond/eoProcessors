@@ -20,3 +20,7 @@ EXPOSE 8000
 
 # Run the application
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+
+LABEL org.opencontainers.image.source=https://github.com/noa-beyond/eoProcessors/
+LABEL org.opencontainers.image.description="National Observatory of Athens - EO Browser"
+LABEL org.opencontainers.image.licenses="GNU Affero General Public License v3.0"
