@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Sentinel Data Browser</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+    <style>
+        #map {
+            height: 100vh;
+            width: 100%;
+        }
+
+        #floating-form {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            z-index: 1001;
+            width: 320px;
+        }
+
+        #floating-form h5 {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+      <!-- Include Navbar -->
+    {% include 'navbar.html' %}
+    <div id="floating-form">
+        <form method="post" action="/browser/results/">
+        {% csrf_token %}
+        <h5>Sentinel Data Ingester</h5>
+
+        <!-- Data Source -->
+        <div class="form-group mb-3">
+            <label for="dataSource" class="badge text-bg-success form-label">Data Source</label>
+            <br>
+            <select id="dataSource" name="data_source" class="form-select">
+                <option value="Sentinel-1">Sentinel-1</option>
+                <option value="Sentinel-2" selected>Sentinel-2</option>
+            </select>
+        </div>
+
+        <!-- Max Cloud Coverage (Sentinel-2 only) -->
+        <div id="cloudCoverageDiv" class="form-group mb-3">
+            <label for="cloudCoverage" class="badge text-bg-success form-label">Max Cloud Coverage (%)</label>
+            <input type="range" id="cloudCoverage" name="cloud_coverage" min="0" max="100" value="50" class="form-range">
+        </div>
+
+        <!-- Product Type (Sentinel-1 only) -->
+        <div id="productTypeDiv" class="form-group mb-3 d-none">
+            <label for="productType" class="badge text-bg-success form-label">Product Type</label>
+            <select id="productType" name="product_type" class="form-select">
+                <option value="GRD">GRD</option>
+                <option value="SLC">SLC</option>
+                <option value="OCN">OCN</option>
+            </select>
+        </div>
+
+        <!-- Relative Orbit (Sentinel-1 only) -->
+        <div id="relativeOrbitDiv" class="form-group mb-3 d-none">
+            <label for="relativeOrbit" class="badge text-bg-success form-label">Relative Orbit</label>
+            <input type="number" id="relativeOrbit" name="relative_orbit" class="form-control" placeholder="Enter Relative Orbit">
+        </div>
+
+        <!-- Time Range -->
+        <div class="form-group mb-3">
+            <label for="timeRange" class="badge text-bg-success form-label">Time Range</label>
+            <input type="date" id="startDate" name="start_date" class="form-control mb-2">
+            <input type="date" id="endDate" name="end_date" class="form-control">
+        </div>
+
+        <!-- Bounding Box -->
+        <div class="form-group mb-3">
+            <label for="bbox" class="badge text-bg-success form-label">Bounding Box</label>
+            <input type="text" id="bbox" name="bbox" class="form-control" readonly>
+        </div>
+
+        <!-- Geometry -->
+        <input type="hidden" id="geometry" name="geometry" value="">
+
+        <button type="submit" class="btn btn-primary">Search</button>
+    </form>
+
+    </div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js"></script>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const dataSourceField = document.getElementById('dataSource');
+        const cloudCoverageDiv = document.getElementById('cloudCoverageDiv');
+        const productTypeDiv = document.getElementById('productTypeDiv');
+        const relativeOrbitDiv = document.getElementById('relativeOrbitDiv');
+
+        // Function to toggle visibility based on selected data source
+        function toggleFields() {
+            const selectedValue = dataSourceField.value;
+
+            if (selectedValue === 'Sentinel-2') {
+                // Show Max Cloud Coverage
+                cloudCoverageDiv.classList.remove('d-none');
+
+                // Hide Sentinel-1 specific fields
+                productTypeDiv.classList.add('d-none');
+                relativeOrbitDiv.classList.add('d-none');
+            } else if (selectedValue === 'Sentinel-1') {
+                // Hide Max Cloud Coverage
+                cloudCoverageDiv.classList.add('d-none');
+
+                // Show Sentinel-1 specific fields
+                productTypeDiv.classList.remove('d-none');
+                relativeOrbitDiv.classList.remove('d-none');
+            }
+        }
+
+        // Attach change event listener to the data source field
+        dataSourceField.addEventListener('change', toggleFields);
+
+        // Initialize visibility on page load
+        toggleFields();
+    });
+</script>
+
+    <script>
+        document.querySelector('form').addEventListener('submit', function (event) {
+            const startDateField = document.getElementById('startDate');
+            const endDateField = document.getElementById('endDate');
+
+            // Validate the start date
+            if (!startDateField.value) {
+                alert('Start Date is required.');
+                event.preventDefault(); // Stop form submission
+                return;
+            }
+
+            // Set the current datetime if end date is empty
+            if (!endDateField.value) {
+                const now = new Date();
+                const currentDate = now.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+                endDateField.value = currentDate;
+            }
+        });
+    // Initialize the map
+    const map = L.map('map').setView([42, 12], 6); // Centered over Italy
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+    }).addTo(map);
+
+    // Add a FeatureGroup to store drawn items
+    const drawnItems = new L.FeatureGroup();
+    map.addLayer(drawnItems);
+
+    // Add drawing controls with the toolbar on the right
+    const drawControl = new L.Control.Draw({
+        position: 'topright', // Explicitly set the toolbar to appear on the top-right
+        edit: {
+            featureGroup: drawnItems,
+            remove: true, // Allow deletion of shapes
+        },
+        draw: {
+            polygon: true,
+            rectangle: true,
+            circle: false, // Disable circle tool
+            marker: false, // Disable marker tool
+            polyline: false, // Disable polyline tool
+        },
+    });
+    map.addControl(drawControl);
+
+    // Handle the creation of new shapes
+    map.on(L.Draw.Event.CREATED, function (e) {
+        const layer = e.layer;
+        drawnItems.addLayer(layer);
+
+        // Get GeoJSON geometry and calculate bbox
+        const geometry = layer.toGeoJSON().geometry;
+        const bbox = turf.bbox(layer.toGeoJSON());
+
+        // Update form fields
+        document.getElementById('geometry').value = JSON.stringify(geometry);
+        document.getElementById('bbox').value = bbox.join(', ');
+    });
+
+    // Fix invalid map size on load
+    setTimeout(() => {
+        map.invalidateSize();
+    }, 500);
+</script>
+
+</body>
+</html>
