@@ -61,7 +61,7 @@ def search(request):
             response.raise_for_status()
         
         except requests.exceptions.RequestException as e:
-            return JsonResponse({"error": str(e)}, status=500)
+            return JsonResponse({"Internal error"}, status=500)
 
         return JsonResponse(response.json())
 
@@ -161,7 +161,7 @@ def _collect_existing_products(start_date, end_date, bbox, cloud_cover=100, prov
             result['quicklook'] = f"https://datahub.creodias.eu/odata/v1/Assets({result['uuid']})/$value"
         return results
     except requests.RequestException as e:
-        return JsonResponse({"error": f"API request failed: {str(e)}"}, status=500)
+        return JsonResponse({"error": "API request failed}"}, status=500)
 
 def _bbox_to_polygon(xmin, ymin, xmax, ymax):
     polygon = {
@@ -205,7 +205,7 @@ def submit_order(request):
                 }, status=400)
 
         except requests.exceptions.RequestException as e:
-            return JsonResponse({"error": str(e)}, status=500)
+            return JsonResponse({"error": "Internal error"}, status=500)
     
 
 def user_dashboard(request):
