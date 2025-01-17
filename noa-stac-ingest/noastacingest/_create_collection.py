@@ -15,11 +15,12 @@ from pystac import (
     Link,
     RelType,
     MediaType,
-    CatalogType,
+    # CatalogType,
     SpatialExtent,
     TemporalExtent,
 )
 from pystac.layout import AsIsLayoutStrategy
+
 
 def main(config_file):
 
@@ -57,7 +58,9 @@ def main(config_file):
 
     l2a_collection.normalize_hrefs(str(config["collection_path"] + l2a_collection_id + "/"))
     l2a_collection.make_all_asset_hrefs_absolute()
-    if not os.path.exists(str(config["collection_path"] + l2a_collection_id + "/" + "collection.json")):
+    if not os.path.exists(
+        str(config["collection_path"] + l2a_collection_id + "/" + "collection.json")
+    ):
         l2a_collection.save(dest_href=str(config["collection_path"] + l2a_collection_id))
 
     catalog.add_link(Link(
@@ -66,7 +69,10 @@ def main(config_file):
             media_type=MediaType.JSON
         )
     )
-    catalog.add_child(l2a_collection, config["collections"][l2a_collection_id]["description"], AsIsLayoutStrategy())
+    catalog.add_child(
+        l2a_collection, config["collections"][l2a_collection_id]["description"],
+        AsIsLayoutStrategy()
+    )
     catalog.save()
 
 
