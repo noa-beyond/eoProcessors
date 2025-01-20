@@ -20,13 +20,17 @@ noa-stac-ingest/noastacingest/_create_collection.py
 ```
 
 ## How to use as a service, consuming/producing from/to kafka, and ingesting to pgSTAC
+
 - Build docker image (Dockerfile or compose)  
-- Execute (please mind the config file. If no changes are needed, do not mount the following config)
+- Execute the following snippet, and please mind the config file. If no changes are needed, **do not mount** the config. However,
+- **Do** include the config file as a cli argument.
+- Also, check the fs mounts (mount the _root_ folder of products and STAC files)
+
 ```
 docker run -it \
--v ./config/config.json:/app/config/default_config.json \
--v /mnt/data/dev/:/mnt/data/dev/ \
-noastacingest noa-stac-ingest-service -db config/default_config.json
+-v ./config/config.json:/app/config/config_service.json \
+-v /mnt/data/poc/:/mnt/data/poc/ \
+noastacingest noa-stac-ingest-service -db config/config_service.json
 ```
 
 Also mind any port forwarding needed for kafka or pgSTAC.
