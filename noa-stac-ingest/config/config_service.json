@@ -1,4 +1,7 @@
 {
+    "catalog_path": "/mnt/data/poc/STAC/catalog/",
+    "catalog_filename": "catalog.json",
+    "collection_path": "/mnt/data/poc/STAC/catalog/collections/",
     "group_id": "stacingest-group-request",
     "topics_consumer": ["stacingest.order.requested"],
     "topic_producer": "stacingest.order.completed",
