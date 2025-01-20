@@ -2,6 +2,7 @@
 Warning! This might be a destructive action, if a Catalog/Collection
 with the same name exists
 """
+
 import os
 import sys
 import json
@@ -15,11 +16,12 @@ from pystac import (
     Link,
     RelType,
     MediaType,
-    CatalogType,
+    # CatalogType,
     SpatialExtent,
     TemporalExtent,
 )
 from pystac.layout import AsIsLayoutStrategy
+
 
 def main(config_file):
 
@@ -40,7 +42,7 @@ def main(config_file):
     l2a_collection_id = "sentinel2-l2a"
     l2a_collection = Collection(
         id=l2a_collection_id,
-        href=str(config["collection_path"] + l2a_collection_id + "/" + "collection.json"),
+        href=str(config["collection_path"] + l2a_collection_id + "/collection.json"),
         description=config["collections"][l2a_collection_id]["description"],
         extent=DEFAULT_EXTENT,
     )
@@ -51,22 +53,30 @@ def main(config_file):
         Link(
             rel=RelType.ITEMS,
             target=str(config["collection_path"] + l2a_collection_id + "/items/"),
-            media_type=MediaType.JSON
+            media_type=MediaType.JSON,
         )
     )
 
-    l2a_collection.normalize_hrefs(str(config["collection_path"] + l2a_collection_id + "/"))
+    l2a_collection.normalize_hrefs(
+        str(config["collection_path"] + l2a_collection_id + "/")
+    )
     l2a_collection.make_all_asset_hrefs_absolute()
-    if not os.path.exists(str(config["collection_path"] + l2a_collection_id + "/" + "collection.json")):
-        l2a_collection.save(dest_href=str(config["collection_path"] + l2a_collection_id))
 
-    catalog.add_link(Link(
-            rel="data",
-            target=config["collection_path"],
-            media_type=MediaType.JSON
+    if not os.path.exists(
+        str(config["collection_path"] + l2a_collection_id + "/collection.json")
+    ):
+        l2a_collection.save(
+            dest_href=str(config["collection_path"] + l2a_collection_id)
         )
+
+    catalog.add_link(
+        Link(rel="data", target=config["collection_path"], media_type=MediaType.JSON)
     )
-    catalog.add_child(l2a_collection, config["collections"][l2a_collection_id]["description"], AsIsLayoutStrategy())
+    catalog.add_child(
+        l2a_collection,
+        config["collections"][l2a_collection_id]["description"],
+        AsIsLayoutStrategy(),
+    )
     catalog.save()
 
 

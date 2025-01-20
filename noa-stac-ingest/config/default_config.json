@@ -1,16 +1,16 @@
 {   
     "catalog_id": "noa-beyond-internal",
-    "catalog_path": "/mnt/data/dev/STAC/catalog/",
+    "catalog_path": "/mnt/data/poc/STAC/catalog/",
     "catalog_filename": "catalog.json",
     "catalog_description": "National Observatory of Athens internal STAC Catalog",
-    "collection_path": "/mnt/data/dev/STAC/catalog/collections/",
-    "output_path": "/mnt/data/dev/STAC/catalog/items/",
+    "collection_path": "/mnt/data/poc/STAC/catalog/collections/",
+    "output_path": "/mnt/data/poc/STAC/catalog/items/",
     "collections": {
         "sentinel2-l2a": {
             "description": "Internal downloaded Sentinel2 L2A data"
         }   
     },
-    "group_id": "harvester-group-request",
+    "group_id": "stacingest-group-request",
     "topics_consumer": ["stacingest.order.requested"],
     "topic_producer": "stacingest.order.completed",
     "num_partitions": 2,
