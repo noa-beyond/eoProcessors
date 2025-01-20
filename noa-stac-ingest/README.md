@@ -19,6 +19,16 @@ noa-stac-ingest/noastacingest/_create_catalog.py
 noa-stac-ingest/noastacingest/_create_collection.py
 ```
 
+Regarding the pgSTAC db, the processor will try to retrieve connection credentials from
+these environmental variables:
+
+```
+STACDB_ADMIN_USERNAME
+STACDB_ADMIN_PASSWORD
+STACDB_URI (ip:port)
+STACDB_DBNAME
+```
+
 ## How to use as a service, consuming/producing from/to kafka, and ingesting to pgSTAC
 
 - Build docker image (Dockerfile or compose)  
