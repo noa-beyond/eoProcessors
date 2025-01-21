@@ -12,12 +12,14 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 
 from pathlib import Path
 import os
-import environ
 
 from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+GDAL_LIBRARY_PATH = os.getenv(
+    "GDAL_LIBRARY_PATH", r"C:\Users\thana\.conda\envs\eo\Library\bin\gdal.dll"
+)
 
 
 # Quick-start development settings - unsuitable for production
@@ -32,12 +34,6 @@ DEBUG = True
 ALLOWED_HOSTS = ["10.201.40.191", "localhost", "127.0.0.1"]
 
 
-env = environ.Env(
-    DEBUG=(bool, False)
-)
-
-environ.Env.read_env()
-
 # Application definition
 
 INSTALLED_APPS = [
@@ -49,6 +45,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "browser",
     "leaflet",
+    # "bootstrap5",
     "stac_app",
 ]
 
@@ -88,12 +85,12 @@ WSGI_APPLICATION = "sentinel_browser.wsgi.application"
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',  # Changed to standard PostgreSQL backend
-        'NAME': 'dev_stac',                        # Hard-coded DB name
-        'USER': 'dev_stac_admin',                  # Hard-coded DB user
-        'PASSWORD': 'nopassword',                  # Hard-coded DB password
-        'HOST': '10.201.40.191',                   # Hard-coded DB host
-        'PORT': '5433',                            # Hard-coded DB port
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': config('DB_NAME'),
+        'USER': config('DB_USER'),
+        'PASSWORD': config('DB_PASSWORD'),
+        'HOST': config('DB_HOST', default='localhost'),
+        'PORT': config('DB_PORT', default='5432'),
     }
 }
 
@@ -140,17 +137,3 @@ STATIC_URL = '/static/'
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 CORS_ALLOW_ALL_ORIGINS = True
-
-# Static files (CSS, JavaScript, Images)
-STATIC_URL = '/static/'
-
-# Directory where collectstatic will collect static files for deployment
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-
-# Additional locations of static files
-STATICFILES_DIRS = [
-    BASE_DIR / 'static',
-]
-
-# GDAL Configuration
-#GDAL_LIBRARY_PATH = os.getenv('GDAL_LIBRARY_PATH', '/usr/lib/x86_64-linux-gnu/libgdal.so')

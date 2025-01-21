@@ -1,0 +1,35 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:15-alpine  # Changed to standard PostgreSQL image if not using PostGIS
+    environment:
+      POSTGRES_DB: dev_stac
+      POSTGRES_USER: dev_stac_admin
+      POSTGRES_PASSWORD: nopassword
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"  # Host port 5433 mapped to container port 5432
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "dev_stac_admin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: gunicorn sentinel_browser.wsgi:application --workers 3 --bind 0.0.0.0:8000  # Using hard-coded values
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    # Removed env_file since DB credentials are hard-coded
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
