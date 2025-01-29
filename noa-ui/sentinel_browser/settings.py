@@ -12,14 +12,18 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 
 from pathlib import Path
 import os
+import environ
+from dotenv import load_dotenv
+
 
 from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-GDAL_LIBRARY_PATH = os.getenv(
-    "GDAL_LIBRARY_PATH", r"C:\Users\thana\.conda\envs\eo\Library\bin\gdal.dll"
-)
+
+
+# Load .env file
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 # Quick-start development settings - unsuitable for production
@@ -31,8 +35,15 @@ SECRET_KEY = "django-insecure-sr12l!e0bqpgw(d$_7=0k56039u62$+0+4&6=hur-8t)fr9iqq
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["10.201.40.191", "localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ['*'] #"10.201.40.191", "localhost", "127.0.0.1"]
 
+
+import logging
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s %(levelname)s %(message)s",
+)
 
 # Application definition
 
@@ -45,7 +56,6 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "browser",
     "leaflet",
-    "bootstrap5",
     "stac_app",
 ]
 
@@ -82,18 +92,19 @@ WSGI_APPLICATION = "sentinel_browser.wsgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
+load_dotenv(os.path.join(BASE_DIR, ".env"))
 
+# Database Configuration
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME'),
-        'USER': config('DB_USER'),
-        'PASSWORD': config('DB_PASSWORD'),
-        'HOST': config('DB_HOST', default='localhost'),
-        'PORT': config('DB_PORT', default='5432'),
+        'NAME': os.getenv("POSTGRES_DB"),
+        'USER': os.getenv("POSTGRES_USER"),
+        'PASSWORD': os.getenv("POSTGRES_PASSWORD"),
+        'HOST': os.getenv("POSTGRES_HOST"),
+        'PORT': "5433",
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators
@@ -137,3 +148,21 @@ STATIC_URL = '/static/'
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+# Static files (CSS, JavaScript, Images)
+STATIC_URL = '/static/'
+
+# Directory where collectstatic will collect static files for deployment
+# STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # This will be used in collectstatic
+
+
+# Additional locations of static files
+#STATICFILES_DIRS = [
+#    BASE_DIR / 'staticfiles',
+#]
+
+# GDAL Configuration
+#GDAL_LIBRARY_PATH = os.getenv('GDAL_LIBRARY_PATH', '/usr/lib/x86_64-linux-gnu/libgdal.so')
