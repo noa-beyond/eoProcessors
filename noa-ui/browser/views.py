@@ -60,8 +60,8 @@ def search(request):
             response = requests.post(endpoint, json=payload, verify=False) 
             response.raise_for_status()
         
-        except requests.exceptions.RequestException as e:
-            return JsonResponse({"error": str(e)}, status=500)
+        except requests.exceptions.RequestException:
+            return JsonResponse({"Internal error"}, status=500)
 
         return JsonResponse(response.json())
 
@@ -80,12 +80,12 @@ def results(request):
 
         try:
             bbox_coords = [float(coord) for coord in bbox.split(',')]
-            
+            print(bbox_coords)    
             if len(bbox_coords) != 4:
                 raise ValueError("Bounding box must have exactly 4 coordinates.")
         
-        except ValueError as e:
-            return render(request, 'base.html', {'error': f"Invalid bounding box: {str(e)}"})
+        except ValueError:
+            return render(request, 'base.html', {'error': "Invalid bounding box"})
 
         all_products = _collect_existing_products(start_date, end_date, bbox)
 
@@ -124,10 +124,11 @@ def results(request):
         not_available = [] 
         
         for product in all_products:
-            
-            if product['name'] in unique_names:
+            try: 
+                if product['name'] in unique_names:
+                    continue
+            except Exception:
                 continue
-            
             not_available.append(product)
 
         return render(request, 'results.html', {"items": {"available_items": existing_items, "not_available_items":not_available}})
@@ -139,7 +140,6 @@ def results(request):
 def _collect_existing_products(start_date, end_date, bbox, cloud_cover=100, provider=2, satellite_collection=1):
     geometry = [float(coordinate) for coordinate in bbox.split(",")]
     polygon = _bbox_to_polygon(geometry[0],geometry[1],geometry[2],geometry[3])
-    
     payload = {
         "provider": int(provider),
         "startDate": start_date,
@@ -156,12 +156,13 @@ def _collect_existing_products(start_date, end_date, bbox, cloud_cover=100, prov
         results = response.json()
         
         for result in results:
+            print('Hi')
             result['tile'] = result['name'].split('_')[5]
             result['sensing_date'] = result['name'].split('_')[2][:4] + '-' + result['name'].split('_')[2][4:6] + '-' + result['name'].split('_')[2][6:8]
             result['quicklook'] = f"https://datahub.creodias.eu/odata/v1/Assets({result['uuid']})/$value"
         return results
-    except requests.RequestException as e:
-        return JsonResponse({"error": f"API request failed: {str(e)}"}, status=500)
+    except requests.RequestException:
+        return JsonResponse({"error": "API request failed}"}, status=500)
 
 def _bbox_to_polygon(xmin, ymin, xmax, ymax):
     polygon = {
@@ -203,9 +204,8 @@ def submit_order(request):
                     "error": "Failed to submit order",
                     "status_code": response.status_code
                 }, status=400)
-
-        except requests.exceptions.RequestException as e:
-            return JsonResponse({"error": str(e)}, status=500)
+        except requests.exceptions.RequestException:
+            return JsonResponse({"error": "Internal error"}, status=500)
     
 
 def user_dashboard(request):
@@ -227,10 +227,10 @@ def user_dashboard(request):
                 "order_id": order_id,
                 "status": "Downloaded" if status else "Not Downloaded Yet"
             })
-        except requests.RequestException as e:
+        except requests.RequestException:
             order_statuses.append({
                 "order_id": order_id,
-                "status": f"Error fetching status {e}"
+                "status": "Error fetching status"
             })
 
     return render(request, "dashboard.html", {"order_statuses": order_statuses})

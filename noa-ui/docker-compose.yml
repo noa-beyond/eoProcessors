@@ -1,8 +1,19 @@
-name: noaui
+version: '3.9'
+
 services:
-  noaui:
-    image: noaui:latest
-    build:
-      context: .
-    working_dir: /app    
-    command: python manage.py runserver 0.0.0.0:8000
+    web:
+        environment:
+          POSTGRES_HOST: 10.201.40.191
+          POSTGRES_DB: dev_stac
+          POSTGRES_USER: dev_stac_admin
+          POSTGRES_PASSWORD: nopassword
+          POSTGRES_PORT: 5433
+        build:
+          context: .
+          dockerfile: Dockerfile
+        command: gunicorn sentinel_browser.wsgi:application --workers 3 --bind 0.0.0.0:8000  # Using hard-coded values
+        volumes:
+          - .:/app
+        ports:
+          - "8000:8000"
+        # Removed env_file since DB credentials are hard-coded
