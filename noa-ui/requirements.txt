@@ -6,3 +6,4 @@ django-leaflet
 psycopg2-binary
 gunicorn
 django-environ
+python-dotenv
