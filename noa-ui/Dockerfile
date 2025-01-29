@@ -5,10 +5,13 @@ FROM python:3.10-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Install system dependencies (without GDAL)
+# Install system dependencies including GDAL
 RUN apt-get update && apt-get install -y \
     build-essential \
     libpq-dev \
+    postgresql-client \
+    gdal-bin \
+    libgdal-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Set the working directory
@@ -21,8 +24,16 @@ RUN pip install -r requirements.txt
 
 # Copy the entire project
 COPY . /app/
+RUN mkdir -p /app/staticfiles
 
-# Remove GDAL verification step since GDAL is not used
+# Set environment variables for database connection
+ENV POSTGRES_HOST=10.201.40.191
+ENV POSTGRES_DB=dev_stac
+ENV POSTGRES_USER=dev_stac_admin
+ENV POSTGRES_PASSWORD=nopassword
+ENV HOST=5433
+
+# Remove GDAL verification step since GDAL is now installed
 # RUN gdalinfo --version
 
 # Copy the entrypoint script
@@ -34,3 +45,7 @@ ENTRYPOINT ["/app/entrypoint.sh"]
 
 # Remove the CMD since the entrypoint script handles starting Gunicorn
 # CMD ["gunicorn", "sentinel_browser.wsgi:application", "--workers", "3", "--bind", "0.0.0.0:8000"]
+
+LABEL org.opencontainers.image.source=https://github.com/noa-beyond/eoProcessors/
+LABEL org.opencontainers.image.description="National Observatory of Athens - EO Product Catalog UI"
+LABEL org.opencontainers.image.licenses="GNU Affero General Public License v3.0"

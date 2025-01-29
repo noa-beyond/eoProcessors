@@ -29,14 +29,15 @@ SECRET_KEY = "django-insecure-sr12l!e0bqpgw(d$_7=0k56039u62$+0+4&6=hur-8t)fr9iqq
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["10.201.40.191", "localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ['*'] #"10.201.40.191", "localhost", "127.0.0.1"]
 
 
-env = environ.Env(
-    DEBUG=(bool, False)
+import logging
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s %(levelname)s %(message)s",
 )
-
-environ.Env.read_env()
 
 # Application definition
 
@@ -86,16 +87,20 @@ WSGI_APPLICATION = "sentinel_browser.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
 
+
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',  # Changed to standard PostgreSQL backend
-        'NAME': 'dev_stac',                        # Hard-coded DB name
-        'USER': 'dev_stac_admin',                  # Hard-coded DB user
-        'PASSWORD': 'nopassword',                  # Hard-coded DB password
-        'HOST': '10.201.40.191',                   # Hard-coded DB host
-        'PORT': '5433',                            # Hard-coded DB port
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('POSTGRES_DB'),
+        'USER': os.getenv('POSTGRES_USER'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD'),
+        'HOST': os.getenv('POSTGRES_HOST'),
+        'PORT': '5433',
     }
+
 }
+
 
 
 # Password validation
@@ -145,12 +150,16 @@ CORS_ALLOW_ALL_ORIGINS = True
 STATIC_URL = '/static/'
 
 # Directory where collectstatic will collect static files for deployment
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+# STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # This will be used in collectstatic
+
 
 # Additional locations of static files
-STATICFILES_DIRS = [
-    BASE_DIR / 'static',
-]
+#STATICFILES_DIRS = [
+#    BASE_DIR / 'staticfiles',
+#]
 
 # GDAL Configuration
 #GDAL_LIBRARY_PATH = os.getenv('GDAL_LIBRARY_PATH', '/usr/lib/x86_64-linux-gnu/libgdal.so')
