@@ -9,6 +9,9 @@ from psycopg.rows import dict_row
 # TODO: after integration tests, remove helper functions and make
 # table specific functions generic (by posting table name also)
 
+from pypgstac import db as pgdb
+from pypgstac.load import Loader, Methods
+
 
 def get_local_config(filename="database.ini", section="sentinel_products"):
     """
@@ -82,7 +85,7 @@ def update_uuid(config, table, uuid, column, value):
     sql = f"""
         UPDATE {table}
         SET {column} = %s
-        WHERE products.id = %s;
+        WHERE products.uuid = %s;
     """
     if column == "id":
         # Do not explain
@@ -114,3 +117,14 @@ def query_all_items(config):
             results = curs.fetchall()
             for row in results:
                 print(row)
+
+
+def load_stac_items_to_pgstac(item_path: str, collection: bool = False):
+    """ Connect to pgSTAC and populate item"""
+    connection_string = f"postgresql://{os.getenv('STACDB_ADMIN_USERNAME')}:{os.getenv('STACDB_ADMIN_PASSWORD')}@{os.getenv('STACDB_URI')}/{os.getenv('STACDB_DBNAME')}"
+    stac_db = pgdb.PgstacDB(connection_string)
+    stac_loader = Loader(stac_db)
+    if collection:
+        stac_loader.load_collections(item_path, insert_mode=Methods.upsert)
+    else:
+        stac_loader.load_items(item_path, insert_mode=Methods.upsert)

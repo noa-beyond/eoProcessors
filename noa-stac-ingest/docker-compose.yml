@@ -1,0 +1,41 @@
+name: noastacingest
+services:
+  noaharvester:
+    image: noastacingest:latest
+    build:
+      context: .
+      secrets:
+        - DB_USER
+        - DB_PASSWORD
+        - DB_HOST
+        - DB_PORT
+        - DB_NAME
+        - STACDB_ADMIN_USERNAME
+        - STACDB_ADMIN_PASSWORD
+        - STACDB_DBNAME
+        - STACDB_URI
+    working_dir: /app    
+    volumes:
+      - ./config:/app/config
+      - /mnt/data/dev:/mnt/data/dev
+    command: python /app/noastacingest/cli.py --help
+
+secrets:
+  DB_USER:
+    environment: DB_USER
+  DB_PASSWORD:
+    environment: DB_PASSWORD
+  DB_HOST:
+    environment: DB_HOST
+  DB_PORT:
+    environment: DB_PORT
+  DB_NAME:
+    environment: DB_NAME
+  STACDB_ADMIN_USERNAME:
+    environment: STACDB_ADMIN_USERNAME
+  STACDB_ADMIN_PASSWORD:
+    environment: STACDB_ADMIN_PASSWORD
+  STACDB_DBNAME:
+    environment: STACDB_DBNAME
+  STACDB_URI:
+    environment: STACDB_URI

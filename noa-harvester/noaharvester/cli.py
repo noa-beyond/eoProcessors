@@ -5,17 +5,32 @@ from various data providers: Copernicus and Earthdata.
 """
 
 from __future__ import annotations
+import os
 import sys
+from datetime import datetime
+import json
+from time import sleep
 import logging
 from pathlib import Path
 
 import click
 from click import Argument, Option
-
+from kafka import KafkaConsumer as k_KafkaConsumer
+from kafka.errors import (
+    TopicAlreadyExistsError,
+    TopicAuthorizationFailedError,
+    InvalidTopicError,
+    UnknownTopicOrPartitionError,
+    UnsupportedForMessageFormatError,
+    InvalidMessageError
+)
 # Appending the module path in order to have a kind of cli "dry execution"
 sys.path.append(str(Path(__file__).parent / ".."))
 
 from noaharvester import harvester  # noqa:402 pylint:disable=wrong-import-position
+from noaharvester.messaging.message import Message  # noqa:402 pylint:disable=wrong-import-position
+from noaharvester.messaging import AbstractConsumer  # noqa:402 pylint:disable=wrong-import-position
+from noaharvester.messaging.kafka_consumer import KafkaConsumer  # noqa:402 pylint:disable=wrong-import-position
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +127,134 @@ def download(
         click.echo("Done.\n")
 
 
+@cli.command(
+    help=(
+        """
+        Microservice facilitating EO data downloads. Implemented by
+        using a kafka producer/consumer pattern.
+        """
+    )
+)
+@click.option(
+    "--verbose",
+    "-v",
+    is_flag=True,
+    help="Shows the progress indicator (for Copernicus only)",
+)
+@click.option(
+    "--test",
+    "-t",
+    is_flag=True,
+    help="Testing kafka receiving requests. No other functionality",
+)
+@click.argument("config_file", required=True)
+@click.option("--output_path", default="./data", help="Output path")
+def noa_harvester_service(
+    config_file: Argument | str,
+    output_path: Option | str,
+    verbose: Option | bool,
+    test: Option | bool
+) -> None:
+    """
+    Instantiate Harvester class activate service, listening to kafka topic.
+    When triggered, downloads all ids from Products table, based on the 
+    list argument from kafka message.
+
+    Parameters:
+        output_path (click.Option | str): where to download to
+        verbose (click.Option | bool): to show download progress indicator or not
+    """
+    # if config_file:
+    logger.debug("Starting NOA-Harvester service...")
+
+    harvest = harvester.Harvester(
+        config_file=config_file,
+        output_path=output_path,
+        verbose=verbose,
+        is_service=True
+    )
+
+    consumer: AbstractConsumer | k_KafkaConsumer = None
+
+    # Warning: topics is a list, even if there is only one topic
+    # So it should be set as a list in the config file
+    topics = harvest.config.get(
+        "topics_consumer", os.environ.get(
+            "KAFKA_INPUT_TOPICS", ["harvester.order.requested"]
+        )
+    )
+    schema_def = Message.schema_request()
+    num_partitions = int(harvest.config.get(
+        "num_partitions", os.environ.get(
+            "KAFKA_NUM_PARTITIONS", 2
+        )
+    ))
+    replication_factor = int(harvest.config.get(
+        "replication_factor", os.environ.get(
+            "KAFKA_REPLICATION_FACTOR", 3
+        )
+    ))
+
+    while consumer is None:
+        consumer = KafkaConsumer(
+            bootstrap_servers=harvest.config.get(
+                "kafka_bootstrap_servers",
+                (os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"))
+            ),
+            group_id=harvest.config.get(
+                "kafka_request_group_id",
+                (os.getenv("KAFKA_REQUEST_GROUP_ID", "harvester-group-request"))
+            ),
+            topics=topics,
+            schema=schema_def
+        )
+        try:
+            consumer.subscribe_to_topics(topics)
+        except (UnknownTopicOrPartitionError, TopicAuthorizationFailedError, InvalidTopicError) as e:
+            logger.warning("[NOA-Harvester] Kafka Error on Topic subscription: %s", e)
+            logger.warning("[NOA-Harvester] Trying to create it:")
+            try:
+                consumer.create_topics(
+                    topics=topics, num_partitions=num_partitions, replication_factor=replication_factor)
+            except (TopicAlreadyExistsError,
+                    UnknownTopicOrPartitionError,
+                    TopicAuthorizationFailedError,
+                    InvalidTopicError) as g:
+                logger.error("[NOA-Harvester] Kafka: Could not subscribe or create producer topic: %s", g)
+                return
+        if consumer is None:
+            sleep(5)
+
+    click.echo(f"[NOA-Harvester] NOA-Harvester service started. Output path: {output_path}\n")
+
+    while True:
+        try:
+            for message in consumer.read():
+                item = message.value
+                now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                msg = f"[NOA-Harvester] Digesting Item from Topic {message.topic} ({now_time})..."
+                msg += "\n> Item: " + json.dumps(item)
+                logger.debug(msg)
+                click.echo("[NOA-Harvester] Received list to download:")
+                click.echo(item)
+                if test:
+                    downloaded_uuids = "Some downloaded ids"
+                    failed_uuids = "Some failed ids"
+                else:
+                    uuid_list = item["Ids"]
+                    downloaded_uuids, failed_uuids = harvest.download_from_uuid_list(uuid_list)
+                logger.debug("[NOA-Harvester] Downloaded items: %s", downloaded_uuids)
+                if failed_uuids:
+                    click.echo(f"[NOA-Harvester] Failed items: {failed_uuids}")
+                    logger.warning("[NOA-Harvester] Failed uuids: %s", failed_uuids)
+                click.echo(f"[NOA-Harvester] Consumed download message and downloaded {downloaded_uuids}")
+            sleep(1)
+        except (UnsupportedForMessageFormatError, InvalidMessageError) as e:
+            click.echo(f"[NOA-Harvester] Error in reading kafka message: {item}")
+            logger.warning("[NOA-Harvester] Error in reading kafka message: %s", e)
+            continue
+
+
 # TODO v2: integrate functionality in download command
 @cli.command(
     help=(
@@ -128,16 +271,21 @@ def download(
 )
 @click.argument("config_file", required=True)
 @click.option("--output_path", default="./data", help="Output path")
-@click.option("--uuid", "-u", multiple=True, help="Uuid. Can be set multiple times")
+@click.option(
+    "--uuid",
+    "-u",
+    multiple=True,
+    help="Id field of products table. Can be set multiple times"
+)
 def from_uuid_list(
     config_file: Argument | str,
     output_path: Option | str,
     uuid: Option | tuple[str],
     verbose: Option | bool,
-) -> None:
+) -> tuple:
     """
     Instantiate Harvester class and call download function.
-    Downloads all relevant data as defined in the config file.
+    Downloads all ids from Products table, based on the --uuid multiple option.
 
     Parameters:
         config_file (click.Argument | str): config json file listing
@@ -146,24 +294,26 @@ def from_uuid_list(
         uuid (click.Option | tuple[str]): A tuple of uuids to download
         verbose (click.Option | bool): to show download progress indicator or not
     """
-    if config_file:
-        logger.debug("Cli download for config file: %s", config_file)
 
-        click.echo(f"Downloading at: {output_path}\n")
-        harvest = harvester.Harvester(
-            config_file=config_file,
-            output_path=output_path,
-            verbose=verbose,
-            from_uri=True
-        )
-        downloaded_uuids, failed_uuids = harvest.download_from_uuid_list(uuid)
-        if failed_uuids:
-            logger.error("Failed uuids: %s", failed_uuids)
-        # TODO The following is a dev test: to be converted to unit tests
-        # harvest.test_db_connection()
-        print(downloaded_uuids)
-        click.echo("Done.\n")
-        return downloaded_uuids
+    logger.debug("Cli download for config file: %s", config_file)
+
+    click.echo(f"Downloading at: {output_path}\n")
+    harvest = harvester.Harvester(
+        config_file=config_file,
+        output_path=output_path,
+        verbose=verbose,
+        # TODO is not a service, but needs refactoring of Harvester and logic
+        # since we have changed the functionality
+        is_service=True
+    )
+    downloaded_uuids, failed_uuids = harvest.download_from_uuid_list(uuid)
+    if failed_uuids:
+        logger.error("Failed uuids: %s", failed_uuids)
+    # TODO The following is a dev test: to be converted to unit tests
+    # harvest.test_db_connection()
+    print(downloaded_uuids)
+    click.echo("Done.\n")
+    return downloaded_uuids, failed_uuids
 
 
 @cli.command(

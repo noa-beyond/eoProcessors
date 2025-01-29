@@ -6,6 +6,50 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## [0.11.2] - 2024-12-18
+### Fixed
+- Fix some logs. Send one time the completed kafka message (#100)
+
+## [0.11.1] - 2024-12-16
+### Fixed
+- Misleading error message and some logs (#98)
+
+## [0.11.0] - 2024-12-16
+### Changed
+- Added env var fallback for Copernicus credentials (#96)
+
+## [0.10.5] - 2024-12-13
+### Fixed
+- Kafka json bug (#94)
+
+## [0.10.4] - 2024-12-11
+### Fixed
+- External bug: read proper key (#90)
+
+## [0.10.3] - 2024-12-04
+### Fixed
+- Bug downloading one item at a time (#86)
+
+## [0.10.2] - 2024-12-04
+### Fixed
+- UUID to str bug (#84)
+
+## [0.10.1] - 2024-12-04
+### Fixed
+- Pass kafka topics as a list, not as a nested list (#82)
+
+## [0.10.0] - 2024-12-02
+### Fixed
+- Some minor hot-fixes (#77)
+
+## [0.9.0] - 2024-11-21
+### Added
+- Added publishing to kafka topic the successful/failed id lists (#75)
+- Added consuming from kafka topic, getting id lists for download (#75)
+- Added new cli command (noa_harvester_service) (#75)
+
+### Changed
+- Downloading from id (products table, column id) now returns successful and failed lists (#75)
 
 ## [0.8.0] - 2024-11-08
 ### Added

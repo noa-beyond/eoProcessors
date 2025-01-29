@@ -1,0 +1,12 @@
+{
+    "catalog_path": "/mnt/data/poc/STAC/catalog/",
+    "catalog_filename": "catalog.json",
+    "collection_path": "/mnt/data/poc/STAC/catalog/collections/",
+    "group_id": "stacingest-group-request",
+    "topics_consumer": ["stacingest.order.requested"],
+    "topic_producer": "stacingest.order.completed",
+    "num_partitions": 2,
+    "replication_factor": 3,
+    "kafka_bootstrap_servers": "kafka1:9092,kafka2:9092,kafka3:9092",
+    "kafka_request_group_id": "stacingest-group-request"
+}

@@ -14,10 +14,12 @@ services:
         - DB_HOST
         - DB_PORT
         - DB_NAME
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: "kafka1:9092,kafka2:9092,kafka3:9092"
     working_dir: /app    
     volumes:
       - ./config:/app/config
-      - ./data:/app/data
+      - /mnt/data/dev/products:/mnt/data/dev/products
     command: python /app/noaharvester/cli.py --help
 
 secrets:

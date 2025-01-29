@@ -3,6 +3,7 @@
 from __future__ import annotations
 from copy import deepcopy
 
+import os
 import logging
 import json
 import zipfile
@@ -26,12 +27,12 @@ class Harvester:
 
     def __init__(
         self,
-        config_file: str,
+        config_file: str = None,
         output_path: str = None,
         shape_file: str = None,
         verbose: bool = False,
         bbox_only: bool = False,
-        from_uri: bool = False
+        is_service: bool = False
     ) -> Harvester:
         """
         Harvester class. Constructor reads and loads the search items json file.
@@ -41,6 +42,7 @@ class Harvester:
             shape_file (str - Optional): Read and use shapefile instead of config coordinates.
             verbose (bool - Optional): Indicate if Copernicus download progress is verbose.
         """
+        self._config = {}
         self._config_filename = config_file
         self._output_path = output_path
         self._verbose = verbose
@@ -56,9 +58,7 @@ class Harvester:
         with open(config_file, encoding="utf8") as f:
             self._config = json.load(f)
 
-        if from_uri:
-            pass
-        else:
+        if not is_service:
             for item in self._config:
                 if self._shape_file_bbox_list:
                     for bbox in self._shape_file_bbox_list:
@@ -71,7 +71,12 @@ class Harvester:
                     logger.debug("Appending search item: %s", item)
         logger.debug("Total search items: %s", len(self._search_items))
 
-    def download_from_uuid_list(self, uuid_list) -> tuple[list, list]:
+    @property
+    def config(self):
+        """Get config"""
+        return self._config
+
+    def download_from_uuid_list(self, uuid_list: list[str]) -> tuple[list, list]:
         """
         Utilize the minimum provider interface for downloading single items
         """
@@ -83,15 +88,19 @@ class Harvester:
         db_config = db_utils.get_env_config()
         if not db_config:
             db_config = db_utils.get_local_config()
+
+        if db_config:
+            logger.info("[NOA-Harvester] Products db found.")
         else:
-            logger.error("Not db configuration found, in env vars nor local database.ini file.")
+            logger.error("[NOA-Harvester] Not db configuration found, in env vars nor local database.ini file.")
 
         for single_uuid in uuid_list:
             uuid_db_entry = db_utils.query_all_from_table_column_value(
-                db_config, "products", "uuid", single_uuid)
+                db_config, "products", "id", single_uuid)
             provider = db_utils.query_all_from_table_column_value(
                 db_config, "providers", "id", uuid_db_entry.get("provider_id", None)
                 ).get("name")
+            # TODO coupling of db with module
             if provider == "cdse":
                 provider = "copernicus"
             print(provider)
@@ -99,10 +108,11 @@ class Harvester:
             # Check for uuid as passed from request. It should replace uri
             # uuid = None # Test uuid: "83c19de3-e045-40bd-9277-836325b4b64e"
             if uuid_db_entry:
-                logger.debug("Found db entry with uuid: %s", single_uuid)
-                uuid_title = (single_uuid, uuid_db_entry.get("name"))
-                print(uuid_title)
-                downloaded_item_path = download_provider.single_download(*uuid_title)
+                logger.info("[NOA-Harvester] Found db entry in Products table with id: %s", single_uuid)
+                downloaded_item_path = download_provider.single_download(
+                    str(uuid_db_entry.get("uuid")),
+                    uuid_db_entry.get("name")
+                )
                 # Unfortunately, need to distinguish cases:
                 # Up to now, Copernicus products are .SAFE zip files, and as such
                 # need to be indexed (after decompressed) to the db
@@ -117,15 +127,38 @@ class Harvester:
 
                 update_item_path = db_utils.update_uuid(
                     db_config, "products", single_uuid, "path", str(downloaded_item_path))
-
+                # TODO delete order_id
                 if update_status & update_item_path:
                     downloaded_items.append(single_uuid)
+                    logger.info("[NOA-Harvester] Downloaded %s", single_uuid)
                 else:
                     failed_items.append(single_uuid)
-                    logger.error("Could not update uuid: %s", single_uuid)
-            return (downloaded_items, failed_items)
+                    logger.error("[NOA-Harvester] Could not update uuid: %s. Download might have failed.", single_uuid)
+            else:
+                logger.warning("[NOA-Harvester] Could not find id %s in Products db", single_uuid)
+                print(f"Warning! Could not find id {single_uuid} in Products db")
+                continue
+
+        kafka_topic = self.config.get(
+            "topic_producer", os.environ.get(
+                "KAFKA_OUTPUT_TOPIC", "harvester.order.completed")
+        )
+        logger.info("[NOA-Harvester] Downloaded list. Sending kafka message")
+        try:
+            bootstrap_servers = self.config.get(
+                "kafka_bootstrap_servers", os.getenv(
+                    "KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"
+                )
+            )
+            utils.send_kafka_message(bootstrap_servers, kafka_topic, downloaded_items, failed_items)
+            print(f"[NOA-Harvester] Kafka message of Product(s) downloading sent to: {kafka_topic}")
+        except BrokenPipeError as e:
+            print(f"[NOA-Harvester] Error sending kafka message to: {kafka_topic}")
+            logger.warning("Error sending kafka message: %s ", e)
+        return (downloaded_items, failed_items)
 
     def test_db_connection(self):
+        """Out of place Testing"""
         db_config = db_utils.get_env_config()
         if not db_config:
             db_config = db_utils.get_local_config()

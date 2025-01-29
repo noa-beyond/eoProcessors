@@ -15,6 +15,7 @@ import os
 import environ
 from dotenv import load_dotenv
 
+
 from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -91,9 +92,6 @@ WSGI_APPLICATION = "sentinel_browser.wsgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
-
-
-
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 # Database Configuration
@@ -107,8 +105,6 @@ DATABASES = {
         'PORT': "5433",
     }
 }
-
-
 
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators

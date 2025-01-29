@@ -140,7 +140,6 @@ def results(request):
 def _collect_existing_products(start_date, end_date, bbox, cloud_cover=100, provider=2, satellite_collection=1):
     geometry = [float(coordinate) for coordinate in bbox.split(",")]
     polygon = _bbox_to_polygon(geometry[0],geometry[1],geometry[2],geometry[3])
-
     payload = {
         "provider": int(provider),
         "startDate": start_date,
@@ -205,7 +204,6 @@ def submit_order(request):
                     "error": "Failed to submit order",
                     "status_code": response.status_code
                 }, status=400)
-
         except requests.exceptions.RequestException:
             return JsonResponse({"error": "Internal error"}, status=500)
     
