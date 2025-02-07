@@ -80,7 +80,7 @@ def results(request):
 
         try:
             bbox_coords = [float(coord) for coord in bbox.split(',')]
-            print(bbox_coords)    
+
             if len(bbox_coords) != 4:
                 raise ValueError("Bounding box must have exactly 4 coordinates.")
         
@@ -104,7 +104,9 @@ def results(request):
         with connection.cursor() as cursor:
             cursor.execute(query, params)
             rows = cursor.fetchall()
+            
             unique_names = []
+            
             for row in rows:
                 item_id = row[0]
                 geometry = json.loads(row[1]) 
@@ -120,15 +122,17 @@ def results(request):
                 })
 
                 unique_names.append(content.get('properties').get('s2:product_uri'))
-        
+      
         not_available = [] 
         
         for product in all_products:
+                        
             try: 
                 if product['name'] in unique_names:
                     continue
             except Exception:
                 continue
+            
             not_available.append(product)
 
         return render(request, 'results.html', {"items": {"available_items": existing_items, "not_available_items":not_available}})
@@ -140,6 +144,7 @@ def results(request):
 def _collect_existing_products(start_date, end_date, bbox, cloud_cover=100, provider=2, satellite_collection=1):
     geometry = [float(coordinate) for coordinate in bbox.split(",")]
     polygon = _bbox_to_polygon(geometry[0],geometry[1],geometry[2],geometry[3])
+
     payload = {
         "provider": int(provider),
         "startDate": start_date,
@@ -156,11 +161,11 @@ def _collect_existing_products(start_date, end_date, bbox, cloud_cover=100, prov
         results = response.json()
         
         for result in results:
-            print('Hi')
             result['tile'] = result['name'].split('_')[5]
             result['sensing_date'] = result['name'].split('_')[2][:4] + '-' + result['name'].split('_')[2][4:6] + '-' + result['name'].split('_')[2][6:8]
             result['quicklook'] = f"https://datahub.creodias.eu/odata/v1/Assets({result['uuid']})/$value"
         return results
+    
     except requests.RequestException:
         return JsonResponse({"error": "API request failed}"}, status=500)
 
@@ -189,6 +194,7 @@ def submit_order(request):
         }
 
         api_url = f"{API_URL}/Orders"
+        
         try:
             response = requests.post(api_url, json=payload, headers={"Content-Type": "application/json"})
 
@@ -204,6 +210,7 @@ def submit_order(request):
                     "error": "Failed to submit order",
                     "status_code": response.status_code
                 }, status=400)
+
         except requests.exceptions.RequestException:
             return JsonResponse({"error": "Internal error"}, status=500)
     
