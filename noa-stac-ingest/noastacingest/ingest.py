@@ -146,16 +146,20 @@ class Ingest:
         ingested_items = []
         failed_items = []
         # TODO: this looks at S2 table config
+        # TODO: correct the algorithm: unite config retrieval
         db_config = db_utils.get_env_config()
         if not db_config:
-            db_config = db_utils.get_local_config()
-        else:
-            print("[NOA-STACIngest] ERROR - no db config")
-            logger.error(
-                "Not db configuration found, in env vars nor local database.ini file."
+            logger.warning(
+                "Not db configuration found in env vars. Trying local file"
             )
-            failed_items.append(uuid_list)
-            return ingested_items, failed_items
+            db_config = db_utils.get_local_config()
+            if not db_config:
+                print("[NOA-STACIngest] ERROR - no db config")
+                logger.error(
+                    "[NOA-STACIngest] Not db configuration found, in env vars nor local database.ini file."
+                )
+                failed_items.append(uuid_list)
+                return ingested_items, failed_items
 
         for single_uuid in uuid_list:
             item = db_utils.query_all_from_table_column_value(

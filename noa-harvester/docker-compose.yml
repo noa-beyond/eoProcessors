@@ -19,7 +19,7 @@ services:
     working_dir: /app    
     volumes:
       - ./config:/app/config
-      - /mnt/data/dev/products:/mnt/data/dev/products
+      - /mnt/data/poc/products:/mnt/data/poc/products
     command: python /app/noaharvester/cli.py --help
 
 secrets:
