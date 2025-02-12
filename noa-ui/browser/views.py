@@ -188,8 +188,12 @@ def submit_order(request):
         item_ids_json = request.POST.get('item_ids', '[]')
         item_ids = json.loads(item_ids_json)
         
+        order_id = request.POST.get("order_type")
+
+        print("Order:",order_id)
+
         payload = {
-            "orderType": 1, 
+            "orderType": int(order_id), 
             "productIds": item_ids
         }
 
