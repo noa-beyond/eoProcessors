@@ -16,7 +16,7 @@ COPY . .
 RUN pip install -r requirements.txt --no-cache-dir
 
 # Create a default Products download dir
-RUN mkdir -p /mnt/data/dev/
+RUN mkdir -p /mnt/data/poc/
 
 # Command to run the script when the container starts
 ENTRYPOINT ["python", "noastacingest/cli.py"]
