@@ -1,5 +1,5 @@
 import requests
-from datetime import datetime
+# from datetime import datetime
 import json
 import os
 
@@ -7,17 +7,22 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from django.db import connection
 
-from utils.geo_utils import bbox_to_polygon
+# from utils.geo_utils import bbox_to_polygon
 
-from django.core.serializers.json import DjangoJSONEncoder
+# from django.core.serializers.json import DjangoJSONEncoder
 
 API_BASE_URL = "http://10.201.40.192:30080/api/SatelliteProduct/GetAll"
-API_URL =  "http://10.201.40.192:30080/api"
+API_URL = "http://10.201.40.192:30080/api"
+
 
 def map_view(request):
     return render(request, 'base.html')
 
+
+# TODO Review/Remove dead code
+
 def search(request):
+    """
     if request.method == "POST":
         data_source = request.POST.get("data_source")
         start_date = request.POST.get("start_date") + "T00:00:00.000"
@@ -39,7 +44,7 @@ def search(request):
                 },
             }
             endpoint = f"{API_BASE_URL}/SatelliteProduct"
-        
+
         elif data_source == "Sentinel-1":
             payload = {
                 "provider": 1,  
@@ -52,20 +57,20 @@ def search(request):
             }
             endpoint = f"{API_BASE_URL}/SatelliteProduct"
 
-        
         else:
             return JsonResponse({"error": "Invalid data source"}, status=400)
 
         try:
             response = requests.post(endpoint, json=payload, verify=False) 
             response.raise_for_status()
-        
+
         except requests.exceptions.RequestException:
             return JsonResponse({"Internal error"}, status=500)
 
         return JsonResponse(response.json())
 
     return render(request, "search.html")
+    """
 
 
 def results(request):
@@ -83,12 +88,11 @@ def results(request):
 
             if len(bbox_coords) != 4:
                 raise ValueError("Bounding box must have exactly 4 coordinates.")
-        
+
         except ValueError:
             return render(request, 'base.html', {'error': "Invalid bounding box"})
 
         all_products = _collect_existing_products(start_date, end_date, bbox)
-
 
         query = """
             SELECT id, ST_AsGeoJSON(ST_Transform(geometry, 4326)), content, datetime
@@ -100,20 +104,20 @@ def results(request):
         params = [start_date, end_date, bbox_coords[0], bbox_coords[1], bbox_coords[2], bbox_coords[3]]
 
         existing_items = []
-        
+
         with connection.cursor() as cursor:
             cursor.execute(query, params)
             rows = cursor.fetchall()
-            
+
             unique_names = []
-            
+
             for row in rows:
                 item_id = row[0]
                 geometry = json.loads(row[1]) 
                 content = json.loads(row[2])  
-                
+
                 content['geometry'] = geometry
-                
+
                 existing_items.append({
                     "id": item_id,
                     "geometry": geometry,
@@ -122,23 +126,22 @@ def results(request):
                 })
 
                 unique_names.append(content.get('properties').get('s2:product_uri'))
-      
+
         not_available = [] 
-        
+
         for product in all_products:
-                        
-            try: 
+
+            try:
                 if product['name'] in unique_names:
                     continue
             except Exception:
                 continue
-            
+
             not_available.append(product)
 
-        return render(request, 'results.html', {"items": {"available_items": existing_items, "not_available_items":not_available}})
+        return render(request, 'results.html', {"items": {"available_items": existing_items, "not_available_items": not_available}})
 
     return render(request, 'base.html')
-
 
 
 def _collect_existing_products(start_date, end_date, bbox, cloud_cover=100, provider=2, satellite_collection=1):
@@ -158,26 +161,27 @@ def _collect_existing_products(start_date, end_date, bbox, cloud_cover=100, prov
     try:
         response = requests.post(API_BASE_URL, json=payload)
         response.raise_for_status() 
-        results = response.json()
-        
-        for result in results:
+        product_results = response.json()
+
+        for result in product_results:
             result['tile'] = result['name'].split('_')[5]
             result['sensing_date'] = result['name'].split('_')[2][:4] + '-' + result['name'].split('_')[2][4:6] + '-' + result['name'].split('_')[2][6:8]
             result['quicklook'] = f"https://datahub.creodias.eu/odata/v1/Assets({result['uuid']})/$value"
         return results
-    
+
     except requests.RequestException:
         return JsonResponse({"error": "API request failed}"}, status=500)
+
 
 def _bbox_to_polygon(xmin, ymin, xmax, ymax):
     polygon = {
         "type": "string",
         "coordinates": [[
-            [xmin, ymin],  
-            [xmax, ymin],  
-            [xmax, ymax],  
-            [xmin, ymax], 
-            [xmin, ymin]  
+            [xmin, ymin],
+            [xmax, ymin],
+            [xmax, ymax],
+            [xmin, ymax],
+            [xmin, ymin]
         ]]
     }
     return polygon
@@ -187,7 +191,7 @@ def submit_order(request):
     if request.method == 'POST':
         item_ids_json = request.POST.get('item_ids', '[]')
         item_ids = json.loads(item_ids_json)
-        
+
         order_type = request.POST.get("order_type")
 
         print("Order type:", order_type)
@@ -198,30 +202,29 @@ def submit_order(request):
         }
 
         api_url = f"{API_URL}/Orders"
-        
+
         try:
             response = requests.post(api_url, json=payload, headers={"Content-Type": "application/json"})
 
             if response.status_code == 200:
                 order_id = response.json()
-                
+
                 update_json_file(order_id, item_ids)
-                
+
                 return JsonResponse({"message": "Order successfully submitted", "data": response.json()})
-            
-            else:
-                return JsonResponse({
-                    "error": "Failed to submit order",
-                    "status_code": response.status_code
-                }, status=400)
+
+            return JsonResponse({
+                "error": "Failed to submit order",
+                "status_code": response.status_code
+            }, status=400)
 
         except requests.exceptions.RequestException:
             return JsonResponse({"error": "Internal error"}, status=500)
-    
+
 
 def user_dashboard(request):
-    user_orders = ['dbb98151-d790-467b-bc15-9e53fcf0e340'] 
-    
+    user_orders = ['dbb98151-d790-467b-bc15-9e53fcf0e340']
+
     api_base_url = "http://10.201.40.192:30080/api/Orders/"
 
     order_statuses = []
@@ -229,10 +232,10 @@ def user_dashboard(request):
     for order_id in user_orders:
         try:
             response = requests.get(f"{api_base_url}{order_id}")
-            
+
             response.raise_for_status()
-            
-            status = response.json() 
+
+            status = response.json()
 
             order_statuses.append({
                 "order_id": order_id,
@@ -250,19 +253,19 @@ def user_dashboard(request):
 def update_json_file(response_data, custom_text, file_path="responses.json"):
     """
     Updates a JSON file with new key-value pairs. If the file doesn't exist, it creates one.
-    
+
     :param response_data: The key (e.g., response data) to add to the JSON.
     :param custom_text: The value (e.g., custom text) to associate with the key.
     :param file_path: The path to the JSON file (default is 'responses.json').
     """
     data = {}
-    
+
     if os.path.exists(file_path):
 
         with open(file_path, "r") as json_file:
             try:
                 data = json.load(json_file)
-            
+
             except json.JSONDecodeError:
                 print("Existing JSON file is empty or corrupted. Starting fresh.")
 
