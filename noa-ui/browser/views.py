@@ -36,7 +36,7 @@ def search(request):
 
         if data_source == "Sentinel-2":
             payload = {
-                "provider": 2, 
+                "provider": 2,
                 "startDate": start_date,
                 "geometry": bbox_to_polygon(geometry),
                 "properties": {
@@ -47,7 +47,7 @@ def search(request):
 
         elif data_source == "Sentinel-1":
             payload = {
-                "provider": 1,  
+                "provider": 1,
                 "startDate": start_date,
                 "geometry": bbox_to_polygon(geometry),
                 "properties": {
@@ -82,6 +82,9 @@ def results(request):
         start_date = request.POST.get('start_date').split('T')[0]
         end_date = request.POST.get('end_date')
         bbox = request.POST.get('bbox')
+        # TODO's
+        # cloud_cover =
+        # satellite_collection =
 
         try:
             bbox_coords = [float(coord) for coord in bbox.split(',')]
@@ -92,6 +95,7 @@ def results(request):
         except ValueError:
             return render(request, 'base.html', {'error': "Invalid bounding box"})
 
+        # TODO introduce at least the cloud cover and satellite collection vars
         all_products = _collect_existing_products(start_date, end_date, bbox)
 
         query = """
@@ -113,8 +117,8 @@ def results(request):
 
             for row in rows:
                 item_id = row[0]
-                geometry = json.loads(row[1]) 
-                content = json.loads(row[2])  
+                geometry = json.loads(row[1])
+                content = json.loads(row[2])
 
                 content['geometry'] = geometry
 
@@ -127,10 +131,11 @@ def results(request):
 
                 unique_names.append(content.get('properties').get('s2:product_uri'))
 
-        not_available = [] 
+        not_available = []
 
         for product in all_products:
 
+            # TODO review the following. What is your intent? Maybe a warning log message is enough?
             try:
                 if product['name'] in unique_names:
                     continue
@@ -146,7 +151,7 @@ def results(request):
 
 def _collect_existing_products(start_date, end_date, bbox, cloud_cover=100, provider=2, satellite_collection=1):
     geometry = [float(coordinate) for coordinate in bbox.split(",")]
-    polygon = _bbox_to_polygon(geometry[0],geometry[1],geometry[2],geometry[3])
+    polygon = _bbox_to_polygon(geometry[0], geometry[1], geometry[2], geometry[3])
 
     payload = {
         "provider": int(provider),
