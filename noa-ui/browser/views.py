@@ -172,7 +172,7 @@ def _collect_existing_products(start_date, end_date, bbox, cloud_cover=100, prov
             result['tile'] = result['name'].split('_')[5]
             result['sensing_date'] = result['name'].split('_')[2][:4] + '-' + result['name'].split('_')[2][4:6] + '-' + result['name'].split('_')[2][6:8]
             result['quicklook'] = f"https://datahub.creodias.eu/odata/v1/Assets({result['uuid']})/$value"
-        return results
+        return product_results
 
     except requests.RequestException:
         return JsonResponse({"error": "API request failed}"}, status=500)
