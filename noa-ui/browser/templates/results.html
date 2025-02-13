@@ -459,6 +459,14 @@
                             Use indices (e.g., NDVI, NDMI)?
                         </label>
                     </div>
+                    <div id="indicesDropdown" class="mt-2">
+                        <label for="orderSelection">Type of Order:</label>
+                        <select class="form-select" id="order_type">
+                            <option value="1">Download</option>
+                            <option value="2">Add to STAC</option>
+                            <option value="3">Download and Add to STAC</option>
+                        </select>
+                    </div>
                 </div>
         
                 <div class="modal-footer">
@@ -559,6 +567,13 @@
             console.log(itemIdsInput)
             // Append the hidden input to the form
             form.appendChild(itemIdsInput);
+
+            const selectedIndex = document.getElementById('order_type').value;
+            const indexInput = document.createElement('input');
+            indexInput.type = 'hidden';
+            indexInput.name = 'order_type';
+            indexInput.value = selectedIndex;
+            form.appendChild(indexInput);
             
     // Submit the form programmatically
     form.submit();
