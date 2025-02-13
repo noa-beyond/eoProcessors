@@ -146,6 +146,11 @@ def noa_stac_ingest_service(
 
     ingestor = ingest.Ingest(config=config_file)
 
+    logger.warning("[NOA-STACIngest | WARNING] Configuration: %s ", ingestor.config)
+    logger.info("[NOA-STACIngest | INFO] Configuration: %s ", ingestor.config)
+    click.echo(f"[NOA-STACIngest | CLICK] Configuration: {ingestor.config}")
+    print(f"[NOA-STACIngest | JASONSFAVOURITE] Configuration: {ingestor.config}")
+
     consumer: AbstractConsumer | k_KafkaConsumer = None
 
     # Warning: topics is a list, even if there is only one topic
@@ -189,11 +194,13 @@ def noa_stac_ingest_service(
             schema=schema_def
         )
         try:
+            logger.warning("[NOA-STACIngest | WARNING] Trying to subscribe to %s", ingestor.config.get("topics_consumer", "NO SETUP"))
             consumer.subscribe_to_topics(topics)
         except (UnknownTopicOrPartitionError, TopicAuthorizationFailedError, InvalidTopicError) as e:
             logger.warning("[NOA-STACIngest] Kafka Error on Topic subscription: %s", e)
             logger.warning("[NOA-STACIngest] Trying to create it:")
             try:
+                logger.warning("[NOA-STACIngest | WARNING] Creating Topics")
                 consumer.create_topics(
                     topics=topics, num_partitions=num_partitions, replication_factor=replication_factor)
             except (TopicAlreadyExistsError,
@@ -211,11 +218,13 @@ def noa_stac_ingest_service(
     while True:
         try:
             for message in consumer.read():
+                logger.warning("[NOA-STACIngest | WARNING] Reading message")
                 item = message.value
                 now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 msg = f"[NOA-STACIngest] Digesting Item from Topic {message.topic} ({now_time})..."
                 msg += "\n> Item: " + json.dumps(item)
                 logger.debug(msg)
+                logger.warning(msg)
                 click.echo(f"[NOA-STACIngest] Received list to ingest: {item}")
                 if test:
                     ingested = "Some ingested ids"

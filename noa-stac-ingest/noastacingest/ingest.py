@@ -162,6 +162,7 @@ class Ingest:
                 return ingested_items, failed_items
 
         for single_uuid in uuid_list:
+            logger.warning("[NOA-STACIngest | WARNING] Trying to ingest single uuid %s", single_uuid)
             item = db_utils.query_all_from_table_column_value(
                 db_config, "products", "id", single_uuid
             )
@@ -184,6 +185,7 @@ class Ingest:
             "topic_producer",
             os.environ.get("KAFKA_OUTPUT_TOPIC", "stacingest.order.completed"),
         )
+        logger.warning("[NOA-STACIngest | WARNING] Sending message to topic %s", kafka_topic)
         try:
             bootstrap_servers = self.config.get(
                 "kafka_bootstrap_servers",
