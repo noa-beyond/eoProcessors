@@ -34,6 +34,7 @@ from noastacingest.messaging import AbstractConsumer # noqa:402 pylint:disable=w
 from noastacingest.messaging.kafka_consumer import KafkaConsumer # noqa:402 pylint:disable=wrong-import-position
 
 logger = logging.getLogger(__name__)
+processor = "[NOA-STACIngest]"
 
 
 @click.group(
@@ -50,7 +51,12 @@ logger = logging.getLogger(__name__)
 def cli(log):
     """Click cli group for query, download, describe cli commands"""
     numeric_level = getattr(logging, log.upper(), "WARNING")
-    logging.basicConfig(level=numeric_level, format="%(asctime)s %(message)s")
+    logging.basicConfig(
+        # TODO: funcname only in debug. The rest, like below
+        format=f"[%(asctime)s.%(msecs)03d] [%(levelname)s] {processor} [%(funcName)s] %(message)s",
+        level=numeric_level,
+        datefmt='%Y-%m-%dT%H:%M:%S'
+    )
 
 
 @cli.command(help="Create STAC Item from SAFE path")
@@ -80,7 +86,6 @@ def create_item_from_path(
     # TODO needs refactor. Updating and creating items can be done in batches, especially in db
     if config:
         logger.debug("Cli STAC creation using config file: %s", config)
-
     ingestor = ingest.Ingest(config=config)
 
     if recursive:
@@ -146,10 +151,7 @@ def noa_stac_ingest_service(
 
     ingestor = ingest.Ingest(config=config_file)
 
-    logger.warning("[NOA-STACIngest | WARNING] Configuration: %s ", ingestor.config)
     logger.info("[NOA-STACIngest | INFO] Configuration: %s ", ingestor.config)
-    click.echo(f"[NOA-STACIngest | CLICK] Configuration: {ingestor.config}")
-    print(f"[NOA-STACIngest | JASONSFAVOURITE] Configuration: {ingestor.config}")
 
     consumer: AbstractConsumer | k_KafkaConsumer = None
 
