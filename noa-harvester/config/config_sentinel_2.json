@@ -5,10 +5,13 @@
         "search_terms":
         {
             "maxRecords": "100",
-            "startDate": "2024-09-01",
-            "completionDate": "2024-09-05",
+            "startDate": "2019-12-15",
+            "completionDate": "2021-01-15",
             "box": "24.15943,38.50005,24.24733,38.55608",
-            "productType": "S2MSI2A"
+            "productType": "S2MSI2A",
+            "tileId": "34SEJ",
+            "cloudCover": "[0,20]",
+            "publishedAfter": "2022-01-23"
         }
     }
 ]
