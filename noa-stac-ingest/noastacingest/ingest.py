@@ -145,7 +145,6 @@ class Ingest:
         """Get from products table the paths to ingest"""
         ingested_items = []
         failed_items = []
-        # TODO: this looks at S2 table config
         # TODO: correct the algorithm: unite config retrieval
         db_config = db_utils.get_env_config()
         if not db_config:
@@ -154,15 +153,14 @@ class Ingest:
             )
             db_config = db_utils.get_local_config()
             if not db_config:
-                print("[NOA-STACIngest] ERROR - no db config")
                 logger.error(
-                    "[NOA-STACIngest] Not db configuration found, in env vars nor local database.ini file."
+                    "Not db configuration found, in env vars nor local database.ini file."
                 )
                 failed_items.append(uuid_list)
                 return ingested_items, failed_items
 
         for single_uuid in uuid_list:
-            logger.warning("[NOA-STACIngest | WARNING] Trying to ingest single uuid %s", single_uuid)
+            logger.debug("Trying to ingest single uuid %s", single_uuid)
             item = db_utils.query_all_from_table_column_value(
                 db_config, "products", "id", single_uuid
             )
@@ -173,11 +171,12 @@ class Ingest:
                     Path(item_path), collection, db_ingest, single_uuid
                 )
                 ingested_items.append(str(single_uuid))
-                print(f"Ingested from {item_path}")
-            except RuntimeWarning:
-                logger.warning(
+                logger.debug("Ingested item from %s", item_path)
+            except RuntimeWarning as e:
+                logger.error(
                     "Item could not be ingested to pgSTAC: %s", str(single_uuid)
                 )
+                logger.error("Could not create STAC Item: %s", e)
                 failed_items.append(str(single_uuid))
                 continue
 
@@ -185,7 +184,7 @@ class Ingest:
             "topic_producer",
             os.environ.get("KAFKA_OUTPUT_TOPIC", "stacingest.order.completed"),
         )
-        logger.warning("[NOA-STACIngest | WARNING] Sending message to topic %s", kafka_topic)
+        logger.debug("Sending message to topic %s", kafka_topic)
         try:
             bootstrap_servers = self.config.get(
                 "kafka_bootstrap_servers",
@@ -194,7 +193,11 @@ class Ingest:
             utils.send_kafka_message(
                 bootstrap_servers, kafka_topic, ingested_items, failed_items
             )
-            logger.info("Kafka message sent")
+            logger.info(
+                "Ingested %d items (%d failed). Sending message to Kafka consumer",
+                len(ingested_items),
+                len(failed_items)
+            )
         except BrokenPipeError as e:
             logger.error("Error sending kafka message: %s", e)
 
