@@ -17,7 +17,6 @@ import click
 from click import Argument, Option
 from kafka import KafkaConsumer as k_KafkaConsumer
 from kafka.errors import (
-    TopicAlreadyExistsError,
     TopicAuthorizationFailedError,
     InvalidTopicError,
     UnknownTopicOrPartitionError,
@@ -34,7 +33,7 @@ from noastacingest.messaging import AbstractConsumer # noqa:402 pylint:disable=w
 from noastacingest.messaging.kafka_consumer import KafkaConsumer # noqa:402 pylint:disable=wrong-import-position
 
 logger = logging.getLogger(__name__)
-processor = "[NOA-STACIngest]"
+PROCESSOR = "[NOA-STACIngest]"
 
 
 @click.group(
@@ -52,8 +51,7 @@ def cli(log):
     """Click cli group for query, download, describe cli commands"""
     numeric_level = getattr(logging, log.upper(), "WARNING")
     logging.basicConfig(
-        # TODO: funcname only in debug. The rest, like below
-        format=f"[%(asctime)s.%(msecs)03d] [%(levelname)s] {processor} [%(funcName)s] %(message)s",
+        format=f"[%(asctime)s.%(msecs)03d] [%(levelname)s] {PROCESSOR} %(message)s",
         level=numeric_level,
         datefmt='%Y-%m-%dT%H:%M:%S'
     )
@@ -83,19 +81,19 @@ def create_item_from_path(
         recursive (click.Option | bool): To ingest all (SAFE) directories under input (for multiple item creation)
         update_db (click.Option | bool): Update pgstac for new items, using upsert. It also updates the collections
     """
+
     # TODO needs refactor. Updating and creating items can be done in batches, especially in db
-    if config:
-        logger.debug("Cli STAC creation using config file: %s", config)
+    logger.info("Cli STAC ingest using config file: %s", config)
     ingestor = ingest.Ingest(config=config)
 
     if recursive:
-        click.echo(f"Ingesting items in path {input_path}\n")
+        click.echo(f"Ingesting items recursively from path {input_path}\n")
         for single_item in os.listdir(input_path):
             item = Path(input_path, single_item)
             if item.is_dir():
                 ingestor.single_item(item, collection, update_db)
     else:
-        click.echo("Ingesting single item from path\n")
+        click.echo(f"Ingesting single item from {input_path}\n")
         ingestor.single_item(Path(input_path), collection, update_db)
 
 
@@ -151,83 +149,72 @@ def noa_stac_ingest_service(
 
     ingestor = ingest.Ingest(config=config_file)
 
-    logger.info("[NOA-STACIngest | INFO] Configuration: %s ", ingestor.config)
+    logger.info("Configuration: %s ", ingestor.config)
 
     consumer: AbstractConsumer | k_KafkaConsumer = None
 
     # Warning: topics is a list, even if there is only one topic
     # So it should be defined as a list in the config json file
+    logger.debug("Getting topics for producer/consumer")
+
     topics = ingestor.config.get(
         "topics_consumer", os.environ.get(
             "KAFKA_INPUT_TOPICS", ["stacingest.order.requested"]
         )
     )
     schema_def = Message.schema_request()
-    num_partitions = int(ingestor.config.get(
-        "num_partitions", os.environ.get(
-            "KAFKA_NUM_PARTITIONS", 2
-        )
-    ))
-    replication_factor = int(ingestor.config.get(
-        "replication_factor", os.environ.get(
-            "KAFKA_REPLICATION_FACTOR", 3
-        )
-    ))
 
     while consumer is None:
         consumer = KafkaConsumer(
             bootstrap_servers=ingestor.config.get(
                 "kafka_bootstrap_servers",
                 (
-                    os.getenv("KAFKA_BOOTSTRAP_SERVERS",
-                              "localhost:9092"
-                            )
+                    os.getenv(
+                        "KAFKA_BOOTSTRAP_SERVERS",
+                        "localhost:9092"
+                    )
                 )
             ),
             group_id=ingestor.config.get(
                 "kafka_request_group_id",
                 (
-                        os.getenv("KAFKA_REQUEST_GROUP_ID",
-                                "stacingest-group-request"
-                                )
+                    os.getenv(
+                        "KAFKA_REQUEST_GROUP_ID",
+                        "stacingest-group-request"
+                    )
                 )
             ),
             topics=topics,
             schema=schema_def
         )
         try:
-            logger.warning("[NOA-STACIngest | WARNING] Trying to subscribe to %s", ingestor.config.get("topics_consumer", "NO SETUP"))
+            logger.debug(
+                "Trying to subscribe to %s", ingestor.config.get("topics_consumer", "NO SETUP")
+            )
             consumer.subscribe_to_topics(topics)
-        except (UnknownTopicOrPartitionError, TopicAuthorizationFailedError, InvalidTopicError) as e:
-            logger.warning("[NOA-STACIngest] Kafka Error on Topic subscription: %s", e)
-            logger.warning("[NOA-STACIngest] Trying to create it:")
-            try:
-                logger.warning("[NOA-STACIngest | WARNING] Creating Topics")
-                consumer.create_topics(
-                    topics=topics, num_partitions=num_partitions, replication_factor=replication_factor)
-            except (TopicAlreadyExistsError,
-                    UnknownTopicOrPartitionError,
-                    TopicAuthorizationFailedError,
-                    InvalidTopicError) as g:
-                logger.error("[NOA-STACIngest] Kafka: Could not subscribe or create producer topic: %s", g)
-                return
+        except (
+            UnknownTopicOrPartitionError,
+            TopicAuthorizationFailedError,
+            InvalidTopicError
+        ) as e:
+            logger.error("Kafka Error on Topic subscription: %s", e)
+            logger.error("No topics to subscribe to, retrying...")
         if consumer is None:
             sleep(5)
 
-    click.echo("NOA-STACIngest service started.\n")
+    logger.info("Service started.\n")
     if not db_ingest:
         logger.warning("Items will not be ingested to pgSTAC. Did you enable the -db flag?")
     while True:
         try:
             for message in consumer.read():
-                logger.warning("[NOA-STACIngest | WARNING] Reading message")
+                logger.debug("Reading value of incoming message")
                 item = message.value
                 now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                msg = f"[NOA-STACIngest] Digesting Item from Topic {message.topic} ({now_time})..."
+                msg = f"Digesting Item from Topic {message.topic} ({now_time})..."
                 msg += "\n> Item: " + json.dumps(item)
                 logger.debug(msg)
-                logger.warning(msg)
-                click.echo(f"[NOA-STACIngest] Received list to ingest: {item}")
+                logger.info("Received list to ingest: %s", item)
                 if test:
                     ingested = "Some ingested ids"
                     failed = "Some failed to ingest ids"
@@ -238,12 +225,12 @@ def noa_stac_ingest_service(
                         collection,
                         db_ingest
                     )
-                logger.debug("[NOA-STACIngest] Ingested items: %s", ingested)
+                logger.debug("Ingested items: %s", ingested)
                 if failed:
-                    logger.error("[NOA-STACIngest] Failed uuids: %s", failed)
+                    logger.error("Failed uuids: %s", failed)
             sleep(1)
         except (UnsupportedForMessageFormatError, InvalidMessageError) as e:
-            logger.error("[NOA-Harvester] Error in reading kafka message: %s", e)
+            logger.error("Error in STAC ingestion: %s", e)
             continue
 
 
