@@ -13,7 +13,7 @@
 
         #floating-form {
             position: absolute;
-            top: 10px;
+            top: 60px;
             left: 10px;
             background-color: #fff;
             border: 1px solid #ddd;
@@ -30,12 +30,56 @@
             margin-bottom: 1rem;
             text-align: center;
         }
+
+         /* Top Navigation Bar */
+         .navbar {
+            background-color: #004080; /* Dark Blue */
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .navbar .title {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .navbar .nav-links {
+            display: flex;
+            gap: 20px;
+        }
+
+        .navbar .nav-links a {
+            text-decoration: none;
+            color: white;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        .navbar .nav-links a:hover {
+            color: #ffcc00; /* Highlight effect */
+        }
     </style>
 </head>
 <body>
+
+ <div class="navbar">
+    <div class="title">Beyond Centre of EO Research and Satellite Remote Sensing</div>
+    <div class="nav-links">
+        <a href="#">Login</a>
+        <a href="#">Browser</a>
+        <a href="{% url 'user_dashboard' %}">Dashboard</a>
+    </div>
+</div>
+
     <div id="map"></div>
-      <!-- Include Navbar -->
-    {% include 'navbar.html' %}
+    
+   
+
     <div id="floating-form">
         <form method="post" action="">
         {% csrf_token %}
@@ -45,7 +89,7 @@
         <div class="form-group mb-3">
             <label for="dataSource" class="badge text-bg-success form-label">Data Source</label>
             <br>
-            <select id="dataSource" name="data_source" class="form-select">
+            <select id="dataSource" name="dataSource" class="form-select">
                 <option value="Sentinel-1">Sentinel-1</option>
                 <option value="Sentinel-2" selected>Sentinel-2</option>
             </select>
@@ -53,14 +97,14 @@
 
         <!-- Max Cloud Coverage (Sentinel-2 only) -->
         <div id="cloudCoverageDiv" class="form-group mb-3">
-            <label for="cloudCoverage" class="badge text-bg-success form-label">Max Cloud Coverage (%)</label>
-            <input type="range" id="cloudCoverage" name="cloud_coverage" min="0" max="100" value="50" class="form-range">
+            <label for="cloudCoverage" class="badge text-bg-success form-label">Max Cloud Coverage (%): <span id="cloudCoverageValue">50</span></label>
+            <input type="range" id="cloudCoverage" name="cloudCoverage" min="0" max="100" value="50" class="form-range">
         </div>
 
         <!-- Product Type (Sentinel-1 only) -->
         <div id="productTypeDiv" class="form-group mb-3 d-none">
             <label for="productType" class="badge text-bg-success form-label">Product Type</label>
-            <select id="productType" name="product_type" class="form-select">
+            <select id="productType" name="productType" class="form-select">
                 <option value="GRD">GRD</option>
                 <option value="SLC">SLC</option>
                 <option value="OCN">OCN</option>
@@ -197,6 +241,15 @@
     setTimeout(() => {
         map.invalidateSize();
     }, 500);
+</script>
+
+<script>
+    const cloudCoverage = document.getElementById("cloudCoverage");
+    const cloudCoverageValue = document.getElementById("cloudCoverageValue");
+
+    cloudCoverage.addEventListener("input", function() {
+        cloudCoverageValue.textContent = this.value;
+    });
 </script>
 
 </body>

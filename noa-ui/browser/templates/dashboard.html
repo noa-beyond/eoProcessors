@@ -52,37 +52,110 @@
         <div class="nav-links">
             <a href="#">Login</a>
             <a href="#">Browser</a>
-            <a href="#">Dashboard</a>
+            <a href="{% url 'user_dashboard' %}">Dashboard</a>
         </div>
     </div>
 
     <div class="container my-5">
         <h1 class="text-center mb-4">User Dashboard</h1>
+<!-- Search & Filter Form -->
+<form method="GET" action="{% url 'user_dashboard' %}" class="row mb-4">
+    <div class="col-md-6">
+        <input type="text" name="search" value="{{ request.GET.search|default_if_none:'' }}" 
+               class="form-control" placeholder="Search by Order ID...">
+    </div>
+    <div class="col-md-4">
+        <select name="status" class="form-select">
+            <option value="">Filter by Status</option>
+            <option value=1>Completed</option> 
+            <option value=0>In Progress</option> 
+        </select>
+    </div>
+    <div class="col-md-2">
+        <button type="submit" class="btn btn-primary w-100">Search</button>
+    </div>
+</form>
 
-        <table class="table table-striped table-bordered">
-            <thead class="table-dark">
-                <tr>
-                    <th scope="col">Order ID</th>
-                    <th scope="col">Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for order in order_statuses %}
-                <tr>
-                    <td>{{ order.order_id }}</td>
-                    <td>
-                        {% if order.status == "Downloaded" %}
-                        <span class="badge bg-success">{{ order.status }}</span>
-                        {% elif order.status == "Processing" %}
-                        <span class="badge bg-warning text-dark">{{ order.status }}</span>
-                        {% else %}
-                        <span class="badge bg-danger">{{ order.status }}</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+<!-- Order Table -->
+<table class="table table-striped table-bordered">
+    <thead class="table-dark">
+        <tr>
+            <th scope="col">Order ID</th>
+            <th scope="col">Status</th>
+            <th scope="col">Code Snippet</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for order in order_statuses %}
+        <tr>
+            <td>{{ order.order_id }}</td>
+            <td>
+                {% if order.status == "Completed" %}
+                <span class="badge bg-success">{{ order.status }}</span>
+                {% else %}
+                <span class="badge bg-warning text-dark">{{ order.status }}</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if order.status == "Completed" %}
+                <div class="code-container">
+                    <pre><code class="language-python" id="code-snippet-{{ order.order_id }}">
+    import odc.stac
+    from odc.stac import stac_load
+    import xarray as xr
+    
+    # STAC API URL
+    stac_api = "https://10.201.40.191"
+    
+    # Define search parameters
+    query = {
+        "collections": ["sentinel-2-l2a"],
+        "bbox": [xmin, ymin, xmax, ymax],
+        "datetime": "2024-01-01/2024-02-01"
+    }
+    
+    # Load data into xarray
+    ds = stac_load(
+        url=stac_api,
+        query=query,
+        bands=["red", "green", "blue", "nir"],
+        chunks={},
+    )
+    
+    print(ds)</code></pre>
+                    <button class="btn btn-sm btn-outline-primary copy-btn" data-code="code-snippet-{{ order.order_id }}">
+                        Copy
+                    </button>
+                </div>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    
+    <!-- JavaScript for Copy-to-Clipboard -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            document.querySelectorAll(".copy-btn").forEach(button => {
+                button.addEventListener("click", function () {
+                    const codeId = this.getAttribute("data-code");
+                    const codeElement = document.getElementById(codeId);
+                    
+                    if (codeElement) {
+                        const textToCopy = codeElement.innerText;
+                        navigator.clipboard.writeText(textToCopy).then(() => {
+                            alert("Code copied to clipboard!");
+                        }).catch(err => {
+                            console.error("Failed to copy: ", err);
+                        });
+                    }
+                });
+            });
+        });
+    </script>
+    
+</table>
+
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

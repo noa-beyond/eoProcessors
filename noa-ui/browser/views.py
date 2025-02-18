@@ -14,63 +14,8 @@ from django.db import connection
 API_BASE_URL = "http://10.201.40.192:30080/api/SatelliteProduct/GetAll"
 API_URL = "http://10.201.40.192:30080/api"
 
-
 def map_view(request):
     return render(request, 'base.html')
-
-
-# TODO Review/Remove dead code
-
-def search(request):
-    """
-    if request.method == "POST":
-        data_source = request.POST.get("data_source")
-        start_date = request.POST.get("start_date") + "T00:00:00.000"
-        end_date = request.POST.get("end_date", datetime.now().strftime("%Y-%m-%d"))
-        geometry = request.POST.get("bbox")
-        cloud_coverage = request.POST.get("cloud_coverage", None)
-        product_type = request.POST.get("product_type", None)
-        relative_orbit = request.POST.get("relative_orbit", None)
-
-        geometry = [coordinate for coordinate in geometry.split(",")]
-
-        if data_source == "Sentinel-2":
-            payload = {
-                "provider": 2,
-                "startDate": start_date,
-                "geometry": bbox_to_polygon(geometry),
-                "properties": {
-                    "cloudCoverage": cloud_coverage
-                },
-            }
-            endpoint = f"{API_BASE_URL}/SatelliteProduct"
-
-        elif data_source == "Sentinel-1":
-            payload = {
-                "provider": 1,
-                "startDate": start_date,
-                "geometry": bbox_to_polygon(geometry),
-                "properties": {
-                    "productType": product_type,
-                    "relativeOrbit": relative_orbit,
-                },
-            }
-            endpoint = f"{API_BASE_URL}/SatelliteProduct"
-
-        else:
-            return JsonResponse({"error": "Invalid data source"}, status=400)
-
-        try:
-            response = requests.post(endpoint, json=payload, verify=False) 
-            response.raise_for_status()
-
-        except requests.exceptions.RequestException:
-            return JsonResponse({"Internal error"}, status=500)
-
-        return JsonResponse(response.json())
-
-    return render(request, "search.html")
-    """
 
 
 def results(request):
@@ -82,9 +27,15 @@ def results(request):
         start_date = request.POST.get('start_date').split('T')[0]
         end_date = request.POST.get('end_date')
         bbox = request.POST.get('bbox')
-        # TODO's
-        # cloud_cover =
-        # satellite_collection =
+
+        cloud_cover, product_type = None, None
+
+        if request.POST.get('dataSource') == "Sentinel-2":
+            cloud_cover = request.POST.get('cloudCoverage')
+            satellite_collection = 1
+        else:
+            product_type = request.POST.get('productType') 
+            satellite_collection = 2
 
         try:
             bbox_coords = [float(coord) for coord in bbox.split(',')]
@@ -96,7 +47,7 @@ def results(request):
             return render(request, 'base.html', {'error': "Invalid bounding box"})
 
         # TODO introduce at least the cloud cover and satellite collection vars
-        all_products = _collect_existing_products(start_date, end_date, bbox)
+        all_products = _collect_existing_products(start_date, end_date, bbox, cloud_cover= cloud_cover, product_type = product_type, satellite_collection=satellite_collection)
 
         query = """
             SELECT id, ST_AsGeoJSON(ST_Transform(geometry, 4326)), content, datetime
@@ -149,19 +100,33 @@ def results(request):
     return render(request, 'base.html')
 
 
-def _collect_existing_products(start_date, end_date, bbox, cloud_cover=100, provider=2, satellite_collection=1):
+def _collect_existing_products(start_date, end_date, bbox, cloud_cover=None, product_type=None, provider=2, satellite_collection=1):
     geometry = [float(coordinate) for coordinate in bbox.split(",")]
     polygon = _bbox_to_polygon(geometry[0], geometry[1], geometry[2], geometry[3])
 
-    payload = {
-        "provider": int(provider),
-        "startDate": start_date,
-        "endDate": end_date,
-        "satelliteCollection": satellite_collection,
-        "cloudCover": int(cloud_cover),
-        "geometry": polygon,
-        "properties": {},
-    }
+    print("Cloud:",cloud_cover)
+
+    if satellite_collection == 1:
+        payload = {
+            "provider": int(provider),
+            "startDate": start_date,
+            "endDate": end_date,
+            "satelliteCollection": satellite_collection,
+            "cloudCover": int(cloud_cover),
+            "geometry": polygon,
+            "properties": {},
+        }
+    
+    else:
+         payload = {
+            "provider": int(provider),
+            "startDate": start_date,
+            "endDate": end_date,
+            "satelliteCollection": satellite_collection,
+            "productType": product_type,
+            "geometry": polygon,
+            "properties": {},
+        }        
 
     try:
         response = requests.post(API_BASE_URL, json=payload)
@@ -214,7 +179,7 @@ def submit_order(request):
             if response.status_code == 200:
                 order_id = response.json()
 
-                update_json_file(order_id, item_ids)
+                update_json_file(order_id, item_ids, order_type)
 
                 return JsonResponse({"message": "Order successfully submitted", "data": response.json()})
 
@@ -227,12 +192,24 @@ def submit_order(request):
             return JsonResponse({"error": "Internal error"}, status=500)
 
 
-def user_dashboard(request):
-    user_orders = ['dbb98151-d790-467b-bc15-9e53fcf0e340']
+def user_dashboard(request, file_path="responses.json"):
+
+    try:    
+        with open(file_path, "r") as json_file:
+            data = json.load(json_file)
+            user_orders = list(data.keys())
+    
+    except json.JSONDecodeError:
+        user_orders = []
+        print("JSON file is empty or corrupted.")
 
     api_base_url = "http://10.201.40.192:30080/api/Orders/"
 
     order_statuses = []
+
+    search_query = request.GET.get('search', '')
+    status_filter = request.GET.get('status', '')
+
 
     for order_id in user_orders:
         try:
@@ -244,37 +221,54 @@ def user_dashboard(request):
 
             order_statuses.append({
                 "order_id": order_id,
-                "status": "Downloaded" if status else "Not Downloaded Yet"
+                "status": "Completed" if status else "In Progress"
             })
+        
         except requests.RequestException:
             order_statuses.append({
                 "order_id": order_id,
                 "status": "Error fetching status"
             })
 
+        if search_query:
+            order_statuses = [order for order in order_statuses if search_query in order["order_id"]]
+
+        if status_filter in ["0", "1"]:
+            order_statuses = [order for order in order_statuses if order["status"] == "Completed" and status_filter == "1" or order["status"] == "In Progress" and status_filter == "0"]
+
     return render(request, "dashboard.html", {"order_statuses": order_statuses})
 
 
-def update_json_file(response_data, custom_text, file_path="responses.json"):
+def update_json_file(response_data, product_ids, order_type, file_path="responses.json"):
     """
-    Updates a JSON file with new key-value pairs. If the file doesn't exist, it creates one.
+    Updates a JSON file with new key-value pairs in the format:
+    {
+        "order-id": {
+            "product-ids": [...],
+            "order-type": "..."
+        }
+    }
 
-    :param response_data: The key (e.g., response data) to add to the JSON.
-    :param custom_text: The value (e.g., custom text) to associate with the key.
+    :param response_data: The order ID (key).
+    :param product_ids: The list of product IDs associated with the order.
+    :param order_type: The type of order.
     :param file_path: The path to the JSON file (default is 'responses.json').
     """
     data = {}
 
     if os.path.exists(file_path):
-
         with open(file_path, "r") as json_file:
             try:
                 data = json.load(json_file)
-
             except json.JSONDecodeError:
                 print("Existing JSON file is empty or corrupted. Starting fresh.")
 
-    data[response_data] = custom_text
+    data[response_data] = {
+        "product-ids": product_ids,
+        "order-type": order_type
+    }
+
+    print("Data:",data)
 
     with open(file_path, "w") as json_file:
         json.dump(data, json_file, indent=4)

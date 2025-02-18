@@ -300,7 +300,7 @@
         <div class="nav-links">
             <a href="#">Login</a>
             <a href="#">Browser</a>
-            <a href="#">Dashboard</a>
+            <a href="{% url 'user_dashboard' %}">Dashboard</a>
         </div>
     </div>
 
@@ -382,7 +382,9 @@
                     <button id="toOrderBtn" class="btn btn-sm btn-outline-primary rounded-pill">
                         To Order: <span id="orderCount">0</span>
                       </button>
-
+                    <button id="selectAllBtn" class="btn btn-sm btn-outline-primary rounded-pill">
+                        Select All
+                    </button>
                 </h5>
               </div>
               <div class="card-body">
@@ -434,15 +436,17 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
+                    <p><strong>Total Items to be Ordered:</strong> <span id="totalOrderCount">0</span></p>
+
                     <table class="table">
                         <thead>
                             <tr>
                                 <th style="display:none;">ID</th> <!-- Hidden column header -->
-                                <th>Item</th>
-                                <th>Action</th>
+                                <th style="display:none;">Item</th>
+                                <th style="display:none;">Action</th>
                             </tr>
                         </thead>
-                        <tbody id="orderTableBody">
+                        <tbody id="orderTableBody" style="display: none;">
                             <!-- Dynamic rows will go here -->
                         </tbody>
                     </table>
@@ -482,111 +486,123 @@
 
         
         document.addEventListener('DOMContentLoaded', function () {
-            let orderItems = []; // Array to store selected items
+            let orderItems = []; 
             const orderCount = document.getElementById('orderCount');
             const orderTableBody = document.getElementById('orderTableBody');
-    // Attach click event listeners to all "+" buttons
-    document.querySelectorAll('.addToOrderBtn').forEach(button => {
-    button.addEventListener('click', function () {
-      
-        const itemName = this.getAttribute('data-item'); // Get item name
-        const itemId = this.getAttribute('data-id');     // Get item ID
-        console.log("Hello")
-        console.log('Item Name:', itemName); // Debugging
-        console.log('Item ID:', itemId);     // Debugging
+            const selectAllBtn = document.getElementById('selectAllBtn'); 
 
-        // Avoid duplicate entries in the table
-        if (!orderItems.some(item => item.id === itemId)) {
-            orderItems.push({ id: itemId, name: itemName });
-
-            // Update the "To Order" button count
-            orderCount.textContent = orderItems.length;
-
-            // Add the item to the modal table
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td style="display:none;">${itemId}</td> <!-- Hidden item ID -->
-                <td>${itemName}</td> <!-- Visible item name -->
-                <td>
-                    <button class="btn btn-danger btn-sm removeFromOrderBtn" data-id="${itemId}">
-                        Remove
-                    </button>
-                </td>
-            `;
-            orderTableBody.appendChild(row);
-
-            // Add event listener to remove the item
-            row.querySelector('.removeFromOrderBtn').addEventListener('click', function () {
-                const removeItemId = this.getAttribute('data-id');
-
-                // Remove the item from the orderItems array
-                orderItems = orderItems.filter(item => item.id !== removeItemId);
-
-                // Update the "To Order" button count
-                orderCount.textContent = orderItems.length;
-
-                // Remove the row from the table
-                row.remove();
-            });
-        }
-    });
-});
-    // Show Modal on "To Order" Button Click
-    toOrderBtn.addEventListener('click', function () {
-        const orderModal = new bootstrap.Modal(document.getElementById('orderModal'));
-        orderModal.show();
-    });
-
-    // Place Order Button Click Event
-    document.getElementById('placeOrderBtn').addEventListener('click', function () {
-
-        if (orderItems.length > 0) {
-            console.log("Here")
-            const rows = document.querySelectorAll('#orderTableBody tr');
-    
-            // Initialize an array to store the IDs
-            const itemIds = [];
-
-            // Loop through each row and collect hidden IDs
-            rows.forEach(row => {
-                const itemId = row.querySelector('td:first-child').innerText; // Hidden ID is in the first column
-                console.log(itemId);
-                itemIds.push(itemId);
-            });
-            // orderItems = [];
-            // orderCount.textContent = 0;
-            // orderTableBody.innerHTML = ''; // Clear the modal table
-            const form = document.getElementById('orderForm');
-            const itemIdsInput = document.createElement('input');
-            itemIdsInput.type = 'hidden';
-            itemIdsInput.name = 'item_ids'; // Name to match in Django view
-            itemIdsInput.value = JSON.stringify(itemIds); // Store IDs as a JSON string
-            console.log("Step 3")
-            console.log(itemIds)
-            console.log("Step 3")
-            console.log(itemIdsInput)
-            // Append the hidden input to the form
-            form.appendChild(itemIdsInput);
-
-            const selectedIndex = document.getElementById('order_type').value;
-            const indexInput = document.createElement('input');
-            indexInput.type = 'hidden';
-            indexInput.name = 'order_type';
-            indexInput.value = selectedIndex;
-            form.appendChild(indexInput);
+            document.querySelectorAll('.addToOrderBtn').forEach(button => {
+                button.addEventListener('click', function () {
             
-    // Submit the form programmatically
-    form.submit();
-        } else {
-            alert('No items in the basket!');
-        }
+                const itemName = this.getAttribute('data-item'); // Get item name
+                const itemId = this.getAttribute('data-id');     // Get item ID
+                console.log("Hello")
+                console.log('Item Name:', itemName); // Debugging
+                console.log('Item ID:', itemId);     // Debugging
 
-      
+                // Avoid duplicate entries in the table
+                if (!orderItems.some(item => item.id === itemId)) {
+                    orderItems.push({ id: itemId, name: itemName });
+
+                    // Update the "To Order" button count
+                    orderCount.textContent = orderItems.length;
+
+                    totalOrderCount.textContent = orderCount.textContent;
 
 
-    });
-});
-       
+                    // Add the item to the modal table
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td style="display:none;">${itemId}</td> <!-- Hidden item ID -->
+                        <td>${itemName}</td> <!-- Visible item name -->
+                        <td>
+                            <button class="btn btn-danger btn-sm removeFromOrderBtn" data-id="${itemId}">
+                                Remove
+                            </button>
+                        </td>
+                    `;
+                    orderTableBody.appendChild(row);
+
+                // Add event listener to remove the item
+                row.querySelector('.removeFromOrderBtn').addEventListener('click', function () {
+                    const removeItemId = this.getAttribute('data-id');
+
+                    // Remove the item from the orderItems array
+                    orderItems = orderItems.filter(item => item.id !== removeItemId);
+
+                    // Update the "To Order" button count
+                    orderCount.textContent = orderItems.length;
+
+                    // Remove the row from the table
+                    row.remove();
+                        });
+                        }
+                    });
+            });
+
+            selectAllBtn.addEventListener('click', function () {
+                document.querySelectorAll('.addToOrderBtn').forEach(button => {
+                    button.click();
+                });
+            });
+
+            // Show Modal on "To Order" Button Click
+            toOrderBtn.addEventListener('click', function () {
+                const orderModal = new bootstrap.Modal(document.getElementById('orderModal'));
+                orderModal.show();
+            });
+
+
+            // Place Order Button Click Event
+            document.getElementById('placeOrderBtn').addEventListener('click', function () {
+
+                if (orderItems.length > 0) {
+                    console.log("Here")
+                    const rows = document.querySelectorAll('#orderTableBody tr');
+            
+                    // Initialize an array to store the IDs
+                    const itemIds = [];
+
+                    // Loop through each row and collect hidden IDs
+                    rows.forEach(row => {
+                        const itemId = row.querySelector('td:first-child').innerText; // Hidden ID is in the first column
+                        console.log(itemId);
+                        itemIds.push(itemId);
+                    });
+                    // orderItems = [];
+                    // orderCount.textContent = 0;
+                    // orderTableBody.innerHTML = ''; // Clear the modal table
+                    const form = document.getElementById('orderForm');
+                    const itemIdsInput = document.createElement('input');
+                    itemIdsInput.type = 'hidden';
+                    itemIdsInput.name = 'item_ids'; // Name to match in Django view
+                    itemIdsInput.value = JSON.stringify(itemIds); // Store IDs as a JSON string
+                    console.log("Step 3")
+                    console.log(itemIds)
+                    console.log("Step 3")
+                    console.log(itemIdsInput)
+                    // Append the hidden input to the form
+                    form.appendChild(itemIdsInput);
+
+                    const selectedIndex = document.getElementById('order_type').value;
+                    const indexInput = document.createElement('input');
+                    indexInput.type = 'hidden';
+                    indexInput.name = 'order_type';
+                    indexInput.value = selectedIndex;
+                    form.appendChild(indexInput);
+                    
+            // Submit the form programmatically
+            form.submit();
+                } else {
+                    alert('No items in the basket!');
+                }
+
+            
+
+
+            });
+        });
+            
 
  // Handle info icon click to show popup
  document.querySelectorAll('.info-btn').forEach(infoIcon => {
