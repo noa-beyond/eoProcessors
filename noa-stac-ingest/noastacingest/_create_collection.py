@@ -39,50 +39,52 @@ def main(config_file):
         TemporalExtent([[datetime.datetime.now(datetime.timezone.utc), None]]),
     )
     # TODO complete rest of fields like license etc
-    l2a_collection_id = "sentinel2-l2a"
-    l2a_collection = Collection(
-        id=l2a_collection_id,
-        href=str(config["collection_path"] + l2a_collection_id + "/collection.json"),
-        description=config["collections"][l2a_collection_id]["description"],
-        extent=DEFAULT_EXTENT,
-    )
-    items_path = Path(config["collection_path"], l2a_collection_id, "items")
-    if not os.path.exists(str(items_path)):
-        items_path.mkdir(parents=True, exist_ok=True)
-    l2a_collection.add_link(
-        Link(
-            rel=RelType.ITEMS,
-            target=str(config["collection_path"] + l2a_collection_id + "/items/"),
-            media_type=MediaType.JSON,
+    for collection_id, collection_details in config["collections"].items():
+        collection_description = collection_details["description"]
+
+        new_collection = Collection(
+            id=collection_id,
+            href=str(config["collection_path"] + collection_id + "/collection.json"),
+            description=collection_description,
+            extent=DEFAULT_EXTENT,
         )
-    )
-
-    l2a_collection.normalize_hrefs(
-        str(config["collection_path"] + l2a_collection_id + "/")
-    )
-    l2a_collection.make_all_asset_hrefs_absolute()
-
-    if not os.path.exists(
-        str(config["collection_path"] + l2a_collection_id + "/collection.json")
-    ):
-        l2a_collection.save(
-            dest_href=str(config["collection_path"] + l2a_collection_id)
+        items_path = Path(config["collection_path"], collection_id, "items")
+        if not os.path.exists(str(items_path)):
+            items_path.mkdir(parents=True, exist_ok=True)
+        new_collection.add_link(
+            Link(
+                rel=RelType.ITEMS,
+                target=str(config["collection_path"] + collection_id + "/items/"),
+                media_type=MediaType.JSON,
+            )
         )
 
-    catalog.add_link(
-        Link(rel="data", target=config["collection_path"], media_type=MediaType.JSON)
-    )
-    catalog.add_child(
-        l2a_collection,
-        config["collections"][l2a_collection_id]["description"],
-        AsIsLayoutStrategy(),
-    )
-    catalog.save()
+        new_collection.normalize_hrefs(
+            str(config["collection_path"] + collection_id + "/")
+        )
+        new_collection.make_all_asset_hrefs_absolute()
+
+        if not os.path.exists(
+            str(config["collection_path"] + collection_id + "/collection.json")
+        ):
+            new_collection.save(
+                dest_href=str(config["collection_path"] + collection_id)
+            )
+
+        catalog.add_link(
+            Link(rel="data", target=config["collection_path"], media_type=MediaType.JSON)
+        )
+        catalog.add_child(
+            new_collection,
+            collection_description,
+            AsIsLayoutStrategy(),
+        )
+        catalog.save()
 
 
 if __name__ == "__main__":  # pragma: no cover
     if len(sys.argv) != 2:
         print("Usage: python _create_collection.py <config_file_path>")
     else:
-        config_file = sys.argv[1]
-        main(config_file)
+        collection_config_file = sys.argv[1]
+        main(collection_config_file)
