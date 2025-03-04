@@ -60,11 +60,6 @@ jobs:
           COPERNICUS_PASSWORD: ${{ secrets.COPERNICUS_PASSWORD }}
           EARTHDATA_LOGIN: ${{ secrets.EARTHDATA_LOGIN }}
           EARTHDATA_PASSWORD: ${{ secrets.EARTHDATA_PASSWORD }}
-          POSTGRES_HOST: ${{ secrets.POSTGRES_HOST }}
-          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
-          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          HOST: ${{ secrets.HOST }}
         run: |
           for dir in noa-harvester noa-ui noa-stac-ingest; do
             IMAGE_NAME="ghcr.io/noa-beyond/${dir}"
