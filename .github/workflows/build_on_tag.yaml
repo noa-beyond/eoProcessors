@@ -1,0 +1,96 @@
+name: Build & Push Docker Images on Tag
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read  
+      packages: write  
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Ensure full history is fetched
+
+      - name: Check if Tag Belongs to Main Branch
+        run: |
+          TAG_COMMIT=$(git rev-list -n 1 ${{ github.ref }}) 
+          echo "Tag commit: $TAG_COMMIT"
+          
+          # Check if this commit exists in main
+          if git branch -r --contains $TAG_COMMIT | grep "origin/main"; then
+            echo "Tag is from main branch."
+          else
+            echo "Tag is NOT from main branch. Exiting."
+            exit 1
+          fi
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.TOKEN1 }}
+
+      - name: Get Latest Tag and Increment Version
+        id: version
+        run: |
+          latest_tag=$(git tag -l --sort=-v:refname | head -n 1)
+          
+          if [ -z "$latest_tag" ]; then
+            new_tag="v0.0.1"
+          else
+            new_tag=$(echo $latest_tag | awk -F. -v OFS=. '{$NF++;print}')
+          fi
+
+          echo "New tag version: $new_tag"
+          echo "TAG_VERSION=$new_tag" >> $GITHUB_ENV
+
+      - name: Build & Push Docker Images
+        env:
+          TAG_VERSION: ${{ env.TAG_VERSION }}
+          COPERNICUS_LOGIN: ${{ secrets.COPERNICUS_LOGIN }}
+          COPERNICUS_PASSWORD: ${{ secrets.COPERNICUS_PASSWORD }}
+          EARTHDATA_LOGIN: ${{ secrets.EARTHDATA_LOGIN }}
+          EARTHDATA_PASSWORD: ${{ secrets.EARTHDATA_PASSWORD }}
+          POSTGRES_HOST: ${{ secrets.POSTGRES_HOST }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          HOST: ${{ secrets.HOST }}
+        run: |
+          for dir in noa-harvester noa-ui noa-stac-ingest; do
+            IMAGE_NAME="ghcr.io/nkintis/${dir}"
+            echo "Building and pushing Docker image for $dir"
+            
+            if [ "$dir" = "noa-harvester" ]; then
+              docker build --no-cache \
+                --secret id=COPERNICUS_LOGIN,env=COPERNICUS_LOGIN \
+                --secret id=COPERNICUS_PASSWORD,env=COPERNICUS_PASSWORD \
+                --secret id=EARTHDATA_LOGIN,env=EARTHDATA_LOGIN \
+                --secret id=EARTHDATA_PASSWORD,env=EARTHDATA_PASSWORD \
+                -t $IMAGE_NAME:latest -t $IMAGE_NAME:${{ env.TAG_VERSION }} $dir
+                
+            elif [ "$dir" = "noa-ui" ]; then
+              docker build --no-cache \
+                --build-arg POSTGRES_HOST=${{ secrets.POSTGRES_HOST }} \
+                --build-arg POSTGRES_DB=${{ secrets.POSTGRES_DB }} \
+                --build-arg POSTGRES_USER=${{ secrets.POSTGRES_USER }} \
+                --build-arg POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} \
+                --build-arg HOST=${{ secrets.HOST }} \
+                -t $IMAGE_NAME:latest -t $IMAGE_NAME:${{ env.TAG_VERSION }} $dir
+      
+            else
+              docker build --no-cache -t $IMAGE_NAME:latest -t $IMAGE_NAME:${{ env.TAG_VERSION }} $dir
+            fi
+            
+            docker push $IMAGE_NAME:latest
+            docker push $IMAGE_NAME:${{ env.TAG_VERSION }}
+          done
