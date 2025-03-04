@@ -26,13 +26,19 @@ RUN pip install -r requirements.txt
 COPY . /app/
 RUN mkdir -p /app/staticfiles
 
-# Set environment variables for database connection
-ENV POSTGRES_HOST=10.201.40.191
-ENV POSTGRES_DB=dev_stac
-ENV POSTGRES_USER=dev_stac_admin
-ENV POSTGRES_PASSWORD=nopassword
-ENV HOST=5433
+# Set environment variables for database connection using build arguments
+ARG POSTGRES_HOST
+ARG POSTGRES_DB
+ARG POSTGRES_USER
+ARG POSTGRES_PASSWORD
+ARG HOST
 
+# Set environment variables from build arguments
+ENV POSTGRES_HOST=$POSTGRES_HOST
+ENV POSTGRES_DB=$POSTGRES_DB
+ENV POSTGRES_USER=$POSTGRES_USER
+ENV POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+ENV HOST=$HOST
 # Remove GDAL verification step since GDAL is now installed
 # RUN gdalinfo --version
 
