@@ -67,7 +67,7 @@ jobs:
           HOST: ${{ secrets.HOST }}
         run: |
           for dir in noa-harvester noa-ui noa-stac-ingest; do
-            IMAGE_NAME="ghcr.io/nkintis/${dir}"
+            IMAGE_NAME="ghcr.io/noa-beyond/${dir}"
             echo "Building and pushing Docker image for $dir"
             
             if [ "$dir" = "noa-harvester" ]; then
