@@ -38,7 +38,7 @@ STACDB_DBNAME
 
 ```
 docker run -it \
--v ./config/config.json:/app/config/config_service.json \
+-v ./config/config_service.json:/app/config/config_service.json \
 -v /mnt/data/poc/:/mnt/data/poc/ \
 noastacingest noa-stac-ingest-service -db config/config_service.json
 ```
