@@ -1,7 +1,7 @@
 import requests
-# from datetime import datetime
 import json
 import os
+import re
 
 from django.shortcuts import render
 from django.http import JsonResponse
@@ -35,7 +35,7 @@ def results(request):
             satellite_collection = 1
         else:
             product_type = request.POST.get('productType') 
-            satellite_collection = 2
+            satellite_collection = 0
 
         try:
             bbox_coords = [float(coord) for coord in bbox.split(',')]
@@ -132,11 +132,28 @@ def _collect_existing_products(start_date, end_date, bbox, cloud_cover=None, pro
         response = requests.post(API_BASE_URL, json=payload)
         response.raise_for_status() 
         product_results = response.json()
+        
+        if satellite_collection == 1:
+            for result in product_results:
+                result['tile'] = result['name'].split('_')[5]
+                result['sensing_date'] = result['name'].split('_')[2][:4] + '-' + result['name'].split('_')[2][4:6] + '-' + result['name'].split('_')[2][6:8]
+                result['quicklook'] = f"https://datahub.creodias.eu/odata/v1/Assets({result['uuid']})/$value"
+        
+        elif satellite_collection == 0:
+            # 'name': 'S1A_IW_SLC__1SDV_20231217T163246_20231217T163314_051697_063E38_8102.SAFE', 
+            for result in product_results:
+                tmp = result['name'].split('_')[5][:8]
+                result['sensing_date'] = tmp[:4] + '-' + tmp[4:6] + '-' + tmp[6:8]
+                result['quicklook'] = f"https://datahub.creodias.eu/odata/v1/Assets({result['uuid']})/$value"
+                
+                _orbit_number = re.search(r'_(\d{6})_', result['name']).group(1)
+                _acquisition_start_time = re.search(r'_(\d{8}T\d{6})_', result['name']).group(1)
+                _hour = int(_acquisition_start_time[9:11])
+                _asc_desc = 'Ascending' if 6 <= _hour < 18 else 'Descending'
 
-        for result in product_results:
-            result['tile'] = result['name'].split('_')[5]
-            result['sensing_date'] = result['name'].split('_')[2][:4] + '-' + result['name'].split('_')[2][4:6] + '-' + result['name'].split('_')[2][6:8]
-            result['quicklook'] = f"https://datahub.creodias.eu/odata/v1/Assets({result['uuid']})/$value"
+                result['tile'] = f"{_orbit_number}_{_asc_desc}"
+
+
         return product_results
 
     except requests.RequestException:
@@ -181,7 +198,7 @@ def submit_order(request):
 
                 update_json_file(order_id, item_ids, order_type)
 
-                return JsonResponse({"message": "Order successfully submitted", "data": response.json()})
+                return render(request, 'dashboard.html', {"message": "Order successfully submitted!"})
 
             return JsonResponse({
                 "error": "Failed to submit order",
