@@ -47,7 +47,7 @@ jobs:
           if [ -z "$latest_tag" ]; then
             new_tag="v0.0.1"
           else
-            new_tag="$latest_tag"
+            new_tag=$(echo $latest_tag | sed 's/+.*//g')
           fi
 
           echo "New tag version: $new_tag"
