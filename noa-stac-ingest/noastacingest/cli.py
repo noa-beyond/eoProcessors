@@ -33,6 +33,7 @@ from noastacingest.messaging import AbstractConsumer # noqa:402 pylint:disable=w
 from noastacingest.messaging.kafka_consumer import KafkaConsumer # noqa:402 pylint:disable=wrong-import-position
 
 logger = logging.getLogger(__name__)
+
 PROCESSOR = "[NOA-STACIngest]"
 
 
@@ -163,6 +164,11 @@ def noa_stac_ingest_service(
         )
     )
     schema_def = Message.schema_request()
+
+    try:
+        logging.getLogger('kafka.consumer.fetcher').setLevel(logging.INFO)
+    except Exception as e:
+        print("No kafka fetcher: %s", e)
 
     while consumer is None:
         consumer = KafkaConsumer(
