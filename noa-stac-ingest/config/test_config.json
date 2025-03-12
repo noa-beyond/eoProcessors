@@ -1,5 +1,6 @@
 {   
     "catalog_id": "noa-beyond-internal",
+    "catalog_title": "noa-beyond-internal-dev",
     "catalog_path": "/tmp/data/dev/STAC/catalog/",
     "catalog_filename": "catalog.json",
     "catalog_description": "DEV - National Observatory of Athens internal STAC Catalog - DEV",

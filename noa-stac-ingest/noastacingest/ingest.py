@@ -73,7 +73,7 @@ class Ingest:
             item = {}
             match satellite:
                 case "S1":
-                    sensor = str(path.name).split("_")[:3]
+                    sensor = str(path.name).split("_")[2][:3]
                     match sensor:
                         case "GRD":
                             item = create_item_s1_grd(str(path))
@@ -121,7 +121,8 @@ class Ingest:
                 item.set_collection(collection_instance)
                 # TODO most providers do not have a direct collection/items relation
                 # Rather, they provide an items link, where all items are present
-                # e.g. https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items
+                # e.g. https://earth-search.aws.element84.com/v1/
+                # collections/sentinel-2-l2a/items
                 # Like so, I do not know if an "extent" property is needed.
                 # If it is, update it:
                 collection_instance.update_extent_from_items()
@@ -154,7 +155,7 @@ class Ingest:
             db_config = db_utils.get_local_config()
             if not db_config:
                 logger.error(
-                    "Not db configuration found, in env vars nor local database.ini file."
+                    "Not db configuration in env vars nor local database.ini file."
                 )
                 failed_items.append(uuid_list)
                 return ingested_items, failed_items
