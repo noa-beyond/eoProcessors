@@ -1,0 +1,26 @@
+{   
+    "catalog_id": "noa-beyond-internal-dev",
+    "catalog_description": "National Observatory of Athens internal STAC Catalog",
+    "catalog_title": "NOA-Beyond-Internal-Dev",
+    "catalog_path": "/tmp/data/dev/STAC/catalog/",
+    "catalog_filename": "catalog.json",
+    "collection_path": "/tmp/data/dev/STAC/catalog/collections/",
+    "output_path": "/tmp/data/dev/STAC/catalog/items/",
+    "collections": {
+        "sentinel1-grd": {
+            "description": "Internal downloaded Sentinel1 GRD data"
+        },
+        "sentinel1-rtc": {
+            "description": "Internal downloaded Sentinel1 RTC data"
+        },
+        "sentinel1-slc": {
+            "description": "Internal downloaded Sentinel1 SLC data"
+        },
+        "sentinel2-l2a": {
+            "description": "Internal downloaded Sentinel2 L2A data"
+        },
+        "sentinel3": {
+            "description": "Internal downloaded Sentinel3 data"
+        }
+    }
+}
