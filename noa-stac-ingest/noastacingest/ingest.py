@@ -73,7 +73,7 @@ class Ingest:
             item = {}
             match satellite:
                 case "S1":
-                    sensor = str(path.name).split("_")[:3]
+                    sensor = str(path.name).split("_")[2][:3]
                     match sensor:
                         case "GRD":
                             item = create_item_s1_grd(str(path))
