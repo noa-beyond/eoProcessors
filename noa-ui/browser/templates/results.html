@@ -385,15 +385,10 @@
                     <button id="selectAllBtn" class="btn btn-sm btn-outline-primary rounded-pill">
                         Select All
                     </button>
-
-                    <button id="deselectAllBtn" class="btn btn-sm btn-outline-primary rounded-pill">
-                        Deselect All
-                    </button>
                 </h5>
               </div>
               <div class="card-body">
                 <div id="not-available-items">
-                    <div id="not-available-items-container"></div>
                   {% for item in items.not_available_items %}
                     <div class="d-flex align-items-center mb-3 border rounded p-2">
 
@@ -408,21 +403,18 @@
 
                         {{ item.sensing_date }}
                       </span>
-                      <button class="btn btn-outline-success btn-sm rounded-circle ms-2 addToOrderBtn" title="Add to order" data-item="{{ item.name }}" data-id="{{ item.id }}">
+                      <button class="btn btn-outline-success btn-sm rounded-circle ms-2 addToOrderBtn" title="Add to order" data-item="{{ item.name }}" data-id="{{ item.id }}" data-geometry="{{ item.geometry|safe }}">
                     
                         <i class="bi bi-plus-lg"></i>
                       </button>
 
+                      <button class="btn btn-outline-success btn-sm rounded-circle ms-2 removeButton" title="Remove from order" data-id="{{ item.id }}">
+                      <i class="bi bi-dash-lg"></i>
+                        </button>
+
                 
                     </div>
                   {% endfor %}
-                  </div>
-                </div>
-                <!-- Pagination Controls -->
-                <div class="d-flex justify-content-center mt-3">
-                    <button id="prevPageBtn" class="btn btn-outline-secondary btn-sm me-2">Previous</button>
-                    <span id="paginationInfo" class="align-self-center"></span>
-                    <button id="nextPageBtn" class="btn btn-outline-secondary btn-sm ms-2">Next</button>
                 </div>
               </div>
             </div>
@@ -503,23 +495,72 @@
             const orderTableBody = document.getElementById('orderTableBody');
             const selectAllBtn = document.getElementById('selectAllBtn'); 
 
+            document.querySelectorAll(".removeButton").forEach((button) => {
+                    button.addEventListener("click", function () {
+                        const itemId = this.getAttribute("data-id");
+
+                        // Remove item from order
+                        orderItems.pop(itemId);
+
+                        // Update the "To Order" button count
+                        orderCount.textContent = orderItems.length;
+
+                        // Remove footprint from the map
+                        if (itemLayers[itemId]) {
+                            map.removeLayer(itemLayers[itemId]);
+                            delete itemLayers[itemId];
+                        }
+
+                         // Find and remove the row from the modal table
+                        const orderTableBody = document.getElementById("orderTableBody");
+                        const rows = orderTableBody.querySelectorAll("tr");
+
+                        rows.forEach((row) => {
+                            console.log(row.querySelector("td:first-child").textContent.trim());
+                            console.log(itemId);
+                            if (row.querySelector("td:first-child").textContent.trim() === itemId) {
+                                console.log("Found the row");
+                                row.remove();
+                             }
+                        });
+
+                       
+                    });
+                });
+
             document.querySelectorAll('.addToOrderBtn').forEach(button => {
                 button.addEventListener('click', function () {
             
                 const itemName = this.getAttribute('data-item'); // Get item name
                 const itemId = this.getAttribute('data-id');     // Get item ID
-                console.log("Hello")
-                console.log('Item Name:', itemName); // Debugging
-                console.log('Item ID:', itemId);     // Debugging
+                let itemGeometry = this.getAttribute('data-geometry'); // Get item geometry
+                itemGeometry = itemGeometry.replace(/'/g, '"');
 
+                // Avoid duplicate entries in the table
                 if (!orderItems.some(item => item.id === itemId)) {
-                    orderItems.push({ id: itemId, name: itemName });
+                    orderItems.push({ id: itemId, name: itemName, geometry: itemGeometry });
 
+                    // Update the "To Order" button count
                     orderCount.textContent = orderItems.length;
+                    
+                    try {
+                       
+                        const footprintLayer = L.geoJSON(JSON.parse(itemGeometry), {
+                            style: { color: 'blue', weight: 2 }
+                        }).addTo(map);  
+
+                        itemLayers[itemId] = footprintLayer; 
+                    
+
+                        console.log('Footprint added for item ${itemId}');
+                    } catch (error) {
+                        console.error('Error adding footprint:', error);
+                    }
 
                     totalOrderCount.textContent = orderCount.textContent;
 
 
+                    // Add the item to the modal table
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td style="display:none;">${itemId}</td> <!-- Hidden item ID -->
@@ -532,18 +573,22 @@
                     `;
                     orderTableBody.appendChild(row);
 
+                // Add event listener to remove the item
                 row.querySelector('.removeFromOrderBtn').addEventListener('click', function () {
                     const removeItemId = this.getAttribute('data-id');
 
+                    // Remove the item from the orderItems array
                     orderItems = orderItems.filter(item => item.id !== removeItemId);
 
+                    // Update the "To Order" button count
                     orderCount.textContent = orderItems.length;
 
+                    // Remove the row from the table
                     row.remove();
                         });
-                        }
-                    });
+                }
             });
+        });
 
             selectAllBtn.addEventListener('click', function () {
                 document.querySelectorAll('.addToOrderBtn').forEach(button => {
@@ -551,44 +596,42 @@
                 });
             });
 
-            deselectAllBtn.addEventListener('click', function () {
-                    orderItems = [];
-                    orderCount.textContent = 0;
-                    orderTableBody.innerHTML = '';
-
-                    document.querySelectorAll('.addToOrderBtn').forEach(button => {
-                        button.classList.remove('btn-danger'); 
-                        button.classList.add('btn-outline-success'); 
-                        button.innerHTML = '<i class="bi bi-plus-lg"></i>';
-                    });
-                });
-
+            // Show Modal on "To Order" Button Click
             toOrderBtn.addEventListener('click', function () {
                 const orderModal = new bootstrap.Modal(document.getElementById('orderModal'));
                 orderModal.show();
             });
 
 
+            // Place Order Button Click Event
             document.getElementById('placeOrderBtn').addEventListener('click', function () {
 
                 if (orderItems.length > 0) {
                     console.log("Here")
                     const rows = document.querySelectorAll('#orderTableBody tr');
             
+                    // Initialize an array to store the IDs
                     const itemIds = [];
 
+                    // Loop through each row and collect hidden IDs
                     rows.forEach(row => {
                         const itemId = row.querySelector('td:first-child').innerText; // Hidden ID is in the first column
                         console.log(itemId);
                         itemIds.push(itemId);
                     });
-                    
+                    // orderItems = [];
+                    // orderCount.textContent = 0;
+                    // orderTableBody.innerHTML = ''; // Clear the modal table
                     const form = document.getElementById('orderForm');
                     const itemIdsInput = document.createElement('input');
                     itemIdsInput.type = 'hidden';
                     itemIdsInput.name = 'item_ids'; // Name to match in Django view
                     itemIdsInput.value = JSON.stringify(itemIds); // Store IDs as a JSON string
-                 
+                    console.log("Step 3")
+                    console.log(itemIds)
+                    console.log("Step 3")
+                    console.log(itemIdsInput)
+                    // Append the hidden input to the form
                     form.appendChild(itemIdsInput);
 
                     const selectedIndex = document.getElementById('order_type').value;
@@ -598,6 +641,7 @@
                     indexInput.value = selectedIndex;
                     form.appendChild(indexInput);
                     
+            // Submit the form programmatically
             form.submit();
                 } else {
                     alert('No items in the basket!');
@@ -615,9 +659,11 @@
         infoIcon.addEventListener('click', function () {
             const itemId = this.dataset.itemId;
             const popup = document.getElementById(`popup-${itemId}`);
-            
             if (popup) {
+                // Show the popup
                 popup.style.display = 'block';
+
+                // Position the popup near the clicked info icon
                 const rect = this.getBoundingClientRect();
                 popup.style.top = `${rect.top + window.scrollY + 20}px`;
                 popup.style.left = `${rect.left + window.scrollX}px`;
@@ -625,6 +671,7 @@
         });
     });
 
+    // Handle close button click to hide popup
     document.querySelectorAll('.popup-close').forEach(closeButton => {
         closeButton.addEventListener('click', function () {
             const popupId = this.dataset.popupId;
@@ -635,6 +682,7 @@
         });
     });
 
+    // Close the popup when clicking outside
     document.addEventListener('click', function (e) {
         if (!e.target.classList.contains('info-btn') && !e.target.classList.contains('popup')) {
             document.querySelectorAll('.popup').forEach(popup => {
@@ -657,17 +705,24 @@
                 [userBbox[3], userBbox[2]]  // Northeast corner (max_lat, max_lon)
             ];
 
-            L.rectangle(bboxBounds, { color: 'red', weight: 2 }).addTo(map);
+            // Add the bbox rectangle in red
+            L.rectangle(bboxBounds, { color: 'red', weight: 3 }).addTo(map);
 
-            map.fitBounds(bboxBounds);
+            // Zoom to fit the bbox
+            map.fitBounds(bboxBounds, {
+                padding: [50, 50],   // Padding in pixels (prevents extreme zoom)
+                maxZoom: 16          // Prevents excessive zooming into small areas
+            });
         }
 
         const itemLayers = {}; // Store layers for toggling
 
+      // Parse items safely into a JavaScript object
     const items = {{ items|safe }}; 
 
     
 
+    // Add all item footprints to the map initially
     items.forEach(item => {
         try {
             const geometry = typeof item.geometry === 'string' ? JSON.parse(item.geometry) : item.geometry;
@@ -699,6 +754,10 @@ items.forEach(item => {
 });
 */
 
+        // Debugging the itemLayers after rendering
+        console.log("Initial item layers:", itemLayers);
+
+// Attach event listeners to toggle buttons
 document.querySelectorAll('.toggle-btn').forEach(btn => {
     btn.addEventListener('click', function () {
         const itemId = this.dataset.itemId;
@@ -709,15 +768,17 @@ document.querySelectorAll('.toggle-btn').forEach(btn => {
             return;
         }
 
+        // Check if the layer exists on the map
         if (itemLayers[itemId]) {
+            // Remove the layer from the map
             map.removeLayer(itemLayers[itemId]);
             delete itemLayers[itemId];
 
+            // Update button state and text
             this.textContent = 'Show';
             this.classList.remove('hide');
-        } 
-        
-        else {
+        } else {
+            // Add the layer to the map
             try {
                 const geometry = typeof item.geometry === 'string' ? JSON.parse(item.geometry) : item.geometry;
                 const layer = L.geoJSON(geometry).addTo(map);
@@ -734,6 +795,7 @@ document.querySelectorAll('.toggle-btn').forEach(btn => {
 });
 
 document.addEventListener('click', function (e) {
+    // Open popup
     if (e.target.classList.contains('info-btn') || e.target.closest('.info-btn')) {
         const btn = e.target.closest('.info-btn');
         const itemId = btn.dataset.itemId;
@@ -750,92 +812,6 @@ document.addEventListener('click', function (e) {
             popup.style.display = 'none';
         }
     }
-});
-
-document.addEventListener('DOMContentLoaded', function () {
-    const itemsPerPage = 10; // Number of items per page
-    let currentPage = 1;
-
-    const itemsContainer = document.getElementById('not-available-items-container');
-    const items = Array.from(itemsContainer.getElementsByClassName('not-available-item'));
-    
-    const totalPages = Math.ceil(items.length / itemsPerPage);
-
-    const prevPageBtn = document.getElementById('prevPageBtn');
-    const nextPageBtn = document.getElementById('nextPageBtn');
-    const paginationInfo = document.getElementById('paginationInfo');
-    const selectAllBtn = document.getElementById('selectAllBtn');
-    const deselectAllBtn = document.getElementById('deselectAllBtn');
-
-    let selectedItems = new Set(); // Store selected items
-
-    function updatePagination() {
-        // Hide all items first
-        items.forEach(item => item.style.display = 'none');
-
-        // Calculate start and end index for the current page
-        const start = (currentPage - 1) * itemsPerPage;
-        const end = start + itemsPerPage;
-
-        // Show only the relevant items
-        items.slice(start, end).forEach(item => item.style.display = 'flex');
-
-        // Update pagination info
-        paginationInfo.textContent = `Page ${currentPage} of ${totalPages}`;
-
-        // Enable/Disable buttons based on page position
-        prevPageBtn.disabled = currentPage === 1;
-        nextPageBtn.disabled = currentPage === totalPages;
-    }
-
-    // Handle "Select All" button for the current page
-    selectAllBtn.addEventListener('click', function () {
-        const visibleItems = items.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-        
-        visibleItems.forEach(item => {
-            const btn = item.querySelector('.addToOrderBtn');
-            const itemId = btn.getAttribute('data-id');
-
-            if (!selectedItems.has(itemId)) {
-                btn.click(); // Simulate click
-                selectedItems.add(itemId);
-            }
-        });
-    });
-
-    // Handle "Deselect All" button for the current page
-    deselectAllBtn.addEventListener('click', function () {
-        const visibleItems = items.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-        
-        visibleItems.forEach(item => {
-            const btn = item.querySelector('.addToOrderBtn');
-            const itemId = btn.getAttribute('data-id');
-
-            if (selectedItems.has(itemId)) {
-                btn.click(); // Simulate click
-                selectedItems.delete(itemId);
-            }
-        });
-    });
-
-    // Handle Previous Page Button Click
-    prevPageBtn.addEventListener('click', function () {
-        if (currentPage > 1) {
-            currentPage--;
-            updatePagination();
-        }
-    });
-
-    // Handle Next Page Button Click
-    nextPageBtn.addEventListener('click', function () {
-        if (currentPage < totalPages) {
-            currentPage++;
-            updatePagination();
-        }
-    });
-
-    // Initial Pagination Setup
-    updatePagination();
 });
 
     
