@@ -408,6 +408,10 @@
                         <i class="bi bi-plus-lg"></i>
                       </button>
 
+                      <button class="btn btn-outline-success btn-sm rounded-circle ms-2 removeButton" title="Remove from order" data-id="{{ item.id }}">
+                      <i class="bi bi-dash-lg"></i>
+                        </button>
+
                 
                     </div>
                   {% endfor %}
@@ -491,6 +495,39 @@
             const orderTableBody = document.getElementById('orderTableBody');
             const selectAllBtn = document.getElementById('selectAllBtn'); 
 
+            document.querySelectorAll(".removeButton").forEach((button) => {
+                    button.addEventListener("click", function () {
+                        const itemId = this.getAttribute("data-id");
+
+                        // Remove item from order
+                        orderItems.pop(itemId);
+
+                        // Update the "To Order" button count
+                        orderCount.textContent = orderItems.length;
+
+                        // Remove footprint from the map
+                        if (itemLayers[itemId]) {
+                            map.removeLayer(itemLayers[itemId]);
+                            delete itemLayers[itemId];
+                        }
+
+                         // Find and remove the row from the modal table
+                        const orderTableBody = document.getElementById("orderTableBody");
+                        const rows = orderTableBody.querySelectorAll("tr");
+
+                        rows.forEach((row) => {
+                            console.log(row.querySelector("td:first-child").textContent.trim());
+                            console.log(itemId);
+                            if (row.querySelector("td:first-child").textContent.trim() === itemId) {
+                                console.log("Found the row");
+                                row.remove();
+                             }
+                        });
+
+                       
+                    });
+                });
+
             document.querySelectorAll('.addToOrderBtn').forEach(button => {
                 button.addEventListener('click', function () {
             
@@ -507,10 +544,7 @@
                     orderCount.textContent = orderItems.length;
                     
                     try {
-                        console.log("Here:", itemGeometry);
-                        console.log("Here:", typeof itemGeometry);
-
-
+                       
                         const footprintLayer = L.geoJSON(JSON.parse(itemGeometry), {
                             style: { color: 'blue', weight: 2 }
                         }).addTo(map);  
