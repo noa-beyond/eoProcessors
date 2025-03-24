@@ -1,5 +1,5 @@
 click==8.1.7
-dask[complete]==2024.6.2
+dask[complete]==2025.3.0
 pyproj==3.6.1
 pyshp==2.3.1
 pytest==8.1.1
