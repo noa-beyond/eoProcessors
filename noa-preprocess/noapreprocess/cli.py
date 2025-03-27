@@ -72,8 +72,9 @@ def extract(
         simple (click.Option | bool): Just extract, no options
         tile_tree (click.Option | bool): Create Tile tree folder structure
         # TODO: raster resolutions config filter is dumb. Only checks if "in" filename.
-          If "all" is set, it also downloads quality masks. So either search by filename field,
-          or set config option of "quality_files": True
+          If "all" is set, it also extracts quality masks (#122 fixed: does not enter QI folder).
+          So either search by filename field, or set config option of "quality_files": True
+          In general, heavy refactor should occur
             "raster_resolutions": ["10m", "60m"]: all, 10m, 20m 60m, qa?
     """
     if config_file:
