@@ -16,5 +16,5 @@
     "start_date": "2017-01-01",
     "end_date": "2025-02-28",
     "max_cloud_cover": 20,
-    "day_delta": 15
+    "day_delta": 0
 }
