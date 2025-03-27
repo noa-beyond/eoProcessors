@@ -44,6 +44,8 @@ def cli(log):
         "If -s flag is used, a simple extract all is performed (bypassing config in a way). "
         "The extraction process works for Sentinel 1 and Sentinel 2 SAFE files, while for Sentinel"
         " 3, a simple extraction is performed without Tile format."
+        "Please note if not a simple extraction is selected, only raster band files are extracted,"
+        " not QI masks"
     )
 )
 @click.option("--output_path", "-o", default="", help="Output path")
