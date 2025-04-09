@@ -12,7 +12,10 @@ from pystac import Catalog
 from noastacingest import utils
 from noastacingest.db import utils as db_utils
 from noastacingest.create_item_copernicus import create_copernicus_item
-from noastacingest.create_item_beyond import create_wrf_item
+from noastacingest.create_item_beyond import (
+    create_wrf_item,
+    create_sentinel_2_monthly_median_item
+)
 
 
 logger = logging.getLogger(__name__)
@@ -60,6 +63,12 @@ class Ingest:
 
         if collection == "wrf":
             item = create_wrf_item(
+                path=path,
+                additional_providers=additional_providers
+            )
+        # TODO add parameters month, year
+        elif collection == "s2_monthly_median":
+            item = create_sentinel_2_monthly_median_item(
                 path=path,
                 additional_providers=additional_providers
             )
