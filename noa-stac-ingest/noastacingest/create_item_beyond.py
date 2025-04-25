@@ -55,7 +55,9 @@ def create_sentinel_2_monthly_median_item(
     """
     Create a STAC Item from monthly median composites.
     Gets a path and has to:
-    1) For every raster (.tif) in path
+    1) For every raster (.tif) in path / (or for every month range?)
+    1a) Which has a pattern of "name_datefrom_dateto_band.tif"
+    1b) or, if item (name, date) exists, skip that file
     2) Reads a custom metadata file inside that folder
     (we need a way to include name, dates etc like an area string (e.g. North_East_Greece)
     3) Get all bands and add them to new Item, so that
@@ -79,6 +81,7 @@ def create_sentinel_2_monthly_median_item(
     bbox = [round(v, COORD_ROUNDING) for v in antimeridian.bbox(geometry)]
 
     # id: filename or something. Should first read the file
+    # ID: S2_MM_DATEFROM_DATETO_AREANAME
     # datetime whatever you want for that item
     item = Item(
         id=metadata.scene_id,
