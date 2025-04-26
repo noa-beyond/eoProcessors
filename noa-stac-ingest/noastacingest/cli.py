@@ -95,7 +95,8 @@ def create_item_from_path(
         recursive (click.Option | bool): To ingest all (SAFE) directories under input (for multiple item creation)
         update_db (click.Option | bool): Update pgstac for new items, using upsert. It also updates the collections
     """
-
+    # TODO This is Sentinel specific. It searches for directories (SAFE or otherwise)
+    # For Beyond items, we need a generalization or a different function
     # TODO needs refactor. Updating/creating items can be done in batches, (e.g in db)
     logger.info("Cli STAC ingest using config file: %s", config)
     ingestor = ingest.Ingest(config=config)

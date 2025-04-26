@@ -66,8 +66,13 @@ class Ingest:
                 path=path,
                 additional_providers=additional_providers
             )
-        # TODO add parameters month, year
+        # TODO add parameters month, year or parse filenames
         elif collection == "s2_monthly_median":
+            # TODO to be called in other place. Single item makes sense for
+            # SAFE or in general Copernicus directories.
+            # In Beyond, for now we do not have "manifests"
+            # So, refactor following function, to crawl directory, as the internals
+            # of the function actually do
             item = create_sentinel_2_monthly_median_item(
                 path=path,
                 additional_providers=additional_providers
