@@ -4,6 +4,8 @@ Generic helper functions for creating Beyond specific STAC items
 from typing import Final
 
 from pathlib import Path
+import logging
+
 import antimeridian
 from shapely import Geometry
 from shapely.geometry import mapping as shapely_mapping
@@ -12,6 +14,9 @@ from shapely.validation import make_valid
 
 from pystac import Item, Provider
 from pystac.utils import now_to_rfc3339_str
+
+logger = logging.getLogger(__name__)
+
 
 COORD_ROUNDING: Final[int] = 6
 
@@ -64,32 +69,57 @@ def create_sentinel_2_monthly_median_item(
     5) A single item is per area and month but has separate assets
     per band.
     """
-    # TODO each beyond median product must have a metadata file from which
-    # the STAC Item will be created
-    #   area="North_West_Greece",
-    #   month=2,
-    #   year=2022,
+    # TODO choose:
+    #  each beyond median product must have a metadata file from which
+    #  the STAC Item will be created
+    #    area="North_West_Greece",
+    #    month=2,
+    #    year=2022,
+    # OR
+    #  derive this information from filenames without extra metadata files
 
-    # ensure that we have a valid geometry, fixing any antimeridian issues
-    # get the Geometry and create a shapely Geometry
+    areas = []
+    for image in path.glob("*.tif"):
+        # WARNING: pattern: a_complex_area_name_startingDate_endingDate_band.tif"
+        try:
+            assert len(str(image).split("_")) > 3
+        except AssertionError:
+            logger.error("Filename does not follow name_date_date_band.tif pattern")
+            continue
+        parts = str(image).split("_")
+        name = "_".join(parts[0:-3])
+        if name not in areas:
 
-    geometry = Geometry()
-    shapely_geometry = shapely_shape(antimeridian.fix_shape(geometry))
-    geometry = make_valid(shapely_geometry)
-    if (ga := geometry.area) > 100:
-        raise Exception(f"Area of geometry is {ga}, which is too large to be correct.")
-    bbox = [round(v, COORD_ROUNDING) for v in antimeridian.bbox(geometry)]
+            areas.append(name)
+            scene_id = "_".join(["S2", "MM", parts[-3], parts[-2], name])
+            # TODO that's not a proper way to construct a datetime
+            # However, I do not think we will be able to have a datetime which makes
+            # sense in a monthly aggregation
+            start_datetime = parts[-3] + "T00:00:00.000000Z"
+            end_datetime = parts[-2] + "T00:00:00.000000Z"
 
-    # id: filename or something. Should first read the file
-    # ID: S2_MM_DATEFROM_DATETO_AREANAME
-    # datetime whatever you want for that item
-    item = Item(
-        id=metadata.scene_id,
-        geometry=shapely_mapping(geometry),
-        bbox=bbox,
-        datetime=metadata.datetime,
-        properties={"created": now_to_rfc3339_str()},
-    )
-    item.common_metadata.providers = additional_providers
+            # ensure that we have a valid geometry, fixing any antimeridian issues
+            # get the Geometry and create a shapely Geometry
+            # TODO bbox geometry from that file
+            geometry = Geometry()
+            shapely_geometry = shapely_shape(antimeridian.fix_shape(geometry))
+            geometry = make_valid(shapely_geometry)
+            if (ga := geometry.area) > 100:
+                raise Exception(f"Area of geometry is {ga}, which is too large to be correct.")
+            bbox = [round(v, COORD_ROUNDING) for v in antimeridian.bbox(geometry)]
 
-    return item
+            # id: filename or something. Should first read the file
+            # ID: S2_MM_DATEFROM_DATETO_AREANAME
+            # datetime whatever you want for that item
+            item = Item(
+                id=scene_id,
+                geometry=shapely_mapping(geometry),
+                bbox=bbox,
+                datetime=None,
+                start_datetime=start_datetime,
+                end_datetime=end_datetime,
+                properties={"created": now_to_rfc3339_str()},
+            )
+            item.common_metadata.providers = additional_providers
+
+            return item
