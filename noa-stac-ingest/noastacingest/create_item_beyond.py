@@ -78,7 +78,7 @@ def create_sentinel_2_monthly_median_item(
     # OR
     #  derive this information from filenames without extra metadata files
 
-    areas = []
+    processed = []
     for image in path.glob("*.tif"):
         # WARNING: pattern: a_complex_area_name_startingDate_endingDate_band.tif"
         try:
@@ -87,11 +87,14 @@ def create_sentinel_2_monthly_median_item(
             logger.error("Filename does not follow name_date_date_band.tif pattern")
             continue
         parts = str(image).split("_")
-        name = "_".join(parts[0:-3])
-        if name not in areas:
 
-            areas.append(name)
-            scene_id = "_".join(["S2", "MM", parts[-3], parts[-2], name])
+        # get the "an_area_startDate_endDate" part, exclude "..._band.tif"
+        area = "_".join(parts[0:-3])
+        area_dates = "_".join(parts[0:-1])
+        if area_dates not in processed:
+            processed.append(area_dates)
+            scene_id = "_".join(["S2", "MM", parts[-3], parts[-2], area])
+
             # TODO that's not a proper way to construct a datetime
             # However, I do not think we will be able to have a datetime which makes
             # sense in a monthly aggregation
@@ -108,9 +111,7 @@ def create_sentinel_2_monthly_median_item(
                 raise Exception(f"Area of geometry is {ga}, which is too large to be correct.")
             bbox = [round(v, COORD_ROUNDING) for v in antimeridian.bbox(geometry)]
 
-            # id: filename or something. Should first read the file
             # ID: S2_MM_DATEFROM_DATETO_AREANAME
-            # datetime whatever you want for that item
             item = Item(
                 id=scene_id,
                 geometry=shapely_mapping(geometry),
