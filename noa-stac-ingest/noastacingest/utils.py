@@ -32,7 +32,7 @@ def get_additional_providers(collection: str) -> list[Provider]:
     """
 
     provider_roles = [ProviderRole.HOST]
-    if collection == "wrf":
+    if collection == "wrf" or collection == "s2_monthly_median":
         provider_roles.append(ProviderRole.PRODUCER)
 
     noa_provider = Provider(
@@ -48,3 +48,10 @@ def get_raster_bbox(tif_path):
     with rasterio.open(tif_path) as dataset:
         bounds = dataset.bounds
         return bounds.left, bounds.bottom, bounds.right, bounds.top
+
+
+def get_raster_size_shape(tif_path):
+    with rasterio.open(tif_path) as dataset:
+        width = dataset.width
+        height = dataset.height
+    return width, height
