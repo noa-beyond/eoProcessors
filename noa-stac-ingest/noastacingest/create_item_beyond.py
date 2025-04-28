@@ -7,13 +7,18 @@ from pathlib import Path
 import logging
 
 import antimeridian
+
 from shapely import Geometry
 from shapely.geometry import mapping as shapely_mapping
 from shapely.geometry import shape as shapely_shape
+from shapely.geometry import box as shapely_box
 from shapely.validation import make_valid
 
 from pystac import Item, Provider
 from pystac.utils import now_to_rfc3339_str
+
+from noastacingest.utils import get_raster_bbox
+
 
 logger = logging.getLogger(__name__)
 
@@ -102,9 +107,7 @@ def create_sentinel_2_monthly_median_item(
             end_datetime = parts[-2] + "T00:00:00.000000Z"
 
             # ensure that we have a valid geometry, fixing any antimeridian issues
-            # get the Geometry and create a shapely Geometry
-            # TODO bbox geometry from that file
-            geometry = Geometry()
+            geometry = shapely_box(get_raster_bbox(image))
             shapely_geometry = shapely_shape(antimeridian.fix_shape(geometry))
             geometry = make_valid(shapely_geometry)
             if (ga := geometry.area) > 100:

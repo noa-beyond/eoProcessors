@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 from kafka.errors import NoBrokersAvailable
 
+import rasterio
 from pystac import Provider, ProviderRole
 
 from noastacingest.messaging.kafka_producer import KafkaProducer
@@ -41,3 +42,9 @@ def get_additional_providers(collection: str) -> list[Provider]:
         url="https://beyond-eocenter.eu/",
     )
     return [noa_provider]
+
+
+def get_raster_bbox(tif_path):
+    with rasterio.open(tif_path) as dataset:
+        bounds = dataset.bounds
+        return bounds.left, bounds.bottom, bounds.right, bounds.top
