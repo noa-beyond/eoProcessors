@@ -190,8 +190,10 @@ def create_sentinel_2_monthly_median_item(
 def image_asset_from_similar_path(
     source_asset_href: Path,
     band: str,
+    # TODO this proj box
     proj_bbox: list[float],
     media_type: Optional[str],
+    # TODO these offsets
     boa_add_offsets: Optional[dict[str, int]] = None,
 ) -> tuple[str, Asset]:
     band_asset_href = ''.join(
