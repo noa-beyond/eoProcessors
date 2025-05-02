@@ -1,6 +1,7 @@
 kafka-python-ng==2.2.3
 pypgstac[psycopg]
-rasterio==1.4.2
+rasterio==1.4.3
+rio-stac==0.11.0
 stactools==0.5.3
 stactools-sentinel1==0.8.0
 stactools-sentinel2==0.6.4
