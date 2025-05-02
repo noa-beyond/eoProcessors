@@ -97,6 +97,9 @@ def main(config_file):
             AsIsLayoutStrategy(),
         )
         catalog.save()
+        collection_path_str = str(config["collection_path"] + collection_id + "/collection.json")
+
+        print(f"Created Collection {collection_id} json at {collection_path_str}")
 
 
 if __name__ == "__main__":  # pragma: no cover
