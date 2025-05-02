@@ -14,7 +14,7 @@ from noastacingest.db import utils as db_utils
 from noastacingest.create_item_copernicus import create_copernicus_item
 from noastacingest.create_item_beyond import (
     create_wrf_item,
-    create_sentinel_2_monthly_median_item
+    create_sentinel_2_monthly_median_items
 )
 
 
@@ -44,6 +44,70 @@ class Ingest:
         """Get config"""
         return self._config
 
+    def ingest_directory(
+        self,
+        input_path: Path,
+        collection: str | None,
+        update_db: bool
+    ) -> bool:
+        # TODO create noa-product-id
+        """
+        Create a new Beyond STAC Item.
+        Catalog and Collection must be present (paths defined in config)
+        """
+        # Additional provider for the item. Beyond host some Copernicus
+        # data but also produces new products.
+        additional_providers = utils.get_additional_providers(collection=collection)
+
+        # TODO add parameters month, year or parse filenames?
+        if collection == "s2_monthly_median":
+            # TODO to be called in other place. Single item makes sense for
+            # SAFE or in general Copernicus directories.
+            # In Beyond, for now we do not have "manifests"
+            # So, refactor following function, to crawl directory, as the internals
+            # of the function actually do
+            created_items = create_sentinel_2_monthly_median_items(
+                path=input_path,
+                additional_providers=additional_providers
+            )
+        print("Created Item ids:")
+        for item in created_items:
+            print(item.id)
+        for item in created_items:
+            item_path = (
+                self._config.get("collection_path") + collection + "/items/" + item.id
+            )
+            # TODO throw error if collection or catalog are not in path
+            json_file_path = str(Path(item_path, item.id + ".json"))
+            print(json_file_path)
+            # Catalog and Collections must exist
+            item.set_root(self._catalog)
+            collection_instance = self._catalog.get_child(collection)
+            item.set_collection(collection_instance)
+            # TODO most providers do not have a direct collection/items relation
+            # Rather, they provide an items link, where all items are present
+            # e.g. https://earth-search.aws.element84.com/v1/
+            # collections/sentinel-2-l2a/items
+            # Like so, I do not know if an "extent" property is needed.
+            # If it is, update it:
+            collection_instance.update_extent_from_items()
+            collection_instance.normalize_and_save(
+                self._config.get("collection_path") + collection + "/"
+            )
+            if update_db:
+                db_utils.load_stac_items_to_pgstac(
+                    [collection_instance.to_dict()], collection=True
+                )
+
+            item.set_self_href(json_file_path)
+            item.save_object(include_self_link=True)
+            if update_db:
+                db_utils.load_stac_items_to_pgstac(
+                    [collection_instance.to_dict()], True
+                )
+                db_utils.load_stac_items_to_pgstac([item.to_dict()])
+            return True
+
     def single_item(
         self,
         path: Path,
@@ -63,17 +127,6 @@ class Ingest:
 
         if collection == "wrf":
             item = create_wrf_item(
-                path=path,
-                additional_providers=additional_providers
-            )
-        # TODO add parameters month, year or parse filenames
-        elif collection == "s2_monthly_median":
-            # TODO to be called in other place. Single item makes sense for
-            # SAFE or in general Copernicus directories.
-            # In Beyond, for now we do not have "manifests"
-            # So, refactor following function, to crawl directory, as the internals
-            # of the function actually do
-            item = create_sentinel_2_monthly_median_item(
                 path=path,
                 additional_providers=additional_providers
             )

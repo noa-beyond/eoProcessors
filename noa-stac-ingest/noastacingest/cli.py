@@ -64,7 +64,9 @@ def cli(log):
     )
 
 
-@cli.command(help="Create STAC Item from SAFE path")
+# TODO refactor so function name and command to show that it is
+# CDSE specific
+@cli.command(help="Create STAC Item from S1-S2 SAFE paths")
 @click.argument("input_path", required=True)
 @click.argument("config", required=True)
 @click.option("--collection", "-c", help="Collection for item(s) to be child of")
@@ -110,6 +112,55 @@ def create_item_from_path(
     else:
         click.echo(f"Ingesting single item from {input_path}\n")
         ingestor.single_item(Path(input_path), collection, update_db)
+
+
+@cli.command(help="Create STAC Item(s) from a directory. Only supports Beyond products")
+@click.argument("input_path", required=True)
+@click.argument("config", required=True)
+@click.option("--collection", "-c", help="Collection for item(s) to be child of")
+@click.option(
+    "--recursive", "-r", is_flag=True, help="Ingest all directories under path"
+)
+@click.option(
+    "--update_db",
+    "-udb",
+    is_flag=True,
+    help="Update STAC db, ingesting(upsert) new items",
+)
+def ingest_from_path(
+    input_path: Argument | str,
+    config: Argument | str,
+    collection: Option | str | None,
+    recursive: Option | bool,
+    update_db: Option | bool,
+) -> None:
+    """
+    Instantiate Ingest Class and call parse directory for items
+
+    Parameters:
+        input (click.Argument | str): Input path
+        config_file (click.Argument | str) - optional: config json file
+            selecting file types etc
+        collection (click.Option | str | None): Collection id of which the new Item(s) will be an Item of
+        recursive (click.Option | bool): Walk path to ingest all items from subdirs
+        update_db (click.Option | bool): Update pgstac for new items, using upsert. It also updates the collections
+    """
+    # TODO Beyond items specific. We need a generalization for all (if possible)
+    # TODO needs refactor. Updating/creating items can be done in batches, (e.g in db)
+    logger.info("Cli STAC ingest using config file: %s", config)
+    ingestor = ingest.Ingest(config=config)
+
+    if recursive:
+        click.echo(f"Ingesting items recursively from path {input_path}\n")
+        for single_directory in [f.path for f in os.scandir(input_path) if f.is_dir()]:
+            ingest_from_path(
+                input_path=single_directory,
+                config=config,
+                collection=collection,
+                recursive=True,
+                update_db=update_db
+            )
+    ingestor.ingest_directory(Path(input_path), collection, update_db)
 
 
 @cli.command(
