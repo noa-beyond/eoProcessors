@@ -5,6 +5,7 @@ from typing import Final, Optional, Pattern
 
 # import re
 from pathlib import Path
+from datetime import datetime, timezone
 import logging
 
 import antimeridian
@@ -23,17 +24,17 @@ from pystac.utils import now_to_rfc3339_str
 
 # from stactools.core.projection import transform_from_bbox
 # from stactools.sentinel2.stac import band_from_band_id
-# from stactools.sentinel2.constants import (
+from stactools.sentinel2.constants import (
 #     SENTINEL_INSTRUMENTS,
 #     SENTINEL_CONSTELLATION,
-#     BANDS_TO_ASSET_NAME,
-#     UNSUFFIXED_BAND_RESOLUTION,
-#     ASSET_TO_TITLE
-# )
+    BANDS_TO_ASSET_NAME,
+    UNSUFFIXED_BAND_RESOLUTION,
+    ASSET_TO_TITLE
+)
 # from noastacingest.utils import get_raster_bbox, get_raster_size_shape
 
-
-from rio_stac.stac import create_stac_item
+import rasterio
+# from rio_stac.stac import create_stac_item
 
 logger = logging.getLogger(__name__)
 
@@ -76,10 +77,10 @@ def create_wrf_item(
     return item
 
 
-def create_sentinel_2_monthly_median_item(
+def create_sentinel_2_monthly_median_items(
     path: Path,
     additional_providers: list[Provider]
-):
+) -> set[Item]:
     """
     Create a STAC Item from S2 monthly median composites.
     Code is based on how Sentinel 2 stactools creates Items.
@@ -102,7 +103,7 @@ def create_sentinel_2_monthly_median_item(
     # OR
     #  derive this information from filenames without extra metadata files
     processed = set()
-    created_items_ids = set()
+    created_items = set()
 
     for image in path.glob("*.tif"):
         parts = image.stem.split("_")
@@ -120,25 +121,81 @@ def create_sentinel_2_monthly_median_item(
             area = "_".join(parts[:-3])
             scene_id = "_".join(["S2", "MM", parts[-3], parts[-2], area])
 
-            bands = []
-            for band_file in path.glob(area_dates + "*.tif"):
-                bands.append(band_file)
+            with rasterio.open(image) as src:
+                bounds = src.bounds
+                bbox = [bounds.left, bounds.bottom, bounds.right, bounds.top]
+                geometry = {
+                    "type": "Polygon",
+                    "coordinates": [[
+                        [bounds.left, bounds.bottom],
+                        [bounds.left, bounds.top],
+                        [bounds.right, bounds.top],
+                        [bounds.right, bounds.bottom],
+                        [bounds.left, bounds.bottom]
+                    ]]
+                }
+            start_datetime = datetime.strptime(parts[-3], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            end_datetime = datetime.strptime(parts[-2], "%Y-%m-%d").replace(tzinfo=timezone.utc)
 
-            # TODO check what happens with start/end date. Maybe check extension
-            item = create_stac_item(
-                source=bands,
+            # Create item
+            # TODO add stac extensions at beginning of file
+            item = Item(
                 id=scene_id,
-                input_datetime=parts[-3] + "T00:00:00.000000Z",
-                with_proj=True,
-                with_eo=True,
-                asset_media_type=pystac.MediaType.GEOTIFF,
-                asset_roles=["data", "aggregation"],
-                with_raster=True,
+                start_datetime=start_datetime,
+                end_datetime=end_datetime,
+                geometry=geometry,
+                bbox=bbox,
+                datetime=None,
+                properties={"created": now_to_rfc3339_str()},
                 collection="s2_monthly_median"
             )
             item.common_metadata.providers = additional_providers
-            created_items_ids.add(scene_id)
-    return created_items_ids
+
+            # Add each band as an asset
+            band_paths = {}
+            for band_file in path.glob(area_dates + "*.tif"):
+                band = band_file.name.rsplit("_", maxsplit=1)[-1].split(".")[0]
+                band_paths[band] = band_file
+            for band_name, path in band_paths.items():
+                if not path.exists():
+                    logger.warning("Band file %s does not exist; skipping.", path)
+                    continue
+                # TODO not needed
+                resolution = highest_asset_res(band)
+                asset_res = resolution
+                if asset_res == highest_asset_res(band):
+                    asset_id = BANDS_TO_ASSET_NAME[band]
+                    band_gsd = asset_res
+
+                asset = Asset(
+                    href=str(path.resolve()),
+                    media_type=pystac.MediaType.GEOTIFF,
+                    roles=["data", "aggregation"],
+                    title=f"Band {band_name}",
+                    title=f"{ASSET_TO_TITLE[asset_id.split('_')[0]]} - {asset_res}m",
+                )
+                item.add_asset(band_name, asset)
+            created_items.add(item)
+
+            # bands = []
+            # for band_file in path.glob(area_dates + "*.tif"):
+            #     bands.append(str(band_file))
+
+            # # TODO check what happens with start/end date. Maybe check extension
+            # item = create_stac_item(
+            #     source=bands,
+            #     id=scene_id,
+            #     input_datetime=parts[-3] + "T00:00:00.000000Z",
+            #     with_proj=True,
+            #     with_eo=True,
+            #     asset_media_type=pystac.MediaType.GEOTIFF,
+            #     asset_roles=["data", "aggregation"],
+            #     with_raster=True,
+            #     collection="s2_monthly_median"
+            # )
+            # item.common_metadata.providers = additional_providers
+            # created_items_ids.add(scene_id)
+    return created_items
 
 
 #                 for area_band_suffix in path.glob(area_dates + "*"):
@@ -280,8 +337,8 @@ def create_sentinel_2_monthly_median_item(
 #     return asset_id, asset
 
 
-# def highest_asset_res(band_id: str) -> int:
-#     return UNSUFFIXED_BAND_RESOLUTION[BANDS_TO_ASSET_NAME[band_id]]
+def highest_asset_res(band_id: str) -> int:
+    return UNSUFFIXED_BAND_RESOLUTION[BANDS_TO_ASSET_NAME[band_id]]
 
 
 # def _get_proj_box(image):
