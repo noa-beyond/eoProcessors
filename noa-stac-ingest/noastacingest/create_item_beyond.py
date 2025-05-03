@@ -163,9 +163,8 @@ def create_sentinel_2_monthly_median_items(
                 # TODO not needed
                 resolution = highest_asset_res(band)
                 asset_res = resolution
-                if asset_res == highest_asset_res(band):
-                    asset_id = BANDS_TO_ASSET_NAME[band]
-                    band_gsd = asset_res
+                asset_id = BANDS_TO_ASSET_NAME[band]
+                band_gsd = asset_res
 
                 asset = Asset(
                     href=str(path.resolve()),
