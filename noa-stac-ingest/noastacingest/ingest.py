@@ -7,7 +7,7 @@ from pathlib import Path
 import json
 import logging
 
-from pystac import Catalog
+from pystac import Catalog, Item
 
 from noastacingest import utils
 from noastacingest.db import utils as db_utils
@@ -44,6 +44,46 @@ class Ingest:
         """Get config"""
         return self._config
 
+    def _save_item_add_to_collection(
+        self,
+        item: Item,
+        collection: str,
+        update_db: bool
+    ):
+        item_path = (
+            self._config.get("collection_path") + collection + "/items/" + item.id
+        )
+        # TODO throw error if collection or catalog are not in path
+        json_file_path = str(Path(item_path, item.id + ".json"))
+        print(json_file_path)
+        # Catalog and Collections must exist
+        item.set_root(self._catalog)
+        collection_instance = self._catalog.get_child(collection)
+        item.set_collection(collection_instance)
+        # TODO most providers do not have a direct collection/items relation
+        # Rather, they provide an items link, where all items are present
+        # e.g. https://earth-search.aws.element84.com/v1/
+        # collections/sentinel-2-l2a/items
+        # Like so, I do not know if an "extent" property is needed.
+        # If it is, update it:
+        collection_instance.update_extent_from_items()
+        collection_instance.normalize_and_save(
+            self._config.get("collection_path") + collection + "/"
+        )
+        if update_db:
+            db_utils.load_stac_items_to_pgstac(
+                [collection_instance.to_dict()], collection=True
+            )
+
+        item.set_self_href(json_file_path)
+        item.save_object(include_self_link=True)
+        if update_db:
+            db_utils.load_stac_items_to_pgstac(
+                [collection_instance.to_dict()], True
+            )
+            db_utils.load_stac_items_to_pgstac([item.to_dict()])
+        return True
+
     def ingest_directory(
         self,
         input_path: Path,
@@ -60,6 +100,7 @@ class Ingest:
         additional_providers = utils.get_additional_providers(collection=collection)
 
         # TODO add parameters month, year or parse filenames?
+        created_items = set()
         if collection == "s2_monthly_median":
             # TODO to be called in other place. Single item makes sense for
             # SAFE or in general Copernicus directories.
@@ -72,41 +113,14 @@ class Ingest:
             )
         print("Created Item ids:")
         for item in created_items:
-            print(item.id)
-        for item in created_items:
-            item_path = (
-                self._config.get("collection_path") + collection + "/items/" + item.id
+            result = self._save_item_add_to_collection(
+                item=item,
+                collection=collection,
+                update_db=update_db
             )
-            # TODO throw error if collection or catalog are not in path
-            json_file_path = str(Path(item_path, item.id + ".json"))
-            print(json_file_path)
-            # Catalog and Collections must exist
-            item.set_root(self._catalog)
-            collection_instance = self._catalog.get_child(collection)
-            item.set_collection(collection_instance)
-            # TODO most providers do not have a direct collection/items relation
-            # Rather, they provide an items link, where all items are present
-            # e.g. https://earth-search.aws.element84.com/v1/
-            # collections/sentinel-2-l2a/items
-            # Like so, I do not know if an "extent" property is needed.
-            # If it is, update it:
-            collection_instance.update_extent_from_items()
-            collection_instance.normalize_and_save(
-                self._config.get("collection_path") + collection + "/"
-            )
-            if update_db:
-                db_utils.load_stac_items_to_pgstac(
-                    [collection_instance.to_dict()], collection=True
-                )
-
-            item.set_self_href(json_file_path)
-            item.save_object(include_self_link=True)
-            if update_db:
-                db_utils.load_stac_items_to_pgstac(
-                    [collection_instance.to_dict()], True
-                )
-                db_utils.load_stac_items_to_pgstac([item.to_dict()])
-            return True
+            if result:
+                print(item.id)
+                # append to return list??
 
     def single_item(
         self,
@@ -140,48 +154,15 @@ class Ingest:
             logger.error("Could not create STAC Item")
             return False
         item.properties["noa_product_id"] = noa_product_id
-        item_path = (
-            self._config.get("collection_path") + collection + "/items/" + item.id
+        result = self._save_item_add_to_collection(
+            item=item,
+            collection=collection,
+            update_db=update_db
         )
-        # TODO throw error if collection or catalog are not in path
-        json_file_path = str(Path(item_path, item.id + ".json"))
-        print(json_file_path)
-
-        # TODO?? add to item??:
-        # feature_collection = {
-        #     "type": "FeatureCollection",
-        #     "features": [
-        #          item.to_dict() for item in collection_instance.get_all_items()
-        #     ]
-        # }
-
-        # Catalog and Collections must exist
-        item.set_root(self._catalog)
-        collection_instance = self._catalog.get_child(collection)
-        item.set_collection(collection_instance)
-        # TODO most providers do not have a direct collection/items relation
-        # Rather, they provide an items link, where all items are present
-        # e.g. https://earth-search.aws.element84.com/v1/
-        # collections/sentinel-2-l2a/items
-        # Like so, I do not know if an "extent" property is needed.
-        # If it is, update it:
-        collection_instance.update_extent_from_items()
-        collection_instance.normalize_and_save(
-            self._config.get("collection_path") + collection + "/"
-        )
-        if update_db:
-            db_utils.load_stac_items_to_pgstac(
-                [collection_instance.to_dict()], collection=True
-            )
-
-        item.set_self_href(json_file_path)
-        item.save_object(include_self_link=True)
-        if update_db:
-            db_utils.load_stac_items_to_pgstac(
-                [collection_instance.to_dict()], True
-            )
-            db_utils.load_stac_items_to_pgstac([item.to_dict()])
-        return True
+        if result:
+            print(f"Created: {item.id}")
+            return result
+            # append to return list??
 
     def from_uuid_db_list(self, uuid_list, collection, db_ingest):
         """Get from products table the paths to ingest"""
