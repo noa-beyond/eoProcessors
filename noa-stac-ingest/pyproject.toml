@@ -15,6 +15,7 @@ dependencies = [
     "build>=1.1.1",
     "click>=8.1.7",
     "kafka-python-ng==2.2.3",
+    "rasterio==1.4.3",
     "pypgstac>=0.9.1",
     "pypgstac[psycopg]",
     "stactools>=0.5.3",

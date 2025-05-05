@@ -104,7 +104,7 @@ def mask_and_complete(
     masked_cube_full = s2_cube.mask(cloud_mask, replacement=None)
     # Keep only AOI
     masked_cube = masked_cube_full.filter_spatial(shape)
-
+    # TODO print count of images after filtering for QA metrics
     for band in bands:
         for retry in range(MAX_RETRIES):
             try:

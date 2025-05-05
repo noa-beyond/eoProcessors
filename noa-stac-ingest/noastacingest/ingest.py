@@ -7,19 +7,17 @@ from pathlib import Path
 import json
 import logging
 
-from stactools.sentinel1.grd.stac import create_item as create_item_s1_grd
-from stactools.sentinel1.rtc.stac import create_item as create_item_s1_rtc
-from stactools.sentinel1.slc.stac import create_item as create_item_s1_slc
-from stactools.sentinel2.commands import create_item as create_item_s2
-from stactools.sentinel3.commands import create_item as create_item_s3
-
-from pystac import Catalog, Provider, ProviderRole
+from pystac import Catalog, Item
 
 from noastacingest import utils
 from noastacingest.db import utils as db_utils
+from noastacingest.create_item_copernicus import create_copernicus_item
+from noastacingest.create_item_beyond import (
+    create_wrf_item,
+    create_sentinel_2_monthly_median_items
+)
 
 
-FILETYPES = ("SAFE", "SEN3")
 logger = logging.getLogger(__name__)
 
 
@@ -46,101 +44,125 @@ class Ingest:
         """Get config"""
         return self._config
 
+    def _save_item_add_to_collection(
+        self,
+        item: Item,
+        collection: str,
+        update_db: bool
+    ):
+        item_path = (
+            self._config.get("collection_path") + collection + "/items/" + item.id
+        )
+        # TODO throw error if collection or catalog are not in path
+        json_file_path = str(Path(item_path, item.id + ".json"))
+        # Catalog and Collections must exist
+        item.set_root(self._catalog)
+        collection_instance = self._catalog.get_child(collection)
+        item.set_collection(collection_instance)
+        # TODO most providers do not have a direct collection/items relation
+        # Rather, they provide an items link, where all items are present
+        # e.g. https://earth-search.aws.element84.com/v1/
+        # collections/sentinel-2-l2a/items
+        # Like so, I do not know if an "extent" property is needed.
+        # If it is, update it:
+        # TODO fix spatial and temporal extent when new item is added
+        collection_instance.update_extent_from_items()
+        collection_instance.normalize_and_save(
+            self._config.get("collection_path") + collection + "/"
+        )
+        if update_db:
+            db_utils.load_stac_items_to_pgstac(
+                [collection_instance.to_dict()], collection=True
+            )
+
+        item.set_self_href(json_file_path)
+        item.save_object(include_self_link=True)
+        if update_db:
+            db_utils.load_stac_items_to_pgstac(
+                [collection_instance.to_dict()], True
+            )
+            db_utils.load_stac_items_to_pgstac([item.to_dict()])
+        return True
+
+    def ingest_directory(
+        self,
+        input_path: Path,
+        collection: str | None,
+        update_db: bool
+    ) -> bool:
+        # TODO create noa-product-id
+        """
+        Create a new Beyond STAC Item.
+        Catalog and Collection must be present (paths defined in config)
+        """
+        # Additional provider for the item. Beyond host some Copernicus
+        # data but also produces new products.
+        additional_providers = utils.get_additional_providers(collection=collection)
+
+        # TODO add parameters month, year or parse filenames?
+        created_items = set()
+        if collection == "s2_monthly_median":
+            # TODO to be called in other place. Single item makes sense for
+            # SAFE or in general Copernicus directories.
+            # In Beyond, for now we do not have "manifests"
+            # So, refactor following function, to crawl directory, as the internals
+            # of the function actually do
+            created_items = create_sentinel_2_monthly_median_items(
+                path=input_path,
+                additional_providers=additional_providers
+            )
+        print("Created Item ids:")
+        for item in created_items:
+            result = self._save_item_add_to_collection(
+                item=item,
+                collection=collection,
+                update_db=update_db
+            )
+            if result:
+                print(item.id)
+                # append to return list??
+
     def single_item(
         self,
         path: Path,
         collection: str | None,
         update_db: bool,
         noa_product_id: str | None = None,
-    ):
+    ) -> bool:
         """
-        Just an item
+        Create a new STAC Item, either by ingestion of existing data or new ones.
+        Copernicus products come in directories (with either SAFE or SEN3 extensions)
+        Catalog and Collection must be present (paths defined in config)
         """
-        # TODO: provide more provider roles when "processor"
-        noa_provider = Provider(
-            name="NOA-Beyond",
-            description="""
-                National Observatory of Athens - 'Beyond' center of EO Research
-            """,
-            roles=ProviderRole.HOST,
-            url="https://beyond-eocenter.eu/",
-        )
-        additional_providers = [noa_provider]
+        # Additional provider for the item. Beyond host some Copernicus
+        # data but also produces new products.
+        item = {}
+        additional_providers = utils.get_additional_providers(collection=collection)
 
-        if path.name.endswith(FILETYPES):
-            platform = str(path.name).split("_", maxsplit=1)[0]
-            satellite = platform[:2]
-            item = {}
-            match satellite:
-                case "S1":
-                    sensor = str(path.name).split("_")[2][:3]
-                    match sensor:
-                        case "GRD":
-                            item = create_item_s1_grd(str(path))
-                            if not collection:
-                                collection = "sentinel1-grd"
-                        case "RTC":
-                            item = create_item_s1_rtc(
-                                granule_href=str(path),
-                                additional_providers=additional_providers,
-                            )
-                            if not collection:
-                                collection = "sentinel1-rtc"
-                        case "SLC":
-                            item = create_item_s1_slc(str(path))
-                            if not collection:
-                                collection = "sentinel1-slc"
-                case "S2":
-                    item = create_item_s2(
-                        granule_href=str(path),
-                        additional_providers=additional_providers,
-                    )
-                    if not collection:
-                        collection = "sentinel2-l2a"
-                case "S3":
-                    item = create_item_s3(str(path))
-                    if not collection:
-                        collection = "sentinel3"
-            item.properties["noa_product_id"] = noa_product_id
-            item_path = (
-                self._config.get("collection_path") + collection + "/items/" + item.id
+        if collection == "wrf":
+            item = create_wrf_item(
+                path=path,
+                additional_providers=additional_providers
             )
-            json_file_path = str(Path(item_path, item.id + ".json"))
-            print(json_file_path)
-
-            # TODO add to item:
-            # feature_collection = {
-            #     "type": "FeatureCollection",
-            #     "features": [
-            #          item.to_dict() for item in collection_instance.get_all_items()
-            #     ]
-            # }
-            if collection:
-                item.set_root(self._catalog)
-                collection_instance = self._catalog.get_child(collection)
-                item.set_collection(collection_instance)
-                # TODO most providers do not have a direct collection/items relation
-                # Rather, they provide an items link, where all items are present
-                # e.g. https://earth-search.aws.element84.com/v1/
-                # collections/sentinel-2-l2a/items
-                # Like so, I do not know if an "extent" property is needed.
-                # If it is, update it:
-                collection_instance.update_extent_from_items()
-                collection_instance.normalize_and_save(
-                    self._config.get("collection_path") + collection + "/"
-                )
-                if update_db:
-                    db_utils.load_stac_items_to_pgstac(
-                        [collection_instance.to_dict()], collection=True
-                    )
-
-            item.set_self_href(json_file_path)
-            item.save_object(include_self_link=True)
-            if update_db:
-                db_utils.load_stac_items_to_pgstac(
-                    [collection_instance.to_dict()], True
-                )
-                db_utils.load_stac_items_to_pgstac([item.to_dict()])
+        else:
+            item = create_copernicus_item(
+                path=path,
+                collection=collection,
+                additional_providers=additional_providers
+            )
+        if not item:
+            logger.error("Could not create STAC Item")
+            return False
+        item.properties["noa_product_id"] = noa_product_id
+        result = self._save_item_add_to_collection(
+            item=item,
+            collection=collection,
+            update_db=update_db
+        )
+        if result:
+            print(f"Created: {item.id}")
+            return result
+            # append to return list??
 
     def from_uuid_db_list(self, uuid_list, collection, db_ingest):
         """Get from products table the paths to ingest"""
@@ -168,12 +190,18 @@ class Ingest:
             item_path = item.get("path")
             # For production the two options should be "None, True"
             try:
-                self.single_item(
+                result = self.single_item(
                     Path(item_path), collection, db_ingest, single_uuid
                 )
-                ingested_items.append(str(single_uuid))
-                logger.debug("Ingested item from %s", item_path)
-            except RuntimeWarning as e:
+                if result:
+                    ingested_items.append(str(single_uuid))
+                    logger.debug("Ingested item from %s", item_path)
+                else:
+                    raise RuntimeError(
+                        "Could not create the STAC Item",
+                        single_uuid
+                    )
+            except RuntimeError as e:
                 logger.error(
                     "Item could not be ingested to pgSTAC: %s", str(single_uuid)
                 )

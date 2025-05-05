@@ -24,6 +24,7 @@ def main(config_file):
     catalog.normalize_hrefs(config["catalog_path"])
     catalog.make_all_asset_hrefs_absolute()
     catalog.save(CatalogType.ABSOLUTE_PUBLISHED, config["catalog_path"])
+    print(f"Created Catalog json at {config['catalog_path']}")
 
 
 if __name__ == "__main__":  # pragma: no cover
