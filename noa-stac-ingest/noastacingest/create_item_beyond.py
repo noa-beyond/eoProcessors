@@ -1,6 +1,7 @@
 """
 Generic helper functions for creating Beyond specific STAC items
 """
+
 from typing import Final
 
 from pathlib import Path
@@ -26,7 +27,7 @@ from stactools.sentinel2.stac import band_from_band_id
 from stactools.sentinel2.constants import (
     BANDS_TO_ASSET_NAME,
     UNSUFFIXED_BAND_RESOLUTION,
-    ASSET_TO_TITLE
+    ASSET_TO_TITLE,
 )
 
 import rasterio
@@ -36,10 +37,7 @@ logger = logging.getLogger(__name__)
 COORD_ROUNDING: Final[int] = 6
 
 
-def create_wrf_item(
-    path: Path,
-    additional_providers: list[Provider]
-):
+def create_wrf_item(path: Path, additional_providers: list[Provider]):
     """
     Weather Research and Forecasting Beyond data.
     STAC Item creation based on Sentinel2 stactools item creation
@@ -69,8 +67,7 @@ def create_wrf_item(
 
 
 def create_sentinel_2_monthly_median_items(
-    path: Path,
-    additional_providers: list[Provider]
+    path: Path, additional_providers: list[Provider]
 ) -> set[Item]:
     """
     Create a STAC Item from S2 monthly median composites.
@@ -101,7 +98,8 @@ def create_sentinel_2_monthly_median_items(
 
         if len(parts) <= 3:
             logger.error(
-                "Invalid filename pattern: %s (expected name_date_date_band.tif)", image.name
+                "Invalid filename pattern: %s (expected name_date_date_band.tif)",
+                image.name,
             )
             continue
 
@@ -117,20 +115,26 @@ def create_sentinel_2_monthly_median_items(
                 bbox = [bounds.left, bounds.bottom, bounds.right, bounds.top]
                 geometry = {
                     "type": "Polygon",
-                    "coordinates": [[
-                        [bounds.left, bounds.bottom],
-                        [bounds.left, bounds.top],
-                        [bounds.right, bounds.top],
-                        [bounds.right, bounds.bottom],
-                        [bounds.left, bounds.bottom]
-                    ]]
+                    "coordinates": [
+                        [
+                            [bounds.left, bounds.bottom],
+                            [bounds.left, bounds.top],
+                            [bounds.right, bounds.top],
+                            [bounds.right, bounds.bottom],
+                            [bounds.left, bounds.bottom],
+                        ]
+                    ],
                 }
                 crs = src.crs.to_epsg()
                 transform = src.transform
                 shape = [src.height, src.width]
 
-            start_datetime = datetime.strptime(parts[-3], "%Y-%m-%d").replace(tzinfo=timezone.utc)
-            end_datetime = datetime.strptime(parts[-2], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            start_datetime = datetime.strptime(parts[-3], "%Y-%m-%d").replace(
+                tzinfo=timezone.utc
+            )
+            end_datetime = datetime.strptime(parts[-2], "%Y-%m-%d").replace(
+                tzinfo=timezone.utc
+            )
 
             item = Item(
                 id=scene_id,
@@ -140,7 +144,7 @@ def create_sentinel_2_monthly_median_items(
                 bbox=bbox,
                 datetime=None,
                 properties={"created": now_to_rfc3339_str()},
-                collection="s2_monthly_median"
+                collection="s2_monthly_median",
             )
             item.common_metadata.providers = additional_providers
             # TODO NOA-Product id as in service is external to this item creation
@@ -148,7 +152,10 @@ def create_sentinel_2_monthly_median_items(
             projection = ProjectionExtension.ext(item, add_if_missing=True)
             projection.epsg = crs
             centroid = antimeridian.centroid(item.geometry)
-            projection.centroid = {"lat": round(centroid.y, 5), "lon": round(centroid.x, 5)}
+            projection.centroid = {
+                "lat": round(centroid.y, 5),
+                "lon": round(centroid.x, 5),
+            }
 
             # Add eo for bands in assets and reserve for future cloud coverage
             # eo = EOExtension.ext(item, add_if_missing=True)
@@ -194,11 +201,13 @@ def create_sentinel_2_monthly_median_items(
                 proj_asset.shape = shape
 
                 raster_asset = RasterExtension.ext(asset)
-                raster_asset.bands = [RasterBand.create(
-                    data_type=dtype,
-                    nodata=nodata,
-                    spatial_resolution=resolution  # TODO check best practices for this one
-                )]
+                raster_asset.bands = [
+                    RasterBand.create(
+                        data_type=dtype,
+                        nodata=nodata,
+                        spatial_resolution=resolution,  # TODO check best practices for this one
+                    )
+                ]
 
                 item.add_asset(band_name, asset)
             created_items.add(item)
