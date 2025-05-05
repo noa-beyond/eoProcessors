@@ -164,10 +164,8 @@ def create_sentinel_2_monthly_median_items(
             RasterExtension.add_to(item)
             # Add each band as an asset
             band_paths = {}
-            print(area_dates)
             for band_file in path.glob(area_dates + "*"):
                 band = band_file.name.rsplit("_", maxsplit=1)[-1].split(".")[0]
-                print(band_file)
                 band_paths[band] = band_file
 
             for band_name, band_path in band_paths.items():

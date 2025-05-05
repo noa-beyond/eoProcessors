@@ -55,7 +55,6 @@ class Ingest:
         )
         # TODO throw error if collection or catalog are not in path
         json_file_path = str(Path(item_path, item.id + ".json"))
-        print(json_file_path)
         # Catalog and Collections must exist
         item.set_root(self._catalog)
         collection_instance = self._catalog.get_child(collection)
