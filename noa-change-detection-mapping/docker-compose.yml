@@ -1,0 +1,31 @@
+name: noachdm
+services:
+  noacdm:
+    image: noachdm:latest
+    build:
+      context: .
+      secrets:
+        - DB_USER
+        - DB_PASSWORD
+        - DB_HOST
+        - DB_PORT
+        - DB_NAME
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: "kafka1:9092,kafka2:9092,kafka3:9092"
+    working_dir: /app    
+    volumes:
+      - ./config:/app/config
+      - /mnt/data/poc/products:/mnt/data/poc/products
+    command: python /app/noachdm/cli.py --help
+
+secrets:
+  DB_USER:
+    environment: DB_USER
+  DB_PASSWORD:
+    environment: DB_PASSWORD
+  DB_HOST:
+    environment: DB_HOST
+  DB_PORT:
+    environment: DB_PORT
+  DB_NAME:
+    environment: DB_NAME
