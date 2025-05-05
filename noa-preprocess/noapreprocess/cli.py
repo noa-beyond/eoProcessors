@@ -44,6 +44,8 @@ def cli(log):
         "If -s flag is used, a simple extract all is performed (bypassing config in a way). "
         "The extraction process works for Sentinel 1 and Sentinel 2 SAFE files, while for Sentinel"
         " 3, a simple extraction is performed without Tile format."
+        "Please note if not a simple extraction is selected, only raster band files are extracted,"
+        " not QI masks"
     )
 )
 @click.option("--output_path", "-o", default="", help="Output path")
@@ -70,8 +72,9 @@ def extract(
         simple (click.Option | bool): Just extract, no options
         tile_tree (click.Option | bool): Create Tile tree folder structure
         # TODO: raster resolutions config filter is dumb. Only checks if "in" filename.
-          If "all" is set, it also downloads quality masks. So either search by filename field,
-          or set config option of "quality_files": True
+          If "all" is set, it also extracts quality masks (#122 fixed: does not enter QI folder).
+          So either search by filename field, or set config option of "quality_files": True
+          In general, heavy refactor should occur
             "raster_resolutions": ["10m", "60m"]: all, 10m, 20m 60m, qa?
     """
     if config_file:

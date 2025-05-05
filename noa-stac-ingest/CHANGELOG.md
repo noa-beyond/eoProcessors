@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## [0.16.0] - 2025-05-05
+### Added
+- Can now ingest Sentinel 2 monthly medians made by NOA-Beyond (#126)
+
 ## [0.15.1] - 2025-03-12
 ### Fixed
 - Bug on Sentinel 1 ingestion (#118)

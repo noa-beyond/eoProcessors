@@ -118,26 +118,26 @@ class Preprocess:
 
     # TODO: with "self", you pass the whole object, where you don't need it. It needs
     # triage, to separate functions to utils and important ones as private.
-    def extract_s2(self, zip_path, archive):
+    def extract_s2(self, zip_path, archive: zipfile.ZipFile):
         for file in archive.namelist():
             for resolution in self._config["raster_resolutions"]:
                 for band in self._config["bands"]:
                     if (
-                        file.endswith(self._config["raster_suffix_input"])
+                        "QI_DATA" not in file
+                        and file.endswith(self._config["raster_suffix_input"])
                         and (resolution in file or resolution == "all")
                         and (band in file or band == "all")
                     ):
-                        filename_parts = Path(file).name.split("_")
-                        tile = filename_parts[-4]
-                        year = filename_parts[-3].split("T")[0][:4]
-                        month = filename_parts[-3].split("T")[0][4:6]
-                        day = filename_parts[-3].split("T")[0][6:8]
                         data = archive.read(file, self._input_path)
-
                         output_file_path = Path(self._output_path, Path(file).name)
                         os.makedirs(Path(self._output_path), exist_ok=True)
 
                         if self._config.get("tile_tree", False):
+                            filename_parts = Path(file).name.split("_")
+                            tile = filename_parts[-4]
+                            year = filename_parts[-3].split("T")[0][:4]
+                            month = filename_parts[-3].split("T")[0][4:6]
+                            day = filename_parts[-3].split("T")[0][6:8]
                             output_file_path = Path(
                                 self._output_path,
                                 tile,
@@ -156,7 +156,7 @@ class Preprocess:
                         if self._config.get("convert_to_cog", False):
                             cog_output_path = str(output_file_path).replace(
                                 self._config["raster_suffix_input"],
-                                f'-cog{self._config["raster_suffix_output"]}',
+                                self._config["raster_suffix_output"],
                             )
                             self._convert_to_cog(output_file_path, cog_output_path)
                             os.remove(output_file_path)
