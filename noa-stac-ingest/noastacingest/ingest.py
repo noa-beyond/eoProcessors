@@ -66,6 +66,7 @@ class Ingest:
         # collections/sentinel-2-l2a/items
         # Like so, I do not know if an "extent" property is needed.
         # If it is, update it:
+        # TODO fix spatial and temporal extent when new item is added
         collection_instance.update_extent_from_items()
         collection_instance.normalize_and_save(
             self._config.get("collection_path") + collection + "/"
