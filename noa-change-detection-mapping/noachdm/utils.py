@@ -390,3 +390,17 @@ def process_all_images(image_files, field_mask_file, crop_id_file, ndvi_thresh, 
 
     # return out_before, out_after, result 
     return out_before, out_after, ndvi_before, ndvi_after, bsi_before, bsi_after, mask_before, mask_after, field_mask, crop_mask, result
+
+
+def crop_and_make_mosaic(items_paths, bbox):
+    """
+    There is a lower (hardcoded for now) limit on kernel for images.
+    Even though we say crop, if the bbox
+    is smaller than this lower limit, we apply the lower limit instead.
+    Moreover, this function crops and then combines the images in a mosaic,
+    by applying a median calculation.
+    This is true in either adjacent tiles case, or in multidate extent cases,
+    where the exact requested date was not found
+    """
+
+    return "maybe_cropped_maybe_composite"

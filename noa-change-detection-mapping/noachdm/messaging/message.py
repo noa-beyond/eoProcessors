@@ -20,9 +20,15 @@ class Message:
                     "type": "string",
                     "uniqueItems": True,
                 }
+            },
+            "bbox": {
+                "type": "array",
+                "items": {
+                    "type": "string"
+                }
             }
         },
-        "required": ["ids_date_from", "ids_date_to"]
+        "required": ["ids_date_from", "ids_date_to", "bbox"]
     }
 
     _schema_response_def = {

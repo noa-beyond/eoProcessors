@@ -207,8 +207,10 @@ def noa_pgaas_chdm(
                 click.echo(item)
                 items_from = item["ids_date_from"]
                 items_to = item["ids_date_to"]
+                # will get bbox as [minX, minY, maxX, maxY] or minLon-minLat/maxLon-maxLat
+                bbox = item["bbox"]
                 new_product_path = chdm_producer.produce_from_items_lists(
-                    items_from, items_to
+                    items_from, items_to, bbox
                 )
                 logger.debug(
                     "New change detection mapping product at: %s",
