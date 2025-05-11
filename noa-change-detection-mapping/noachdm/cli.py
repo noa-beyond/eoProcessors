@@ -114,8 +114,7 @@ def produce(
 def noa_pgaas_chdm(
     config_file: Argument | str,
     output_path: Option | str,
-    verbose: Option | bool,
-    test: Option | bool
+    verbose: Option | bool
 ) -> None:
     """
     Instantiate ChDM class and activate service, listening to kafka topic.
@@ -198,19 +197,20 @@ def noa_pgaas_chdm(
                 msg = f"[NOA-ChDM] Digesting Item from Topic {message.topic} ({now_time})..."
                 msg += "\n> Item: " + json.dumps(item)
                 logger.debug(msg)
-                click.echo("[NOA-ChDM] Received list use:")
+                click.echo("[NOA-ChDM] Received lists use:")
                 click.echo(item)
-                if test:
-                    used_uris = "Some used uris"
-                    failed_uris = "Some failed uris"
-                else:
-                    uri_list = item["Ids"]
-                    used_uris, failed_uris = chdm_producer.produce_from_path_list(uri_list)
-                logger.debug("[NOA-ChDM] Used items: %s", used_uris)
-                if failed_uris:
-                    click.echo(f"[NOA-ChDM] Failed items: {failed_uris}")
-                    logger.warning("[NOA-ChDM] Failed uris: %s", failed_uris)
-                click.echo(f"[NOA-ChDM] Consumed ChDM message and used {used_uris} data")
+                items_from = item["ids_date_from"]
+                items_to = item["ids_date_to"]
+                new_product_path = chdm_producer.produce_from_items_lists(
+                    items_from, items_to
+                )
+                logger.debug(
+                    "[NOA-ChDM] New change detection mapping product at: %s",
+                    new_product_path
+                )
+                click.echo(
+                    f"[NOA-ChDM] Consumed ChDM message and used {items_from} and {items_to} items"
+                )
             sleep(1)
         except (UnsupportedForMessageFormatError, InvalidMessageError) as e:
             click.echo(f"[NOA-ChDM] Error in reading kafka message: {item}")

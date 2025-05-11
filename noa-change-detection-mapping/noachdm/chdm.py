@@ -46,10 +46,11 @@ class ChDM:
         """
         print("Done already")
 
-    def produce_from_path_list(self, uri_list):
+    def produce_from_items_lists(self, items_from, items_to):
         """
         Must accept list of s3 uris probably
         """
         print("Must accept list of EO Data")
-        print(uri_list)
-        return (True, True)
+        print(items_from, items_to)
+        new_product_path = ""
+        return new_product_path

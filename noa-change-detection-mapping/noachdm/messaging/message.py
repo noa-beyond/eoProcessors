@@ -7,7 +7,14 @@ class Message:
         "namespace": "noa.chdm.order",
         "type": "object",
         "properties": {
-            "Ids": {
+            "ids_date_from": {
+                "type": "array",
+                "items": {
+                    "type": "string",
+                    "uniqueItems": True,
+                }
+            },
+            "ids_date_to": {
                 "type": "array",
                 "items": {
                     "type": "string",
@@ -15,7 +22,7 @@ class Message:
                 }
             }
         },
-        "required": ["Ids"]
+        "required": ["ids_date_from", "ids_date_to"]
     }
 
     _schema_response_def = {
