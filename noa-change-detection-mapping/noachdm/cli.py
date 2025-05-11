@@ -34,6 +34,9 @@ from noachdm.messaging.kafka_consumer import KafkaConsumer  # noqa:402 pylint:di
 logger = logging.getLogger(__name__)
 
 
+PROCESSOR = "[NOA-ChDM]"
+
+
 @click.group(
     help=(
         "Help. It needs somebody"
@@ -47,7 +50,11 @@ logger = logging.getLogger(__name__)
 def cli(log):
     """Click cli group for cli commands"""
     numeric_level = getattr(logging, log.upper(), "WARNING")
-    logging.basicConfig(level=numeric_level, format="%(asctime)s %(message)s")
+    logging.basicConfig(
+        format=f"[%(asctime)s.%(msecs)03d] [%(levelname)s] {PROCESSOR} %(message)s",
+        level=numeric_level,
+        datefmt="%Y-%m-%dT%H:%M:%S",
+    )
 
 
 @cli.command(
@@ -126,7 +133,7 @@ def noa_pgaas_chdm(
         verbose (click.Option | bool): verbose
     """
     # if config_file:
-    logger.debug("Starting NOA-Harvester service...")
+    logger.debug("Starting NOA-ChDM service...")
 
     chdm_producer = chdm.ChDM(
         config_file=config_file,
@@ -172,9 +179,8 @@ def noa_pgaas_chdm(
         try:
             consumer.subscribe_to_topics(topics)
         except (UnknownTopicOrPartitionError, TopicAuthorizationFailedError, InvalidTopicError) as e:
-            # TODO Fix logs headers, cannot repeat in every part
-            logger.warning("[NOA-ChDM] Kafka Error on Topic subscription: %s", e)
-            logger.warning("[NOA-ChDM] Trying to create it:")
+            logger.warning("Kafka Error on Topic subscription: %s", e)
+            logger.warning("Trying to create it:")
             try:
                 consumer.create_topics(
                     topics=topics, num_partitions=num_partitions, replication_factor=replication_factor)
@@ -182,22 +188,22 @@ def noa_pgaas_chdm(
                     UnknownTopicOrPartitionError,
                     TopicAuthorizationFailedError,
                     InvalidTopicError) as g:
-                logger.error("[NOA-ChDM] Kafka: Could not subscribe or create producer topic: %s", g)
+                logger.error("Kafka: Could not subscribe or create producer topic: %s", g)
                 return
         if consumer is None:
             sleep(5)
 
-    click.echo(f"[NOA-ChDM] NOA-ChDM service started. Output path: {output_path}\n")
+    click.echo(f"Service started. Output path: {output_path}\n")
 
     while True:
         try:
             for message in consumer.read():
                 item = message.value
                 now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                msg = f"[NOA-ChDM] Digesting Item from Topic {message.topic} ({now_time})..."
+                msg = f"Digesting Item from Topic {message.topic} ({now_time})..."
                 msg += "\n> Item: " + json.dumps(item)
                 logger.debug(msg)
-                click.echo("[NOA-ChDM] Received lists use:")
+                click.echo("Received lists use:")
                 click.echo(item)
                 items_from = item["ids_date_from"]
                 items_to = item["ids_date_to"]
@@ -205,16 +211,16 @@ def noa_pgaas_chdm(
                     items_from, items_to
                 )
                 logger.debug(
-                    "[NOA-ChDM] New change detection mapping product at: %s",
+                    "New change detection mapping product at: %s",
                     new_product_path
                 )
                 click.echo(
-                    f"[NOA-ChDM] Consumed ChDM message and used {items_from} and {items_to} items"
+                    f"Consumed ChDM message and used {items_from} and {items_to} items"
                 )
             sleep(1)
         except (UnsupportedForMessageFormatError, InvalidMessageError) as e:
-            click.echo(f"[NOA-ChDM] Error in reading kafka message: {item}")
-            logger.warning("[NOA-ChDM] Error in reading kafka message: %s", e)
+            click.echo(f"Error in reading kafka message: {item}")
+            logger.warning("Error in reading kafka message: %s", e)
             continue
 
 
