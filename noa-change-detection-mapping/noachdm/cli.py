@@ -27,6 +27,7 @@ from kafka.errors import (
 sys.path.append(str(Path(__file__).parent / ".."))
 
 from noachdm import chdm  # noqa:402 pylint:disable=wrong-import-position
+from noachdm import utils  # noqa:402 pylint:disable=wrong-import-position
 from noachdm.messaging.message import Message  # noqa:402 pylint:disable=wrong-import-position
 from noachdm.messaging import AbstractConsumer  # noqa:402 pylint:disable=wrong-import-position
 from noachdm.messaging.kafka_consumer import KafkaConsumer  # noqa:402 pylint:disable=wrong-import-position
@@ -219,6 +220,27 @@ def noa_pgaas_chdm(
                 click.echo(
                     f"Consumed ChDM message and used {items_from} and {items_to} items"
                 )
+
+                kafka_topic = chdm_producer.config.get(
+                    "topic_producer", os.environ.get(
+                        "KAFKA_OUTPUT_TOPIC", "chdm.order.completed")
+                )
+                logger.info("New ChDM Product . Sending kafka message")
+                try:
+                    bootstrap_servers = chdm_producer.config.get(
+                        "kafka_bootstrap_servers", os.getenv(
+                            "KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"
+                        )
+                    )
+                    utils.send_kafka_message(
+                        bootstrap_servers,
+                        kafka_topic,
+                        new_product_path
+                    )
+                    print(f"Kafka message of New ChDM Product sent to: {kafka_topic}")
+                except BrokenPipeError as e:
+                    print(f"Error sending kafka message to: {kafka_topic}")
+                    logger.warning("Error sending kafka message: %s ", e)
             sleep(1)
         except (UnsupportedForMessageFormatError, InvalidMessageError) as e:
             click.echo(f"Error in reading kafka message: {item}")

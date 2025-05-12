@@ -35,22 +35,11 @@ class Message:
         "namespace": "noa.chdm.response",
         "type": "object",
         "properties": {
-            "succeeded": {
-                "type": "array",
-                "items": {
-                    "type": "string",
-                    "uniqueItems": True,
-                }
-            },
-            "failed": {
-                "type": "array",
-                "items": {
-                    "type": "string",
-                    "uniqueItems": True,
-                }
+            "chdm_product_path": {
+                "type": "string",
             }
         },
-        "required": ["succeeded", "failed"]
+        "required": ["chdm_product_path"]
     }
 
     @staticmethod
