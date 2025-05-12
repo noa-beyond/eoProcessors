@@ -1,4 +1,5 @@
 import os
+import logging
 from tqdm import tqdm
 import fnmatch
 import numpy as np
@@ -18,6 +19,18 @@ import torch
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
+
+import tempfile
+import xarray as xr
+import rioxarray
+
+from noachdm.messaging.kafka_producer import KafkaProducer
+from noachdm.messaging.message import Message
+
+from kafka.errors import NoBrokersAvailable
+
+logger = logging.getLogger(__name__)
+
 
 def percentile_stretch(band_array, lower_percentile=0, upper_percentile=99):
     """Applies a percentile stretch to the band array for better contrast."""
@@ -392,7 +405,19 @@ def process_all_images(image_files, field_mask_file, crop_id_file, ndvi_thresh, 
     return out_before, out_after, ndvi_before, ndvi_after, bsi_before, bsi_after, mask_before, mask_after, field_mask, crop_mask, result
 
 
-def crop_and_make_mosaic(items_paths, bbox):
+def send_kafka_message(bootstrap_servers, topic, product_path):
+    schema_def = Message.schema_response()
+
+    try:
+        producer = KafkaProducer(bootstrap_servers=bootstrap_servers, schema=schema_def)
+        kafka_message = {"chdm_product_path": product_path}
+        producer.send(topic=topic, key=None, value=kafka_message)
+    except NoBrokersAvailable as e:
+        logger.warning("No brokers available. Continuing without Kafka. Error: %s", e)
+        producer = None
+
+
+def crop_and_make_mosaic(items_paths, bbox) -> tempfile.TemporaryDirectory:
     """
     There is a lower (hardcoded for now) limit on kernel for images.
     Even though we say crop, if the bbox
@@ -403,4 +428,29 @@ def crop_and_make_mosaic(items_paths, bbox):
     where the exact requested date was not found
     """
 
-    return "maybe_cropped_maybe_composite"
+    temp_dir = tempfile.TemporaryDirectory()
+    bands = ("B02", "B03", "B04")
+    for band in bands:
+        cropped_list = []
+        for path in items_paths:
+            # TODO construct band file path
+            da = rioxarray.open_rasterio(path, masked=True).squeeze()
+            # da = da.rio.clip_box(minx=bbox[0], miny=bbox[1], maxx=bbox[2], maxy=bbox[3])
+            da = da.rio.clip_box(*bbox)
+            cropped_list.append(da)
+
+        # If more than one path (bbox exceeds one tile or multiple dates)
+        if len(cropped_list) > 1:
+            stacked = xr.concat(cropped_list, dim='stack')
+            result = stacked.median(dim='stack')
+        else:
+            result = cropped_list[0]
+
+        # Ensure result has spatial reference info
+        result.rio.write_crs(result.rio.crs, inplace=True)
+
+        # TODO add meaningful file name
+        output_path = os.path.join(temp_dir.name, "cropped_.", band, ".tif")
+        result.rio.to_raster(output_path)
+
+    return temp_dir.name

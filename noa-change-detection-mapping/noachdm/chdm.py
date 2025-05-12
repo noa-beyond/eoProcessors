@@ -56,18 +56,12 @@ class ChDM:
         print("Must accept list of EO Data")
         print(items_from, items_to)
 
-        just_crop = True
-        # if more than one items (e.g. tiles, or multiple dates), then we need
-        # mosaicing
-        if len(items_from) > 1:
-            just_crop = False
-
-        # TODO this util function actually makes all these operations
-        # on an xarray or cube on the fly method. I would not
-        # suggest GDAL
-        from_path = crop_and_make_mosaic(items_from, bbox, just_crop)
-        to_path = crop_and_make_mosaic(items_to, bbox, just_crop)
+        from_path = crop_and_make_mosaic(items_from, bbox)
+        to_path = crop_and_make_mosaic(items_to, bbox)
 
         new_product_path = ""
         new_product_path = self.produce(from_path=from_path, to_path=to_path)
+
+        from_path.cleanup()
+        to_path.cleanup()
         return new_product_path
