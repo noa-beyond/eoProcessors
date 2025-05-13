@@ -4,10 +4,9 @@ Change detection mapping class
 from __future__ import annotations
 
 import json
-
-from utils import *
 import torch
-from noachdm.utils import crop_and_make_mosaic
+
+from noachdm import utils as chdm_utils
 
 
 class ChDM:
@@ -48,8 +47,8 @@ class ChDM:
         """
         Could accept path full of tifs
         """
-        dataset = SentinelChangeDataset(pre_dir=from_path, post_dir=to_path)
-        predict_all_scenes_to_mosaic(
+        dataset = chdm_utils.SentinelChangeDataset(pre_dir=from_path, post_dir=to_path)
+        chdm_utils.predict_all_scenes_to_mosaic(
             model_weights_path="models_checkpoints/BIT_final_refined.pth",
             dataset=dataset,
             output_dir='data/',
@@ -64,8 +63,8 @@ class ChDM:
         print("Must accept list of EO Data")
         print(items_from, items_to)
 
-        from_path = crop_and_make_mosaic(items_from, bbox)
-        to_path = crop_and_make_mosaic(items_to, bbox)
+        from_path = chdm_utils.crop_and_make_mosaic(items_from, bbox)
+        to_path = chdm_utils.crop_and_make_mosaic(items_to, bbox)
 
         new_product_path = ""
         new_product_path = self.produce(from_path=from_path, to_path=to_path)
