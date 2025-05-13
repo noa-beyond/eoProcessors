@@ -4,10 +4,7 @@ import tempfile
 from collections import defaultdict
 
 import numpy as np
-# import pandas as pd
-# import geopandas as gpd
 import rasterio
-# from rasterio.merge import merge
 import xarray as xr
 import rioxarray
 
@@ -16,7 +13,6 @@ from torch.utils.data import Dataset
 
 from kafka.errors import NoBrokersAvailable
 
-# from noachdm.models.help_funcs import Transformer, TransformerDecoder, TwoLayerConv2d
 from noachdm.models.BIT import define_G
 
 from noachdm.messaging.kafka_producer import KafkaProducer
@@ -87,20 +83,19 @@ def closest_power_of_two(n):
 def closest_even(n):
     if n % 2 == 0:
         return n
-    else:
-        return n - 1 if n % 2 == 1 else n + 1
+    return n - 1 if n % 2 == 1 else n + 1
 
 
 class SentinelChangeDataset(Dataset):
     def __init__(self, pre_dir, post_dir):
-        
+
         self.pre_scenes = self._group_bands(pre_dir)
         self.post_scenes = self._group_bands(post_dir)
 
         # Dynamically compute patch sizes and strides per scene
         self.patch_coords = []
 
-        for idx in range(len(self.pre_scenes)):
+        for idx in enumerate(self.pre_scenes):
             with rasterio.open(self.pre_scenes[idx]['B04']) as src:
                 h, w = src.height, src.width
                 min_dim = min(h, w)
@@ -161,7 +156,7 @@ def predict_all_scenes_to_mosaic(model_weights_path, dataset, output_dir, device
 
     os.makedirs(output_dir, exist_ok=True)
 
-    for scene_idx in range(len(dataset.pre_scenes)):
+    for scene_idx in enumerate(dataset.pre_scenes):
         # print(f"\nProcessing scene {scene_idx + 1}/{len(dataset.pre_scenes)}...")
 
         # Get metadata
@@ -169,9 +164,7 @@ def predict_all_scenes_to_mosaic(model_weights_path, dataset, output_dir, device
             h, w = ref_src.height, ref_src.width
             transform = ref_src.transform
             crs = ref_src.crs
-            
-        patch_size = dataset.patch_size
-        stride = dataset.stride
+
         full_pred = np.zeros((h, w), dtype=np.uint8)
         full_pred_logits = np.zeros((h, w), dtype=np.uint8)
 
@@ -187,7 +180,9 @@ def predict_all_scenes_to_mosaic(model_weights_path, dataset, output_dir, device
             with torch.no_grad():
                 output = model(pre_tensor, post_tensor)
                 # pred_patch = torch.argmax(output, dim=1).cpu().numpy().astype(np.uint8)
-                pred_patch_logits = (torch.softmax(output, dim=1).detach().cpu().numpy()[0,1,:,:]*100).astype(np.uint8)
+                pred_patch_logits = (
+                    torch.softmax(output, dim=1).detach().cpu().numpy()[0, 1, :, :]*100
+                ).astype(np.uint8)
 
             y_shift = pred_patch_logits.shape[0]
             x_shift = pred_patch_logits.shape[1]
@@ -195,26 +190,28 @@ def predict_all_scenes_to_mosaic(model_weights_path, dataset, output_dir, device
             x = min(x, w-x_shift)
             # full_pred[y:y+y_shift, x:x+x_shift] = pred_patch
             full_pred_logits[y:y+y_shift, x:x+x_shift] = pred_patch_logits
-    
+
         full_pred_logits = full_pred_logits.astype(np.float32)
 
         # Standardize
         mean_val = np.mean(full_pred_logits)
         std_val = np.std(full_pred_logits)
         std_logits = (full_pred_logits - mean_val) / (std_val + 1e-8)  # avoid division by zero
-        
+
         # Optionally scale to 0–100 for visualization
         full_pred_logits = (std_logits * 10 + 50).clip(0, 100).astype(np.uint8)
 
         min_val = full_pred_logits.min()
         max_val = full_pred_logits.max()
-        full_pred_logits = ((full_pred_logits - min_val) / (max_val - min_val) * 100).astype(np.uint8)
+        full_pred_logits = (
+            (full_pred_logits - min_val) / (max_val - min_val) * 100
+        ).astype(np.uint8)
 
-        full_pred[full_pred_logits>=50] = 1
+        full_pred[full_pred_logits >= 50] = 1
         full_pred = full_pred.astype(np.uint8)
 
         # Save individual scene prediction
-        output_path = os.path.join(output_dir, f"mosaic_pred.tif")
+        output_path = os.path.join(output_dir, "mosaic_pred.tif")
         with rasterio.open(
             output_path, 'w',
             driver='GTiff',
@@ -226,7 +223,7 @@ def predict_all_scenes_to_mosaic(model_weights_path, dataset, output_dir, device
         ) as dst:
             dst.write(full_pred, 1)
 
-        output_path_logits = os.path.join(output_dir, f"mosaic_pred_logits.tif")
+        output_path_logits = os.path.join(output_dir, "mosaic_pred_logits.tif")
         with rasterio.open(
             output_path_logits, 'w',
             driver='GTiff',
