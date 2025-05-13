@@ -1,28 +1,28 @@
-import torch
-from torch.utils.data import Dataset
-from models.help_funcs import Transformer, TransformerDecoder, TwoLayerConv2d
-from models.BIT import *
-
 import os
+import logging
+import tempfile
+from collections import defaultdict
 
 import numpy as np
-import pandas as pd
-import geopandas as gpd
+# import pandas as pd
+# import geopandas as gpd
 import rasterio
-from rasterio.merge import merge
-
-
-import tempfile
+# from rasterio.merge import merge
 import xarray as xr
 import rioxarray
+
+import torch
+from torch.utils.data import Dataset
+
+from kafka.errors import NoBrokersAvailable
+
+# from noachdm.models.help_funcs import Transformer, TransformerDecoder, TwoLayerConv2d
+from noachdm.models.BIT import define_G
 
 from noachdm.messaging.kafka_producer import KafkaProducer
 from noachdm.messaging.message import Message
 
-from kafka.errors import NoBrokersAvailable
-
 logger = logging.getLogger(__name__)
-
 
 
 def send_kafka_message(bootstrap_servers, topic, product_path):
@@ -75,6 +75,7 @@ def crop_and_make_mosaic(items_paths, bbox) -> tempfile.TemporaryDirectory:
 
     return temp_dir.name
 
+
 def closest_power_of_two(n):
     if n < 1:
         return 1  # Edge case: return 1 for 0 or negative input
@@ -82,11 +83,13 @@ def closest_power_of_two(n):
     upper = 2 ** n.bit_length()
     return lower if n - lower < upper - n else upper
 
+
 def closest_even(n):
     if n % 2 == 0:
         return n
     else:
         return n - 1 if n % 2 == 1 else n + 1
+
 
 class SentinelChangeDataset(Dataset):
     def __init__(self, pre_dir, post_dir):
@@ -117,8 +120,6 @@ class SentinelChangeDataset(Dataset):
                         self.patch_coords.append((idx, y, x))
 
     def _group_bands(self, folder):
-        import os
-        from collections import defaultdict
 
         grouped = defaultdict(dict)
         for fname in sorted(os.listdir(folder)):
@@ -134,10 +135,6 @@ class SentinelChangeDataset(Dataset):
         return len(self.patch_coords)
 
     def __getitem__(self, idx):
-        import rasterio
-        import torch
-        import numpy as np
-
         scene_id, y, x = self.patch_coords[idx]
 
         def read_patch(band_paths):
@@ -191,7 +188,6 @@ def predict_all_scenes_to_mosaic(model_weights_path, dataset, output_dir, device
                 output = model(pre_tensor, post_tensor)
                 # pred_patch = torch.argmax(output, dim=1).cpu().numpy().astype(np.uint8)
                 pred_patch_logits = (torch.softmax(output, dim=1).detach().cpu().numpy()[0,1,:,:]*100).astype(np.uint8)
-
 
             y_shift = pred_patch_logits.shape[0]
             x_shift = pred_patch_logits.shape[1]
