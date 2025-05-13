@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import json
 
+from utils import *
+import torch
 from noachdm.utils import crop_and_make_mosaic
 
 
@@ -46,6 +48,12 @@ class ChDM:
         """
         Could accept path full of tifs
         """
+        dataset = SentinelChangeDataset(pre_dir=from_path, post_dir=to_path)
+        predict_all_scenes_to_mosaic(
+            model_weights_path="models_checkpoints/BIT_final_refined.pth",
+            dataset=dataset,
+            output_dir='data/',
+            device='cuda' if torch.cuda.is_available() else 'cpu')
         print("Done already")
         return "the_product_path"
 
