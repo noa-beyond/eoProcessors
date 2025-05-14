@@ -6,8 +6,9 @@ from torch.optim import lr_scheduler
 from einops import rearrange
 
 import functools
-import models
-from models.help_funcs import Transformer, TransformerDecoder, TwoLayerConv2d
+
+import noachdm.models.resnet as resnet_model
+from noachdm.models.help_funcs import Transformer, TransformerDecoder, TwoLayerConv2d
 
 
 ###############################################################################
@@ -156,13 +157,13 @@ class ResNet(torch.nn.Module):
         super(ResNet, self).__init__()
         expand = 1
         if backbone == 'resnet18':
-            self.resnet = models.resnet18(pretrained=True,
+            self.resnet = resnet_model.resnet18(pretrained=True,
                                           replace_stride_with_dilation=[False,True,True])
         elif backbone == 'resnet34':
-            self.resnet = models.resnet34(pretrained=True,
+            self.resnet = resnet_model.resnet34(pretrained=True,
                                           replace_stride_with_dilation=[False,True,True])
         elif backbone == 'resnet50':
-            self.resnet = models.resnet50(pretrained=True,
+            self.resnet = resnet_model.resnet50(pretrained=True,
                                           replace_stride_with_dilation=[False,True,True])
             expand = 4
         else:
