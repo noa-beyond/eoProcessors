@@ -49,11 +49,13 @@ def crop_and_make_mosaic(items_paths, bbox) -> tempfile.TemporaryDirectory:
     for band in bands:
         cropped_list = []
         for path in items_paths:
-            # TODO construct band file path
-            da = rioxarray.open_rasterio(path, masked=True).squeeze()
-            # da = da.rio.clip_box(minx=bbox[0], miny=bbox[1], maxx=bbox[2], maxy=bbox[3])
-            da = da.rio.clip_box(*bbox)
-            cropped_list.append(da)
+            for raster in os.listdir(path):
+                # TODO construct band file path
+                if band in raster:
+                    da = rioxarray.open_rasterio(raster, masked=True).squeeze()
+                    # da = da.rio.clip_box(minx=bbox[0], miny=bbox[1], maxx=bbox[2], maxy=bbox[3])
+                    da = da.rio.clip_box(*bbox)
+                    cropped_list.append(da)
 
         # If more than one path (bbox exceeds one tile or multiple dates)
         if len(cropped_list) > 1:
@@ -66,7 +68,7 @@ def crop_and_make_mosaic(items_paths, bbox) -> tempfile.TemporaryDirectory:
         result.rio.write_crs(result.rio.crs, inplace=True)
 
         # TODO add meaningful file name
-        output_path = os.path.join(temp_dir.name, "cropped_.", band, ".tif")
+        output_path = os.path.join(temp_dir.name, "cropped_", band, ".tif")
         result.rio.to_raster(output_path)
 
     return temp_dir.name
