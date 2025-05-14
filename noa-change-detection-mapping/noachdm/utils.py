@@ -95,8 +95,8 @@ class SentinelChangeDataset(Dataset):
         # Dynamically compute patch sizes and strides per scene
         self.patch_coords = []
 
-        for idx in enumerate(self.pre_scenes):
-            with rasterio.open(self.pre_scenes[idx]['B04']) as src:
+        for idx, scene in enumerate(self.pre_scenes):
+            with rasterio.open(scene['B04']) as src:
                 h, w = src.height, src.width
                 min_dim = min(h, w)
                 patch_size = max(128, min((3 * min_dim) // 4, 2048))
@@ -156,11 +156,11 @@ def predict_all_scenes_to_mosaic(model_weights_path, dataset, output_dir, device
 
     os.makedirs(output_dir, exist_ok=True)
 
-    for scene_idx in enumerate(dataset.pre_scenes):
+    for scene_index, scene in enumerate(dataset.pre_scenes):
         # print(f"\nProcessing scene {scene_idx + 1}/{len(dataset.pre_scenes)}...")
 
         # Get metadata
-        with rasterio.open(dataset.pre_scenes[scene_idx]['B04']) as ref_src:
+        with rasterio.open(scene['B04']) as ref_src:
             h, w = ref_src.height, ref_src.width
             transform = ref_src.transform
             crs = ref_src.crs
@@ -170,7 +170,7 @@ def predict_all_scenes_to_mosaic(model_weights_path, dataset, output_dir, device
 
         # Predict patches for this scene only
         for idx, (scene_id, y, x) in enumerate(dataset.patch_coords):
-            if scene_id != scene_idx:
+            if scene_id != scene_index:
                 continue
 
             pre_tensor, post_tensor = dataset[idx]
