@@ -9,13 +9,16 @@ name = "noachdm"
 authors = [
     {name = "NOA - Beyond"}
 ]
-description = "Earth Observation data harvester from various sources/hubs"
+description = "Change Detection Mapping EO Processor"
 requires-python = ">=3.12.10"
 dependencies = [
     "build>=1.1.1",
     "click>=8.1.7",
-    "kafka-python-ng==2.2.3",
-    "psycopg>=3.2.3"
+    "einops>=0.8.1",
+    "kafka-python-ng>=2.2.3",
+    "psycopg>=3.2.3",
+    "rioxarray>=0.19.0",
+    "torch==2.7.0"
 ]
 keywords = [
     "data pipelines",

@@ -1,15 +1,8 @@
 # Use the official Python 3.12 image as the base image
-FROM python:3.12.0-slim
+FROM python:3.12-10-slim
 
 RUN pip install --upgrade pip setuptools
 RUN apt-get update
-
-# Install GDAL dependencies
-RUN apt-get install -y libgdal-dev g++
-
-# Update C env vars so compiler can find gdal
-ENV CPLUS_INCLUDE_PATH=/usr/include/gdal
-ENV C_INCLUDE_PATH=/usr/include/gdal
 
 # Set the working directory in the container to /app
 WORKDIR /app
