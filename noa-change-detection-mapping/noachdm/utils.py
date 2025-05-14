@@ -149,6 +149,7 @@ class SentinelChangeDataset(Dataset):
 
 
 def predict_all_scenes_to_mosaic(model_weights_path, dataset, output_dir, device='cpu'):
+    # TODO ask why this network is chosen
     model = define_G(net_G='base_transformer_pos_s4_dd8', input_nc=3)
     model = torch.load(model_weights_path, weights_only=False, map_location=torch.device(device))
     model.eval()
