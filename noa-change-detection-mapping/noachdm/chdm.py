@@ -58,13 +58,13 @@ class ChDM:
             "BIT_final_refined.pth"
         )
 
-        chdm_utils.predict_all_scenes_to_mosaic(
+        product_path = chdm_utils.predict_all_scenes_to_mosaic(
             model_weights_path=trained_model_path,
             dataset=dataset,
             output_dir='data/',
             device='cuda' if torch.cuda.is_available() else 'cpu')
         print("Done already")
-        return "the_product_path"
+        return product_path
 
     def produce_from_items_lists(self, items_from, items_to, bbox):
         """

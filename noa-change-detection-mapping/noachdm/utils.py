@@ -275,3 +275,4 @@ def predict_all_scenes_to_mosaic(model_weights_path, dataset, output_dir, device
             transform=transform
         ) as dst:
             dst.write(full_pred_logits, 1)
+    return output_path
