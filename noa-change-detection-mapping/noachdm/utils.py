@@ -1,6 +1,9 @@
 import os
 import logging
 import tempfile
+import random
+import string
+import pathlib
 from collections import defaultdict
 
 import numpy as np
@@ -46,16 +49,20 @@ def crop_and_make_mosaic(items_paths, bbox) -> tempfile.TemporaryDirectory:
 
     temp_dir = tempfile.TemporaryDirectory()
     bands = ("B02", "B03", "B04")
+    a_filename = ""
     for band in bands:
         cropped_list = []
         for path in items_paths:
             for raster in os.listdir(path):
                 # TODO construct band file path
                 if band in raster:
+                    if a_filename == "":
+                        a_filename = pathlib.Path(raster).name
                     da = rioxarray.open_rasterio(raster, masked=True).squeeze()
                     # da = da.rio.clip_box(minx=bbox[0], miny=bbox[1], maxx=bbox[2], maxy=bbox[3])
                     da = da.rio.clip_box(*bbox)
                     cropped_list.append(da)
+                    continue
 
         # If more than one path (bbox exceeds one tile or multiple dates)
         if len(cropped_list) > 1:
@@ -68,7 +75,20 @@ def crop_and_make_mosaic(items_paths, bbox) -> tempfile.TemporaryDirectory:
         result.rio.write_crs(result.rio.crs, inplace=True)
 
         # TODO add meaningful file name
-        output_path = os.path.join(temp_dir.name, "cropped_", band, ".tif")
+        if len(cropped_list) > 1:
+            a_date = a_filename.split("_")[-4]
+            a_tile = a_filename.split("_")[-5]
+            filename = "_".join(
+                "composite",
+                a_tile,
+                a_date,
+                "composite",
+                "composite",
+                band,
+            )
+        else:
+            filename = a_filename.split(".")[0]
+        output_path = os.path.join(temp_dir.name, filename + ".tif")
         result.rio.to_raster(output_path)
 
     return temp_dir.name
@@ -161,6 +181,12 @@ def predict_all_scenes_to_mosaic(model_weights_path, dataset, output_dir, device
 
     for scene_index, scene in enumerate(dataset.pre_scenes):
         # print(f"\nProcessing scene {scene_idx + 1}/{len(dataset.pre_scenes)}...")
+        # this is not entirely correct, but we need an id (image could belong in more
+        # than one tile
+        tile = dataset.pre_scenes[0]['B04'].split("_")[-5]
+        random_choice = random.choices(string.ascii_letters + string.digits, k=6)
+        date_from = dataset.pre_scenes[0]['B04'].split("_")[-4]
+        date_to = dataset.post_scenes[0]['B04'].split("_")[-4]
 
         # Get metadata
         with rasterio.open(scene['B04']) as ref_src:
@@ -214,7 +240,16 @@ def predict_all_scenes_to_mosaic(model_weights_path, dataset, output_dir, device
         full_pred = full_pred.astype(np.uint8)
 
         # Save individual scene prediction
-        output_path = os.path.join(output_dir, "mosaic_pred.tif")
+        output_filename = "_".join(
+            "ChDM_S2",
+            date_from,
+            date_to,
+            tile,
+            random_choice
+        )
+        output_path = os.path.join(
+            output_dir,
+            output_filename + "_pred.tif")
         with rasterio.open(
             output_path, 'w',
             driver='GTiff',
@@ -226,7 +261,10 @@ def predict_all_scenes_to_mosaic(model_weights_path, dataset, output_dir, device
         ) as dst:
             dst.write(full_pred, 1)
 
-        output_path_logits = os.path.join(output_dir, "mosaic_pred_logits.tif")
+        output_path_logits = os.path.join(
+            output_dir,
+            output_filename + "_pred_logits.tif")
+
         with rasterio.open(
             output_path_logits, 'w',
             driver='GTiff',
