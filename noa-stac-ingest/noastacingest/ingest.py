@@ -14,7 +14,8 @@ from noastacingest.db import utils as db_utils
 from noastacingest.create_item_copernicus import create_copernicus_item
 from noastacingest.create_item_beyond import (
     create_wrf_item,
-    create_sentinel_2_monthly_median_items
+    create_sentinel_2_monthly_median_items,
+    create_chdm_items
 )
 
 
@@ -100,14 +101,16 @@ class Ingest:
         additional_providers = utils.get_additional_providers(collection=collection)
 
         # TODO add parameters month, year or parse filenames?
+        # TODO refactor so to build with factory instead of
+        # multiple ifs
         created_items = set()
         if collection == "s2_monthly_median":
-            # TODO to be called in other place. Single item makes sense for
-            # SAFE or in general Copernicus directories.
-            # In Beyond, for now we do not have "manifests"
-            # So, refactor following function, to crawl directory, as the internals
-            # of the function actually do
             created_items = create_sentinel_2_monthly_median_items(
+                path=input_path,
+                additional_providers=additional_providers
+            )
+        elif collection == "chdm_s2":
+            created_items = create_chdm_items(
                 path=input_path,
                 additional_providers=additional_providers
             )
@@ -122,6 +125,12 @@ class Ingest:
                 print(item.id)
                 # append to return list??
 
+    # TODO to be refactored somehow, so that name has a meaning:
+    # "single item" makes sense mostly for CDSE products, where
+    # a complex structure of directories makes a product.
+    # In Beyond, up to now, we have some info in the filename
+    # (like from-to dates), and the rest resides as logic inside
+    # this processor.
     def single_item(
         self,
         path: Path,
