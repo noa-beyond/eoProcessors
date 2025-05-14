@@ -188,17 +188,27 @@ def noa_pgaas_chdm(
         )
         try:
             consumer.subscribe_to_topics(topics)
-        except (UnknownTopicOrPartitionError, TopicAuthorizationFailedError, InvalidTopicError) as e:
+        except (
+            UnknownTopicOrPartitionError,
+            TopicAuthorizationFailedError,
+            InvalidTopicError
+        ) as e:
             logger.warning("Kafka Error on Topic subscription: %s", e)
             logger.warning("Trying to create it:")
             try:
                 consumer.create_topics(
-                    topics=topics, num_partitions=num_partitions, replication_factor=replication_factor)
+                    topics=topics,
+                    num_partitions=num_partitions,
+                    replication_factor=replication_factor
+                )
             except (TopicAlreadyExistsError,
                     UnknownTopicOrPartitionError,
                     TopicAuthorizationFailedError,
                     InvalidTopicError) as g:
-                logger.error("Kafka: Could not subscribe or create producer topic: %s", g)
+                logger.error(
+                    "Kafka: Could not subscribe or create producer topic: %s",
+                    g
+                )
                 return
         if consumer is None:
             sleep(5)
@@ -217,7 +227,6 @@ def noa_pgaas_chdm(
                 click.echo(item)
                 items_from = item["ids_date_from"]
                 items_to = item["ids_date_to"]
-                # will get bbox as [minX, minY, maxX, maxY] or minLon-minLat/maxLon-maxLat
                 bbox = item["bbox"]
                 new_product_path = chdm_producer.produce_from_items_lists(
                     items_from, items_to, bbox
