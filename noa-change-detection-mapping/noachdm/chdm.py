@@ -3,6 +3,7 @@ Change detection mapping class
 """
 from __future__ import annotations
 
+import os
 import json
 import torch
 
@@ -25,18 +26,19 @@ class ChDM:
         is_service: bool = False
     ) -> ChDM:
         """
-        ChDM class. Constructor reads and loads the config json file
+        ChDM class. Constructor reads and loads the config if any
 
         Parameters:
-            config_file (str): Config filename (json) which includes all search items
+            config_file (str): Config filename (json)
             verbose (bool - Optional): Verbose
         """
         self._config = {}
         self._output_path = output_path
         self._verbose = verbose
 
-        with open(config_file, encoding="utf8") as f:
-            self._config = json.load(f)
+        if config_file:
+            with open(config_file, encoding="utf8") as f:
+                self._config = json.load(f)
 
     @property
     def config(self):
@@ -47,9 +49,17 @@ class ChDM:
         """
         Could accept path full of tifs
         """
+
         dataset = chdm_utils.SentinelChangeDataset(pre_dir=from_path, post_dir=to_path)
+        # getting the trained local model
+        trained_model_path = os.path.join(
+            os.path.dirname(__file__),
+            "models_checkpoints",
+            "BIT_final_refined.pth"
+        )
+
         chdm_utils.predict_all_scenes_to_mosaic(
-            model_weights_path="models_checkpoints/BIT_final_refined.pth",
+            model_weights_path=trained_model_path,
             dataset=dataset,
             output_dir='data/',
             device='cuda' if torch.cuda.is_available() else 'cpu')

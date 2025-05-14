@@ -40,7 +40,10 @@ PROCESSOR = "[NOA-ChDM]"
 
 @click.group(
     help=(
-        "Help. It needs somebody"
+        """
+        Change Detection Mapping EO Processor.
+        Calculates changes from RGB (2,3,4) Sentinel 2 bands
+        """
     )
 )
 @click.option(
@@ -60,7 +63,13 @@ def cli(log):
 
 @cli.command(
     help=(
-        "Produces product"
+        """
+        Produces Change Detection Mapping product. Needs a
+        'from_path' argument, pointing to the directory where
+        the rgb Sentinel 2 band rasters before the change reside,
+        and a 'to_path' for the respective files after the
+        change has occurred.
+        """
     )
 )
 @click.option(
@@ -69,10 +78,12 @@ def cli(log):
     is_flag=True,
     help="Shows the verbose",
 )
-@click.argument("config_file", required=True)
+@click.argument("from_path", required=True)
+@click.argument("to_path", required=True)
 @click.option("--output_path", default="./data", help="Output path")
 def produce(
-    config_file: Argument | str,
+    from_path: Argument | str,
+    to_path: Argument | str,
     output_path: Option | str,
     verbose: Option | bool,
 ) -> None:
@@ -80,21 +91,19 @@ def produce(
     Instantiate ChDM class and calls produce function.
 
     Parameters:
-        config_file (click.Argument | str): config json file
+        from_path (click.Argument | str): path of rasters before change
+        to_path (click.Argument | str): path of rasters after change
         verbose (click.Option | bool): to show verbose
     """
-    if config_file:
-        logger.debug("Cli ChDM product for config file: %s", config_file)
 
-        click.echo("Producing...\n")
-        click.echo(output_path)
-        chdm_producer = chdm.ChDM(
-            config_file=config_file,
-            output_path=output_path,
-            verbose=verbose
-        )
-        chdm_producer.produce()
-        click.echo("Done.\n")
+    click.echo("Producing...\n")
+    click.echo(output_path)
+    chdm_producer = chdm.ChDM(
+        output_path=output_path,
+        verbose=verbose
+    )
+    chdm_producer.produce(from_path, to_path)
+    click.echo("Done.\n")
 
 
 @cli.command(
