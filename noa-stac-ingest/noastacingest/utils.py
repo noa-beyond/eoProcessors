@@ -24,6 +24,18 @@ def send_kafka_message(bootstrap_servers, topic, succeeded, failed):
         producer = None
 
 
+def send_kafka_message_chdm(bootstrap_servers, topic, orderId, result):
+    schema_def = Message.schema_response_chdm()
+
+    try:
+        producer = KafkaProducer(bootstrap_servers=bootstrap_servers, schema=schema_def)
+        kafka_message = {"orderId": orderId, "result": result}
+        producer.send(topic=topic, key=None, value=kafka_message)
+    except NoBrokersAvailable as e:
+        logger.warning("No brokers available. Continuing without Kafka. Error: %s", e)
+        producer = None
+
+
 def get_additional_providers(collection: str) -> list[Provider]:
     """
     Appending additional providers in STAC Item depending on the type

@@ -67,7 +67,7 @@ def create_wrf_item(path: Path, additional_providers: list[Provider]):
 
 
 def create_chdm_items(
-    path: Path, additional_providers: list[Provider]
+    path: Path | str, additional_providers: list[Provider]
 ) -> set[Item]:
     """
     Create a STAC Item the S2 Change Detection mapping Beyond

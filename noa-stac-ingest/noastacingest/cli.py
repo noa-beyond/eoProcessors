@@ -28,6 +28,7 @@ from kafka.errors import (
 sys.path.append(str(Path(__file__).parent / ".."))
 
 from noastacingest import ingest  # noqa:402 pylint:disable=wrong-import-position
+from noastacingest import utils
 from noastacingest.messaging.message import (  # noqa:402 pylint:disable=wrong-import-position
     Message,
 )
@@ -226,7 +227,7 @@ def noa_stac_ingest_service(
 
     topics = ingestor.config.get(
         "topics_consumer",
-        os.environ.get("KAFKA_INPUT_TOPICS", ["stacingest.order.requested"]),
+        os.environ.get("KAFKA_INPUT_TOPICS", ["noa.stacingest.request"]),
     )
     schema_def = Message.schema_request()
 
@@ -283,13 +284,51 @@ def noa_stac_ingest_service(
                     ingested = "Some ingested ids"
                     failed = "Some failed to ingest ids"
                 else:
-                    uuid_list = item["Ids"]
-                    ingested, failed = ingestor.from_uuid_db_list(
-                        uuid_list, collection, db_ingest
-                    )
-                logger.debug("Ingested items: %s", ingested)
-                if failed:
-                    logger.error("Failed uuids: %s", failed)
+                    if "Ids" in item:
+                        uuid_list = item["Ids"]
+                        ingested, failed = ingestor.from_uuid_db_list(
+                            uuid_list, collection, db_ingest
+                        )
+                        logger.debug("Ingested items: %s", ingested)
+                        if failed:
+                            logger.error("Failed uuids: %s", failed)
+                    elif "noaId" in item:
+                        # NOTE this s3 path is mounted. We run on Cloudferro
+                        # Run either as mounted or s3 directly
+                        # TODO pass through NOAId and return orderId
+                        # TODO refactor: kafka response sent at cli level
+                        product_path = item["noaS3Path"]
+                        order_id = item["orderId"]
+
+                        ingestor.ingest_directory(
+                            product_path,
+                            ingestor.config.get("collection"),
+                            db_ingest
+                        )
+                        kafka_topic = ingestor.config.get(
+                            "topic_producer",
+                            os.environ.get(
+                                "KAFKA_OUTPUT_TOPIC",
+                                "noa.stacingest.response"
+                            ),
+                        )
+                        logger.debug("Sending message to topic %s", kafka_topic)
+                        try:
+                            bootstrap_servers = ingestor.config.get(
+                                "kafka_bootstrap_servers",
+                                os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"),
+                            )
+                            result = 0
+                            utils.send_kafka_message_chdm(
+                                bootstrap_servers, kafka_topic, order_id, result
+                            )
+                            logger.info(
+                                "Sending message to Kafka consumer. %s %s",
+                                order_id,
+                                result
+                            )
+                        except BrokenPipeError as e:
+                            logger.error("Error sending kafka message: %s", e)
             sleep(1)
         except (UnsupportedForMessageFormatError, InvalidMessageError) as e:
             logger.error("Error in STAC ingestion: %s", e)
