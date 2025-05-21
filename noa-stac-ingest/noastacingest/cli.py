@@ -38,8 +38,6 @@ from noastacingest.messaging.kafka_consumer import ( # noqa:402 pylint:disable=w
     KafkaConsumer,
 )
 
-logger = logging.getLogger(__name__)
-
 PROCESSOR = "[NOA-STACIngest]"
 
 
@@ -100,6 +98,7 @@ def create_item_from_path(
     # TODO This is Sentinel specific. It searches for directories (SAFE or otherwise)
     # For Beyond items, we need a generalization or a different function
     # TODO needs refactor. Updating/creating items can be done in batches, (e.g in db)
+    logger = logging.getLogger(__name__)
     logger.info("Cli STAC ingest using config file: %s", config)
     ingestor = ingest.Ingest(config=config)
 
@@ -147,6 +146,7 @@ def ingest_from_path(
     """
     # TODO Beyond items specific. We need a generalization for all (if possible)
     # TODO needs refactor. Updating/creating items can be done in batches, (e.g in db)
+    logger = logging.getLogger(__name__)
     logger.info("Cli STAC ingest using config file: %s", config)
     ingestor = ingest.Ingest(config=config)
 
@@ -211,6 +211,7 @@ def noa_stac_ingest_service(
         db_ingest (click.Option | bool): Ingest Item to db. Set to true for production
     """
     # if config_file:
+    logger = logging.getLogger(__name__)
     logger.debug("Starting NOA-STAC-Ingest service...")
 
     ingestor = ingest.Ingest(config=config_file)
