@@ -240,6 +240,7 @@ def predict_all_scenes_to_mosaic(model_weights_path, dataset, output_dir, device
         full_pred = full_pred.astype(np.uint8)
 
         # Save individual scene prediction
+        # ChDM_S2_20220215_20230316_TJ35_AD6548_pred.tif
         output_filename = "_".join(
             "ChDM_S2",
             date_from,
