@@ -33,7 +33,7 @@ STACDB_DBNAME
 - Execute the following snippet, and please mind the config file. If no changes are needed, **do not mount** the config. However,
 - **Do** include the config file as a cli argument.
 - Also, check the fs mounts (mount the _root_ folder of products and STAC files)
-- Please note that this service, for now, only works for ingesting Sentinel 1,2 and 3 SAFE (or SEN3) directories.
+- Please note that this service works for ingesting Sentinel 1,2 and 3 SAFE (or SEN3) directories, and also for some Beyond products: ChDM and CFM (ask infrastructure.beyond at noa dot gr for more info)
 
 ```
 docker run -it \
