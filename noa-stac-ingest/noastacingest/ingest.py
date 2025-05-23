@@ -96,6 +96,16 @@ class Ingest:
         Create a new Beyond STAC Item.
         Catalog and Collection must be present (paths defined in config)
         """
+
+        if not collection:
+            try:
+                collection = utils.get_collection_from_path(input_path)
+            except RuntimeError:
+                message = """
+                STAC Collection not defined or could not infer it
+                from filenames in path
+                """
+                logger.error(message)
         # Additional provider for the item. Beyond host some Copernicus
         # data but also produces new products.
         additional_providers = utils.get_additional_providers(collection=collection)
