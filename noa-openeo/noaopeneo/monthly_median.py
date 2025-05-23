@@ -128,7 +128,7 @@ def mask_and_complete(
                 os.makedirs(output_dir, exist_ok=True)
                 title = f"{Path(shape).stem} {start_date} {end_date} {band}"
                 output_file = os.path.join(
-                    output_dir, f"{Path(shape).stem}_{start_date}_{end_date}_{band}.tif"
+                    output_dir, f"CFM_{Path(shape).stem}_{start_date}_{end_date}_{band}.tif"
                 )
                 # output_file_not_masked = os.path.join(
                 #     output_dir,
