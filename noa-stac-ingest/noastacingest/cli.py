@@ -229,6 +229,9 @@ def noa_stac_ingest_service(
         "topics_consumer",
         os.environ.get("KAFKA_INPUT_TOPICS", ["noa.stacingest.request"]),
     )
+    # TODO even though we get a schema here, it is not actually used.
+    # Moreover, the schema is wrong, since two products use different
+    # schemas, and we cannot have a single consumer validating both
     schema_def = Message.schema_request()
 
     try:
@@ -247,6 +250,7 @@ def noa_stac_ingest_service(
                 (os.getenv("KAFKA_REQUEST_GROUP_ID", "stacingest-group-request")),
             ),
             topics=topics,
+            # TODO this is not used. Either remove it or validate it
             schema=schema_def,
         )
         try:
@@ -284,6 +288,11 @@ def noa_stac_ingest_service(
                     ingested = "Some ingested ids"
                     failed = "Some failed to ingest ids"
                 else:
+                    # TODO priority refactor: need to connect to db
+                    # to check paths. This is only for S2 and that's an
+                    # ugly way to do it. Messages should have the same
+                    # structure and ingestion should be agnostic of
+                    # underlying infra dbs (except pgSTAC of course)
                     if "Ids" in item:
                         uuid_list = item["Ids"]
                         ingested, failed = ingestor.from_uuid_db_list(
@@ -299,10 +308,9 @@ def noa_stac_ingest_service(
                         # TODO refactor: kafka response sent at cli level
                         product_path = item["noaS3Path"]
                         order_id = item["orderId"]
-
                         ingestor.ingest_directory(
                             product_path,
-                            ingestor.config.get("collection"),
+                            None,
                             db_ingest
                         )
                         kafka_topic = ingestor.config.get(
@@ -319,6 +327,8 @@ def noa_stac_ingest_service(
                                 os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"),
                             )
                             result = 0
+                            # TODO, also this: we should have one message schema
+                            # for response
                             utils.send_kafka_message_chdm(
                                 bootstrap_servers, kafka_topic, order_id, result
                             )
