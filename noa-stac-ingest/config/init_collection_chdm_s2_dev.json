@@ -1,0 +1,14 @@
+{   
+    "catalog_id": "noa-beyond-internal-dev",
+    "catalog_description": "National Observatory of Athens internal STAC Catalog",
+    "catalog_title": "NOA-Beyond-Internal-Dev",
+    "catalog_path": "/tmp/data/dev/STAC/catalog/",
+    "catalog_filename": "catalog.json",
+    "collection_path": "/tmp/data/dev/STAC/catalog/collections/",
+    "output_path": "/tmp/data/dev/STAC/catalog/items/",
+    "collections": {
+        "chdm_s2": {
+            "description": "Internal Change Detection Mapping out of Sentinel2 images"
+        }
+    }
+}

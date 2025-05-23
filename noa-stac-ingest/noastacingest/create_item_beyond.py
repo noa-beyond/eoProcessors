@@ -66,6 +66,151 @@ def create_wrf_item(path: Path, additional_providers: list[Provider]):
     return item
 
 
+def create_chdm_items(
+    path: Path | str, additional_providers: list[Provider]
+) -> set[Item]:
+    """
+    Create a STAC Item the S2 Change Detection mapping Beyond
+    product.
+    Code is based on how Sentinel 2 stactools creates Items.
+    Gets a path and has to:
+    1) For every raster (.tif) in path
+
+    """
+    processed = set()
+    created_items = set()
+
+    # _pred is the binary prediction
+    # _pred_logits shows the confidence
+    for image in path.glob("*_pred.tif"):
+        print(image)
+        parts = image.stem.split("_")
+
+        # TODO add further checks. we might end up ingesting anything
+        # Need to add name specific patterns for the products we create
+        # ChDM_S2_20220215_20230316_TJ35_AD6548_pred.tif
+        if len(parts) <= 5:
+            error_message = """
+                Invalid filename pattern: %s
+                (expected name_date_date_tile_idAlphanumeric_pred.tif)"
+            """
+            logger.error(
+                error_message,
+                image.name,
+            )
+            continue
+
+        area_dates = "_".join(parts[:-2])
+        if area_dates not in processed:
+            processed.add(area_dates)
+            scene_id = "_".join([
+                "ChDM",
+                "S2",
+                parts[-5],  # date from
+                parts[-4],  # date to
+                parts[-3],  # tile
+                parts[-2]  # random number
+            ])
+
+            with rasterio.open(image) as src:
+                bounds = src.bounds
+                bbox = [bounds.left, bounds.bottom, bounds.right, bounds.top]
+                geometry = {
+                    "type": "Polygon",
+                    "coordinates": [
+                        [
+                            [bounds.left, bounds.bottom],
+                            [bounds.left, bounds.top],
+                            [bounds.right, bounds.top],
+                            [bounds.right, bounds.bottom],
+                            [bounds.left, bounds.bottom],
+                        ]
+                    ],
+                }
+                crs = src.crs.to_epsg()
+                transform = src.transform
+                shape = [src.height, src.width]
+            start_datetime = datetime.strptime(parts[-5], "%Y-%m-%d").replace(
+                tzinfo=timezone.utc
+            )
+            end_datetime = datetime.strptime(parts[-4], "%Y-%m-%d").replace(
+                tzinfo=timezone.utc
+            )
+
+            item = Item(
+                id=scene_id,
+                start_datetime=start_datetime,
+                end_datetime=end_datetime,
+                geometry=geometry,
+                bbox=bbox,
+                datetime=None,
+                properties={"created": now_to_rfc3339_str()},
+                collection="chdm_s2",
+            )
+            item.common_metadata.providers = additional_providers
+            # TODO NOA-Product id as in service is external to this item creation
+
+            projection = ProjectionExtension.ext(item, add_if_missing=True)
+            projection.epsg = crs
+            centroid = antimeridian.centroid(item.geometry)
+            projection.centroid = {
+                "lat": round(centroid.y, 5),
+                "lon": round(centroid.x, 5),
+            }
+
+            RasterExtension.add_to(item)
+
+            # TODO take care code duplication with other products
+            sub_products = {}
+
+            binary_title = "Change Detection Mapping - binary"
+            confidence_title = "Change Detection Mapping - confidence"
+            confidence_file = Path(image.parent, parts[:-1] + "_pred_logits.tif")
+
+            sub_products[binary_title] = image
+            sub_products[confidence_title] = confidence_file
+
+            for band_name, band_path in sub_products:
+                with rasterio.open(band_path) as src:
+                    dtype = src.dtypes[0]
+                    nodata = src.nodata
+                    resolution = (src.res[0], src.res[1])
+                    shape = [src.height, src.width]
+                    transform = src.transform
+                    crs = src.crs.to_epsg()
+
+                resolution = 10  # that's hardcoded: resolution of S2 RGB bands
+
+                asset_id = band_name
+                asset = Asset(
+                    href=str(band_path.resolve()),
+                    media_type=pystac.MediaType.GEOTIFF,
+                    roles=["data", "aggregation"],
+                    title=asset_id,
+                )
+
+                # TODO check if needed: (from stactools, sentinel 2 stac.py)
+                # (it's how it creates the projection extension)
+                # set_asset_properties(asset, band_gsd)
+                proj_asset = ProjectionExtension.ext(asset)
+                proj_asset.epsg = crs
+                proj_asset.transform = list(transform)[:6]
+                proj_asset.shape = shape
+
+                raster_asset = RasterExtension.ext(asset)
+                raster_asset.bands = [
+                    RasterBand.create(
+                        data_type=dtype,
+                        nodata=nodata,
+                        spatial_resolution=resolution,
+                    )
+                ]
+
+                item.add_asset(band_name, asset)
+            created_items.add(item)
+    return created_items
+
+
 def create_sentinel_2_monthly_median_items(
     path: Path, additional_providers: list[Provider]
 ) -> set[Item]:

@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## [0.17.0] - 2025-05-23
+### Added
+- Can now ingest Change Detection Mapping (ChDM) product made by NOA-Beyond (#130)
+- ChDM and Cloud Free Median (CFM) products can be ingested from the service
+
 ## [0.16.0] - 2025-05-05
 ### Added
 - Can now ingest Sentinel 2 monthly medians made by NOA-Beyond (#126)

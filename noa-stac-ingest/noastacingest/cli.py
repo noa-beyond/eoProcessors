@@ -28,6 +28,7 @@ from kafka.errors import (
 sys.path.append(str(Path(__file__).parent / ".."))
 
 from noastacingest import ingest  # noqa:402 pylint:disable=wrong-import-position
+from noastacingest import utils
 from noastacingest.messaging.message import (  # noqa:402 pylint:disable=wrong-import-position
     Message,
 )
@@ -37,8 +38,6 @@ from noastacingest.messaging import (  # noqa:402 pylint:disable=wrong-import-po
 from noastacingest.messaging.kafka_consumer import ( # noqa:402 pylint:disable=wrong-import-position
     KafkaConsumer,
 )
-
-logger = logging.getLogger(__name__)
 
 PROCESSOR = "[NOA-STACIngest]"
 
@@ -100,6 +99,7 @@ def create_item_from_path(
     # TODO This is Sentinel specific. It searches for directories (SAFE or otherwise)
     # For Beyond items, we need a generalization or a different function
     # TODO needs refactor. Updating/creating items can be done in batches, (e.g in db)
+    logger = logging.getLogger(__name__)
     logger.info("Cli STAC ingest using config file: %s", config)
     ingestor = ingest.Ingest(config=config)
 
@@ -147,6 +147,7 @@ def ingest_from_path(
     """
     # TODO Beyond items specific. We need a generalization for all (if possible)
     # TODO needs refactor. Updating/creating items can be done in batches, (e.g in db)
+    logger = logging.getLogger(__name__)
     logger.info("Cli STAC ingest using config file: %s", config)
     ingestor = ingest.Ingest(config=config)
 
@@ -211,6 +212,7 @@ def noa_stac_ingest_service(
         db_ingest (click.Option | bool): Ingest Item to db. Set to true for production
     """
     # if config_file:
+    logger = logging.getLogger(__name__)
     logger.debug("Starting NOA-STAC-Ingest service...")
 
     ingestor = ingest.Ingest(config=config_file)
@@ -225,8 +227,11 @@ def noa_stac_ingest_service(
 
     topics = ingestor.config.get(
         "topics_consumer",
-        os.environ.get("KAFKA_INPUT_TOPICS", ["stacingest.order.requested"]),
+        os.environ.get("KAFKA_INPUT_TOPICS", ["noa.stacingest.request"]),
     )
+    # TODO even though we get a schema here, it is not actually used.
+    # Moreover, the schema is wrong, since two products use different
+    # schemas, and we cannot have a single consumer validating both
     schema_def = Message.schema_request()
 
     try:
@@ -245,6 +250,7 @@ def noa_stac_ingest_service(
                 (os.getenv("KAFKA_REQUEST_GROUP_ID", "stacingest-group-request")),
             ),
             topics=topics,
+            # TODO this is not used. Either remove it or validate it
             schema=schema_def,
         )
         try:
@@ -282,13 +288,57 @@ def noa_stac_ingest_service(
                     ingested = "Some ingested ids"
                     failed = "Some failed to ingest ids"
                 else:
-                    uuid_list = item["Ids"]
-                    ingested, failed = ingestor.from_uuid_db_list(
-                        uuid_list, collection, db_ingest
-                    )
-                logger.debug("Ingested items: %s", ingested)
-                if failed:
-                    logger.error("Failed uuids: %s", failed)
+                    # TODO priority refactor: need to connect to db
+                    # to check paths. This is only for S2 and that's an
+                    # ugly way to do it. Messages should have the same
+                    # structure and ingestion should be agnostic of
+                    # underlying infra dbs (except pgSTAC of course)
+                    if "Ids" in item:
+                        uuid_list = item["Ids"]
+                        ingested, failed = ingestor.from_uuid_db_list(
+                            uuid_list, collection, db_ingest
+                        )
+                        logger.debug("Ingested items: %s", ingested)
+                        if failed:
+                            logger.error("Failed uuids: %s", failed)
+                    elif "noaId" in item:
+                        # NOTE this s3 path is mounted. We run on Cloudferro
+                        # Run either as mounted or s3 directly
+                        # TODO pass through NOAId and return orderId
+                        # TODO refactor: kafka response sent at cli level
+                        product_path = item["noaS3Path"]
+                        order_id = item["orderId"]
+                        ingestor.ingest_directory(
+                            product_path,
+                            None,
+                            db_ingest
+                        )
+                        kafka_topic = ingestor.config.get(
+                            "topic_producer",
+                            os.environ.get(
+                                "KAFKA_OUTPUT_TOPIC",
+                                "noa.stacingest.response"
+                            ),
+                        )
+                        logger.debug("Sending message to topic %s", kafka_topic)
+                        try:
+                            bootstrap_servers = ingestor.config.get(
+                                "kafka_bootstrap_servers",
+                                os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"),
+                            )
+                            result = 0
+                            # TODO, also this: we should have one message schema
+                            # for response
+                            utils.send_kafka_message_chdm(
+                                bootstrap_servers, kafka_topic, order_id, result
+                            )
+                            logger.info(
+                                "Sending message to Kafka consumer. %s %s",
+                                order_id,
+                                result
+                            )
+                        except BrokenPipeError as e:
+                            logger.error("Error sending kafka message: %s", e)
             sleep(1)
         except (UnsupportedForMessageFormatError, InvalidMessageError) as e:
             logger.error("Error in STAC ingestion: %s", e)
