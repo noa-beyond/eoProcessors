@@ -4,7 +4,7 @@ class Message:
     """
 
     _schema_request_def = {
-        "namespace": "noa.chdm.order",
+        "namespace": "noa.chdm.request",
         "type": "object",
         "properties": {
             "orderId": {
@@ -39,6 +39,12 @@ class Message:
         "namespace": "noa.chdm.response",
         "type": "object",
         "properties": {
+            "result": {
+                "type": "string",
+            },
+            "orderId": {
+                "type": "string",
+            },
             "chdmProductPath": {
                 "type": "string",
             }
