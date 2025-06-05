@@ -158,21 +158,12 @@ def noa_pgaas_chdm(
     # So it should be set as a list in the config file
     topics = chdm_producer.config.get(
         "topics_consumer", os.environ.get(
-            "KAFKA_INPUT_TOPICS", ["chdm.order.requested"]
+            "KAFKA_INPUT_TOPICS", ["noa.chdm.request"]
         )
     )
     schema_def = Message.schema_request()
-    num_partitions = int(chdm_producer.config.get(
-        "num_partitions", os.environ.get(
-            "KAFKA_NUM_PARTITIONS", 2
-        )
-    ))
-    replication_factor = int(chdm_producer.config.get(
-        "replication_factor", os.environ.get(
-            "KAFKA_REPLICATION_FACTOR", 3
-        )
-    ))
 
+    retries = 0
     while consumer is None:
         consumer = KafkaConsumer(
             bootstrap_servers=chdm_producer.config.get(
@@ -193,26 +184,20 @@ def noa_pgaas_chdm(
             TopicAuthorizationFailedError,
             InvalidTopicError
         ) as e:
-            logger.warning("Kafka Error on Topic subscription: %s", e)
-            logger.warning("Trying to create it:")
-            try:
-                consumer.create_topics(
-                    topics=topics,
-                    num_partitions=num_partitions,
-                    replication_factor=replication_factor
-                )
-            except (TopicAlreadyExistsError,
-                    UnknownTopicOrPartitionError,
-                    TopicAuthorizationFailedError,
-                    InvalidTopicError) as g:
+            if retries < 5:
+                logger.warning("Could not subscribe to Topic(s): %s", topics)
+                if consumer is None:
+                    sleep(5)
+                    retries += 1
+                    continue
+            else:
                 logger.error(
-                    "Kafka: Could not subscribe or create producer topic: %s",
-                    g
+                    "Kafka Error on Topic subscription after %i retries: %s",
+                    retries,
+                    e
                 )
-                return
-        if consumer is None:
-            sleep(5)
 
+    logger.info("Service started, subscribed to topics...")
     click.echo(f"Service started. Output path: {output_path}\n")
 
     while True:
@@ -225,23 +210,25 @@ def noa_pgaas_chdm(
                 logger.debug(msg)
                 click.echo("Received lists use:")
                 click.echo(item)
-                items_from = item["ids_date_from"]
-                items_to = item["ids_date_to"]
+                order_id = item["orderId"]
+                items_from = item["initialSelectionProductPaths"]
+                items_to = item["finalSelectionProductPaths"]
                 bbox = item["bbox"]
                 new_product_path = chdm_producer.produce_from_items_lists(
                     items_from, items_to, bbox
                 )
                 logger.debug(
-                    "New change detection mapping product at: %s",
+                    "Order ID: %s. New change detection mapping product at: %s",
+                    order_id,
                     new_product_path
                 )
                 click.echo(
-                    f"Consumed ChDM message and used {items_from} and {items_to} items"
+                    f"Consumed ChDM message for orderId {order_id}"
                 )
 
                 kafka_topic = chdm_producer.config.get(
                     "topic_producer", os.environ.get(
-                        "KAFKA_OUTPUT_TOPIC", "chdm.order.completed")
+                        "KAFKA_OUTPUT_TOPIC", "noa.chdm.response")
                 )
                 logger.info("New ChDM Product . Sending kafka message")
                 try:
@@ -253,6 +240,7 @@ def noa_pgaas_chdm(
                     utils.send_kafka_message(
                         bootstrap_servers,
                         kafka_topic,
+                        order_id,
                         new_product_path
                     )
                     print(f"Kafka message of New ChDM Product sent to: {kafka_topic}")
