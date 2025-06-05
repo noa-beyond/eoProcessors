@@ -4,17 +4,20 @@ class Message:
     """
 
     _schema_request_def = {
-        "namespace": "noa.chdm.order",
+        "namespace": "noa.chdm.request",
         "type": "object",
         "properties": {
-            "ids_date_from": {
+            "orderId": {
+                "type": "string"
+            },
+            "initialSelectionProductPaths": {
                 "type": "array",
                 "items": {
                     "type": "string",
                     "uniqueItems": True,
                 }
             },
-            "ids_date_to": {
+            "finalSelectionProductPaths": {
                 "type": "array",
                 "items": {
                     "type": "string",
@@ -28,18 +31,34 @@ class Message:
                 }
             }
         },
-        "required": ["ids_date_from", "ids_date_to", "bbox"]
+        "required": [
+            "orderId",
+            "initialSelectionProductPaths",
+            "finalSelectionProductPaths",
+            "bbox"
+        ]
     }
 
+    # NOTE product path which includes the two sub-products: binary and confidence
     _schema_response_def = {
         "namespace": "noa.chdm.response",
         "type": "object",
         "properties": {
-            "chdm_product_path": {
+            "result": {
+                "type": "string",
+            },
+            "orderId": {
+                "type": "string",
+            },
+            "chdmProductPath": {
                 "type": "string",
             }
         },
-        "required": ["chdm_product_path"]
+        "required": [
+            "result",
+            "orderId",
+            "chdmProductPath"
+        ]
     }
 
     @staticmethod

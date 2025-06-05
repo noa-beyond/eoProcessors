@@ -16,7 +16,7 @@ import click
 from click import Argument, Option
 from kafka import KafkaConsumer as k_KafkaConsumer
 from kafka.errors import (
-    TopicAlreadyExistsError,
+    NoBrokersAvailable,
     TopicAuthorizationFailedError,
     InvalidTopicError,
     UnknownTopicOrPartitionError,
@@ -103,7 +103,6 @@ def produce(
         verbose=verbose
     )
     chdm_producer.produce(from_path, to_path)
-    click.echo("Done.\n")
 
 
 @cli.command(
@@ -129,9 +128,10 @@ def produce(
 @click.argument("config_file", required=True)
 @click.option("--output_path", default="./data", help="Output path")
 def noa_pgaas_chdm(
-    config_file: Argument | str,
-    output_path: Option | str,
-    verbose: Option | bool
+    config_file: str,
+    output_path: str,
+    test: bool,
+    verbose: bool
 ) -> None:
     """
     Instantiate ChDM class and activate service, listening to kafka topic.
@@ -144,6 +144,7 @@ def noa_pgaas_chdm(
     """
     # if config_file:
     logger.debug("Starting NOA-ChDM service...")
+    logger.info("Testing: %s", test)
 
     chdm_producer = chdm.ChDM(
         config_file=config_file,
@@ -152,67 +153,74 @@ def noa_pgaas_chdm(
         is_service=True
     )
 
+    # Consumer
     consumer: AbstractConsumer | k_KafkaConsumer = None
-
     # Warning: topics is a list, even if there is only one topic
     # So it should be set as a list in the config file
-    topics = chdm_producer.config.get(
+    consumer_topics = chdm_producer.config.get(
         "topics_consumer", os.environ.get(
-            "KAFKA_INPUT_TOPICS", ["chdm.order.requested"]
+            "KAFKA_INPUT_TOPICS", ["noa.chdm.request"]
         )
     )
     schema_def = Message.schema_request()
-    num_partitions = int(chdm_producer.config.get(
-        "num_partitions", os.environ.get(
-            "KAFKA_NUM_PARTITIONS", 2
-        )
-    ))
-    replication_factor = int(chdm_producer.config.get(
-        "replication_factor", os.environ.get(
-            "KAFKA_REPLICATION_FACTOR", 3
-        )
-    ))
+    consumer_bootstrap_servers = chdm_producer.config.get(
+        "kafka_bootstrap_servers",
+        (os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"))
+    )
+    kafka_group_id = chdm_producer.config.get(
+        "kafka_request_group_id",
+        (os.getenv("KAFKA_REQUEST_GROUP_ID", "chdm-group-request"))
+    )
 
-    while consumer is None:
-        consumer = KafkaConsumer(
-            bootstrap_servers=chdm_producer.config.get(
-                "kafka_bootstrap_servers",
-                (os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"))
-            ),
-            group_id=chdm_producer.config.get(
-                "kafka_request_group_id",
-                (os.getenv("KAFKA_REQUEST_GROUP_ID", "chdm-group-request"))
-            ),
-            topics=topics,
-            schema=schema_def
+    # Producer
+    producer_bootstrap_servers = chdm_producer.config.get(
+        "kafka_bootstrap_servers",
+        os.getenv(
+            "KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"
         )
+    )
+
+    producer_topic = chdm_producer.config.get(
+        "topic_producer", os.environ.get(
+            "KAFKA_OUTPUT_TOPIC", "noa.chdm.response")
+    )
+
+    retries = 0
+    while consumer is None:
         try:
-            consumer.subscribe_to_topics(topics)
+            consumer = KafkaConsumer(
+                bootstrap_servers=consumer_bootstrap_servers,
+                group_id=kafka_group_id,
+                topics=consumer_topics,
+                schema=schema_def
+            )
+            consumer.subscribe_to_topics(consumer_topics)
+        except NoBrokersAvailable as e:
+            logger.error(
+                "Kafka configuration error, no brokers available for (%s) : %s ",
+                consumer_bootstrap_servers,
+                e
+            )
+            raise
         except (
             UnknownTopicOrPartitionError,
             TopicAuthorizationFailedError,
             InvalidTopicError
         ) as e:
-            logger.warning("Kafka Error on Topic subscription: %s", e)
-            logger.warning("Trying to create it:")
-            try:
-                consumer.create_topics(
-                    topics=topics,
-                    num_partitions=num_partitions,
-                    replication_factor=replication_factor
-                )
-            except (TopicAlreadyExistsError,
-                    UnknownTopicOrPartitionError,
-                    TopicAuthorizationFailedError,
-                    InvalidTopicError) as g:
+            if retries < 5:
+                logger.warning("Could not subscribe to Topic(s): %s", consumer_topics)
+                if consumer is None:
+                    sleep(5)
+                    retries += 1
+                    continue
+            else:
                 logger.error(
-                    "Kafka: Could not subscribe or create producer topic: %s",
-                    g
+                    "Kafka Error on Topic subscription after %i retries: %s",
+                    retries,
+                    e
                 )
-                return
-        if consumer is None:
-            sleep(5)
 
+    logger.info("Service started, subscribed to topics...")
     click.echo(f"Service started. Output path: {output_path}\n")
 
     while True:
@@ -222,42 +230,35 @@ def noa_pgaas_chdm(
                 now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 msg = f"Digesting Item from Topic {message.topic} ({now_time})..."
                 msg += "\n> Item: " + json.dumps(item)
-                logger.debug(msg)
+                logger.info(msg)
                 click.echo("Received lists use:")
                 click.echo(item)
-                items_from = item["ids_date_from"]
-                items_to = item["ids_date_to"]
+                order_id = item["orderId"]
+                items_from = item["initialSelectionProductPaths"]
+                items_to = item["finalSelectionProductPaths"]
                 bbox = item["bbox"]
                 new_product_path = chdm_producer.produce_from_items_lists(
                     items_from, items_to, bbox
                 )
-                logger.debug(
-                    "New change detection mapping product at: %s",
+                logger.info(
+                    "Order ID: %s. New change detection mapping product at: %s",
+                    order_id,
                     new_product_path
                 )
                 click.echo(
-                    f"Consumed ChDM message and used {items_from} and {items_to} items"
+                    f"Consumed ChDM message for orderId {order_id}"
                 )
 
-                kafka_topic = chdm_producer.config.get(
-                    "topic_producer", os.environ.get(
-                        "KAFKA_OUTPUT_TOPIC", "chdm.order.completed")
-                )
-                logger.info("New ChDM Product . Sending kafka message")
                 try:
-                    bootstrap_servers = chdm_producer.config.get(
-                        "kafka_bootstrap_servers", os.getenv(
-                            "KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"
-                        )
-                    )
                     utils.send_kafka_message(
-                        bootstrap_servers,
-                        kafka_topic,
+                        producer_bootstrap_servers,
+                        producer_topic,
+                        order_id,
                         new_product_path
                     )
-                    print(f"Kafka message of New ChDM Product sent to: {kafka_topic}")
+                    print(f"Kafka message of New ChDM Product sent to: {producer_topic}")
                 except BrokenPipeError as e:
-                    print(f"Error sending kafka message to: {kafka_topic}")
+                    print(f"Error sending kafka message to: {producer_topic}")
                     logger.warning("Error sending kafka message: %s ", e)
             sleep(1)
         except (UnsupportedForMessageFormatError, InvalidMessageError) as e:

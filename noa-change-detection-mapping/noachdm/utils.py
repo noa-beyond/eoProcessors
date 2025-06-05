@@ -24,12 +24,16 @@ from noachdm.messaging.message import Message
 logger = logging.getLogger(__name__)
 
 
-def send_kafka_message(bootstrap_servers, topic, product_path):
+def send_kafka_message(bootstrap_servers, topic, order_id, product_path):
     schema_def = Message.schema_response()
 
     try:
         producer = KafkaProducer(bootstrap_servers=bootstrap_servers, schema=schema_def)
-        kafka_message = {"chdm_product_path": product_path}
+        kafka_message = {
+            "result": 0,
+            "orderId": order_id,
+            "chdm_product_path": product_path
+            }
         producer.send(topic=topic, key=None, value=kafka_message)
     except NoBrokersAvailable as e:
         logger.warning("No brokers available. Continuing without Kafka. Error: %s", e)
@@ -59,7 +63,6 @@ def crop_and_make_mosaic(items_paths, bbox) -> tempfile.TemporaryDirectory:
                     if a_filename == "":
                         a_filename = pathlib.Path(raster).name
                     da = rioxarray.open_rasterio(raster, masked=True).squeeze()
-                    # da = da.rio.clip_box(minx=bbox[0], miny=bbox[1], maxx=bbox[2], maxy=bbox[3])
                     da = da.rio.clip_box(*bbox)
                     cropped_list.append(da)
                     continue
@@ -180,15 +183,11 @@ def predict_all_scenes_to_mosaic(model_weights_path, dataset, output_dir, device
     os.makedirs(output_dir, exist_ok=True)
 
     for scene_index, scene in enumerate(dataset.pre_scenes):
-        # print(f"\nProcessing scene {scene_idx + 1}/{len(dataset.pre_scenes)}...")
-        # this is not entirely correct, but we need an id (image could belong in more
-        # than one tile
         tile = dataset.pre_scenes[0]['B04'].split("_")[-5]
         random_choice = random.choices(string.ascii_letters + string.digits, k=6)
         date_from = dataset.pre_scenes[0]['B04'].split("_")[-4]
         date_to = dataset.post_scenes[0]['B04'].split("_")[-4]
 
-        # Get metadata
         with rasterio.open(scene['B04']) as ref_src:
             h, w = ref_src.height, ref_src.width
             transform = ref_src.transform
@@ -241,13 +240,15 @@ def predict_all_scenes_to_mosaic(model_weights_path, dataset, output_dir, device
 
         # Save individual scene prediction
         # ChDM_S2_20220215_20230316_TJ35_AD6548_pred.tif
-        output_filename = "_".join(
+        filename_parts = [
             "ChDM_S2",
             date_from,
             date_to,
             tile,
-            random_choice
-        )
+            "".join(random_choice)
+        ]
+        output_filename = "_".join(filename_parts)
+
         output_path = os.path.join(
             output_dir,
             output_filename + "_pred.tif")

@@ -7,7 +7,11 @@ import os
 import json
 import torch
 
+import logging
+
 from noachdm import utils as chdm_utils
+
+logger = logging.getLogger(__name__)
 
 
 class ChDM:
@@ -17,7 +21,6 @@ class ChDM:
 
     Methods:
     """
-
     def __init__(
         self,
         config_file: str = None,
@@ -63,7 +66,7 @@ class ChDM:
             dataset=dataset,
             output_dir='data/',
             device='cuda' if torch.cuda.is_available() else 'cpu')
-        print("Done already")
+        logger.info("Done already")
         return product_path
 
     def produce_from_items_lists(self, items_from, items_to, bbox):

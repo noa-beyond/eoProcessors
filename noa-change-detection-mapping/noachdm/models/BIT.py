@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torch.optim import lr_scheduler
 from einops import rearrange
+import logging
 
 import functools
 
@@ -12,6 +13,7 @@ from noachdm.models.help_funcs import Transformer, TransformerDecoder, TwoLayerC
 ###############################################################################
 # Helper Functions
 ###############################################################################
+logger = logging.getLogger(__name__)
 
 
 def get_scheduler(optimizer, args):
@@ -118,7 +120,7 @@ def init_weights(net, init_type="normal", init_gain=0.02):
             nn.init.normal_(m.weight.data, 1.0, init_gain)
             nn.init.constant_(m.bias.data, 0.0)
 
-    print("initialize network with %s" % init_type)
+    logger.info("Initialize network with %s" % init_type)
     net.apply(init_func)  # apply the initialization function <init_func>
 
 
