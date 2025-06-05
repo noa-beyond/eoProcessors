@@ -31,7 +31,12 @@ class Message:
                 }
             }
         },
-        "required": ["orderId", "initialSelectionProductPaths", "finalSelectionProductPaths", "bbox"]
+        "required": [
+            "orderId",
+            "initialSelectionProductPaths",
+            "finalSelectionProductPaths",
+            "bbox"
+        ]
     }
 
     # NOTE product path which includes the two sub-products: binary and confidence
@@ -49,7 +54,11 @@ class Message:
                 "type": "string",
             }
         },
-        "required": ["chdmProductPath"]
+        "required": [
+            "result",
+            "orderId",
+            "chdmProductPath"
+        ]
     }
 
     @staticmethod
