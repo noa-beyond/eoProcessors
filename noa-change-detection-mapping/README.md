@@ -8,13 +8,13 @@ The NOAChDM processor can be executed as:
 - Standalone [**Cli application**](#standalone-cli-execution) or
 - Inside a [**Container**](#docker-execution)
 - As a container, inside a Kubernetes environment with kafka, with a postgres database. This is a Beyond specific setup, where a user can instantiate NOAChDM and request the production of a single product.
-- As a microservice inside a Kubernetes environment with kafka, with a postgres database. Same as above, but now it can be deployed as a service: Product Generation as a Service (PGaaS).
+- As a microservice inside a Kubernetes environment with kafka, with a postgres database. Same as above, but now it can be deployed as a service: Product Generation as a Service (PGaaS). Please find info for that in section [PGaaS](#pgaas)
 
 ## Standalone CLI execution
 
 1. Use your favorite flavor of virtual environment, e.g. conda:
     - Create/activate the environment:
-        - Execute `conda create -n noa-chdm python==3.12.10`
+        - Execute `conda create -n noa-chdm python==3.11.12`
         - Execute `conda activate noa-chdm`
 2. Then:
 
@@ -33,6 +33,9 @@ python noachdm/cli.py [command] config/config.json
 ```
 
 Available commands are:
+
+ - `produce` - Local execution
+ - `noa_pgaas_chdm` - Product Generation as a Service (PGaaS)
 
 ### Config file
 The config file *should* be placed inside `eoProcessors/noa-change-detection-mapping/config`, but of course you could use any path.
@@ -53,20 +56,23 @@ docker build -t noa-chdm .
 
 4. Edit `config/config.json` (or create a new one)
 
-5. Execute either:
+5. Execute:
 
-```
-docker run -it \
--v [./data]:/app/data \
--v [./config/config.json]:/app/config/config.json \
---entrypoint /bin/bash \
-noa-chdm
-```
+5.1
+
+    ```
+    docker run -it \
+    -v [./data]:/app/data \
+    -v [./config/config.json]:/app/config/config.json \
+    --entrypoint /bin/bash \
+    noa-chdm
+    ```
 
 to enter into the container and execute the cli application from there:
 `python noachdm/cli.py produce -v config/config.json`
 
-5.2 Or execute the command leaving the container when the command is completed:
+
+5.2 Execute the command leaving the container when the command is completed:
 
 ```
 docker run -it \
@@ -75,10 +81,21 @@ docker run -it \
 noa-chdm produce -v config/config.json
 ```
 
+### PGaaS
+5.3 Run service:
+
+```
+docker run -it \
+-v [./data]:/app/data \
+-v [./config/config.json]:/app/config/config.json \
+noa-chdm noa-pgaas-chdm -v config/config.json
+```
+
+Also note that the PGaaS listens on the `noa.chdm.request` kafka topic and replies to the `noa.chdm.response` kafka topic.
+
 Please note that in the aforementioned commands you can replace:
     * `[./data]` with the folder where the downloaded data will be stored. The default location is "./data"
     * `[./config/config.json]` with the local location of your configuration file. In that way you will use the local edited file instead of the container one. If you have edited the already present config file before building the container, leave it as is is.
-
 
 ## Config file parameters
 
