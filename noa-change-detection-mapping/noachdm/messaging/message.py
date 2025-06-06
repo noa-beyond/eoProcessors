@@ -24,10 +24,18 @@ class Message:
                     "uniqueItems": True,
                 }
             },
-            "bbox": {
-                "type": "array",
-                "items": {
-                    "type": "string"
+            "geometry": {
+                "type": "object",
+                "properties": {
+                    "type": {
+                        "type": "string"
+                    },
+                    "coordinates": {
+                        "type": "array",
+                        "items": {
+                            "type": "array",
+                        }
+                    }
                 }
             }
         },
@@ -35,7 +43,7 @@ class Message:
             "orderId",
             "initialSelectionProductPaths",
             "finalSelectionProductPaths",
-            "bbox"
+            "geometry"
         ]
     }
 
