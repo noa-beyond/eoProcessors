@@ -236,7 +236,7 @@ def noa_pgaas_chdm(
                 order_id = item["orderId"]
                 items_from = item["initialSelectionProductPaths"]
                 items_to = item["finalSelectionProductPaths"]
-                bbox = item["bbox"]
+                bbox = utils.get_bbox(item["geometry"])
                 new_product_path = chdm_producer.produce_from_items_lists(
                     items_from, items_to, bbox
                 )
@@ -261,6 +261,8 @@ def noa_pgaas_chdm(
                     print(f"Error sending kafka message to: {producer_topic}")
                     logger.warning("Error sending kafka message: %s ", e)
             sleep(1)
+        except ValueError as e:
+            logger.error("Wrong input value error %s", e)
         except (UnsupportedForMessageFormatError, InvalidMessageError) as e:
             click.echo(f"Error in reading kafka message: {item}")
             logger.warning("Error in reading kafka message: %s", e)
