@@ -40,6 +40,33 @@ def send_kafka_message(bootstrap_servers, topic, order_id, product_path):
         producer = None
 
 
+def get_bbox(geometry):
+    """
+    Extract a bbox from a Geojson Geometry
+    """
+    def extract_coords(geom):
+        coords = geom.get("coordinates", [])
+        geometry_type = geom["type"]
+        if geometry_type == "Point":
+            return [coords]
+        elif geometry_type in ["LineString", "MultiPoint"]:
+            return coords
+        elif geometry_type in ["Polygon", "MultiLineString"]:
+            return [pt for ring in coords for pt in ring]
+        elif geometry_type == "MultiPolygon":
+            return [pt for poly in coords for ring in poly for pt in ring]
+        elif geometry_type == "GeometryCollection":
+            return [pt for g in geom["geometries"] for pt in extract_coords(g)]
+        else:
+            raise ValueError(f"Unsupported geometry type: {geometry_type}")
+
+    all_coords = extract_coords(geometry)
+    lons = [pt[0] for pt in all_coords]
+    lats = [pt[1] for pt in all_coords]
+
+    return tuple(min(lons), min(lats), max(lons), max(lats))
+
+
 def crop_and_make_mosaic(items_paths, bbox) -> tempfile.TemporaryDirectory:
     """
     There is a lower (hardcoded for now) limit on kernel for images.
