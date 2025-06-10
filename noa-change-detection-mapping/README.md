@@ -29,7 +29,7 @@ pip install -r requirements.txt
 3. You are ready to execute the cli script:
 
 ```
-python noachdm/cli.py [command] config/config.json
+python noachdm/cli.py [command] [config/config_service.json] (config valid for PGaaS only)
 ```
 
 Available commands are:
@@ -37,7 +37,7 @@ Available commands are:
  - `produce` - Local execution
  - `noa_pgaas_chdm` - Product Generation as a Service (PGaaS)
 
-### Config file
+### Config file for PGaaS
 The config file *should* be placed inside `eoProcessors/noa-change-detection-mapping/config`, but of course you could use any path.
 Please check the [Config](#Config-file-parameters) section regarding config file specification.
 
@@ -54,7 +54,7 @@ Please check the [Config](#Config-file-parameters) section regarding config file
 docker build -t noa-chdm .
 ```
 
-4. Edit `config/config.json` (or create a new one)
+4. (PGaaS only) Edit `config/config_service.json` (or create a new one)
 
 5. Execute:
 
@@ -63,13 +63,12 @@ docker build -t noa-chdm .
     ```
     docker run -it \
     -v [./data]:/app/data \
-    -v [./config/config.json]:/app/config/config.json \
     --entrypoint /bin/bash \
     noa-chdm
     ```
 
 to enter into the container and execute the cli application from there:
-`python noachdm/cli.py produce -v config/config.json`
+`python noachdm/cli.py produce -v [from_path] [to_path]`
 
 
 5.2 Execute the command leaving the container when the command is completed:
@@ -77,8 +76,7 @@ to enter into the container and execute the cli application from there:
 ```
 docker run -it \
 -v [./data]:/app/data \
--v [./config/config.json]:/app/config/config.json \
-noa-chdm produce -v config/config.json
+noa-chdm produce -v [from_path] [to_path]
 ```
 
 ### PGaaS
@@ -87,15 +85,15 @@ noa-chdm produce -v config/config.json
 ```
 docker run -it \
 -v [./data]:/app/data \
--v [./config/config.json]:/app/config/config.json \
-noa-chdm noa-pgaas-chdm -v config/config.json
+-v [./config/config_service.json]:/app/config/config_service.json \
+noa-chdm noa-pgaas-chdm -v config/config_service.json
 ```
 
 Also note that the PGaaS listens on the `noa.chdm.request` kafka topic and replies to the `noa.chdm.response` kafka topic.
 
 Please note that in the aforementioned commands you can replace:
     * `[./data]` with the folder where the downloaded data will be stored. The default location is "./data"
-    * `[./config/config.json]` with the local location of your configuration file. In that way you will use the local edited file instead of the container one. If you have edited the already present config file before building the container, leave it as is is.
+    * `[./config/config_service.json]` with the local location of your configuration file. In that way you will use the local edited file instead of the container one. If you have edited the already present config file before building the container, leave it as is is.
 
 ## Config file parameters
 
@@ -113,13 +111,16 @@ Take a look at the sample config.json.
 Cli can be executed with the following:
 
 - Commands
-    * `produce` - The main option. lorem ipsum.
+    * `produce` - Produce change detection mapping from `[from_path]` rasters to `[to_path]` rasters.
+    * `noa-pgaas-chdm` - PGaaS. Listen to kafka topics for orders.
 - Options
     * `--output_path` Custom download location. Default is `.data`
     * `-v`, `--verbose` Shows the verbose output
     * `--log LEVEL (INFO, DEBUG, WARNING, ERROR)` Shows the logs depending on the selected `LEVEL`
 - Arguments
-    * `config_file` - Necessary argument for the commands, indicating which config file will be used.
+    * `from_path` - Necessary argument for the produce command, indicating "from" date
+    * `to_path` - Necessary argument for the produce command, indicating "to" date
+    * `config_file` - Necessary argument for PGaaS, indicating which config file will be used.
 
 ## Examples
 
