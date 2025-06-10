@@ -143,6 +143,7 @@ def noa_pgaas_chdm(
         verbose (click.Option | bool): verbose
     """
     # if config_file:
+    logger = logging.getLogger(__name__)
     logger.debug("Starting NOA-ChDM service...")
     logger.info("Testing: %s", test)
 
@@ -150,7 +151,8 @@ def noa_pgaas_chdm(
         config_file=config_file,
         output_path=output_path,
         verbose=verbose,
-        is_service=True
+        is_service=True,
+        logger=logger
     )
 
     # Consumer
@@ -236,7 +238,15 @@ def noa_pgaas_chdm(
                 order_id = item["orderId"]
                 items_from = item["initialSelectionProductPaths"]
                 items_to = item["finalSelectionProductPaths"]
-                bbox = utils.get_bbox(item["geometry"])
+                try:
+                    bbox = utils.get_bbox(item["geometry"])
+                except (TypeError, Exception) as e:
+                    logger.error(
+                        "Could not extract bbox coordinates: %s, %s",
+                        bbox,
+                        e
+                    )
+                    continue
                 new_product_path = chdm_producer.produce_from_items_lists(
                     items_from, items_to, bbox
                 )

@@ -11,8 +11,6 @@ import logging
 
 from noachdm import utils as chdm_utils
 
-logger = logging.getLogger(__name__)
-
 
 class ChDM:
     """
@@ -26,7 +24,8 @@ class ChDM:
         config_file: str = None,
         output_path: str = None,
         verbose: bool = False,
-        is_service: bool = False
+        is_service: bool = False,
+        logger=logging.getLogger(__name__)
     ) -> ChDM:
         """
         ChDM class. Constructor reads and loads the config if any
@@ -35,6 +34,8 @@ class ChDM:
             config_file (str): Config filename (json)
             verbose (bool - Optional): Verbose
         """
+        self.logger = logger
+
         self._config = {}
         self._output_path = output_path
         self._verbose = verbose
@@ -66,7 +67,7 @@ class ChDM:
             dataset=dataset,
             output_dir='data/',
             device='cuda' if torch.cuda.is_available() else 'cpu')
-        logger.info("Done already")
+        self.logger.info("Done already")
         return product_path
 
     def produce_from_items_lists(self, items_from, items_to, bbox):
