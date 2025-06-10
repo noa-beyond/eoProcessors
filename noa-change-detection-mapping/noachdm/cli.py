@@ -53,7 +53,7 @@ PROCESSOR = "[NOA-ChDM]"
 )
 def cli(log):
     """Click cli group for cli commands"""
-    numeric_level = getattr(logging, log.upper(), "WARNING")
+    numeric_level = getattr(logging, log.upper(), "DEBUG")
     logging.basicConfig(
         format=f"[%(asctime)s.%(msecs)03d] [%(levelname)s] {PROCESSOR} %(message)s",
         level=numeric_level,
