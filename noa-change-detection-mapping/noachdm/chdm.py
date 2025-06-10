@@ -70,15 +70,25 @@ class ChDM:
         self.logger.info("Done already")
         return product_path
 
-    def produce_from_items_lists(self, items_from, items_to, bbox):
+    def produce_from_items_lists(
+        self,
+        items_from,
+        items_to,
+        bbox,
+        s3=False
+    ):
         """
         Must accept list of s3 uris probably
         """
         print("Must accept list of EO Data")
         print(items_from, items_to)
 
-        from_path = chdm_utils.crop_and_make_mosaic(items_from, bbox)
-        to_path = chdm_utils.crop_and_make_mosaic(items_to, bbox)
+        try:
+            from_path = chdm_utils.crop_and_make_mosaic(items_from, bbox, s3)
+            to_path = chdm_utils.crop_and_make_mosaic(items_to, bbox, s3)
+        except RuntimeError as e:
+            self.logger.error("Could not create or parse input items: %s", e)
+            raise
 
         new_product_path = ""
         new_product_path = self.produce(from_path=from_path, to_path=to_path)

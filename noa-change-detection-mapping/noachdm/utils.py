@@ -67,7 +67,7 @@ def get_bbox(geometry):
     return tuple([min(lons), min(lats), max(lons), max(lats)])
 
 
-def crop_and_make_mosaic(items_paths, bbox) -> tempfile.TemporaryDirectory:
+def crop_and_make_mosaic(items_paths, bbox, s3=False) -> tempfile.TemporaryDirectory:
     """
     There is a lower (hardcoded for now) limit on kernel for images.
     Even though we say crop, if the bbox
@@ -84,6 +84,10 @@ def crop_and_make_mosaic(items_paths, bbox) -> tempfile.TemporaryDirectory:
     for band in bands:
         cropped_list = []
         for path in items_paths:
+            if s3:
+                granule_path = pathlib.Path(path, "GRANULE")
+                dirs = [d for d in granule_path.iterdir() if d.is_dir]
+                path = pathlib.Path(granule_path, dirs[0], "IMG_DATA", "R10m")
             for raster in os.listdir(path):
                 # TODO construct band file path
                 if band in raster:
@@ -98,8 +102,10 @@ def crop_and_make_mosaic(items_paths, bbox) -> tempfile.TemporaryDirectory:
         if len(cropped_list) > 1:
             stacked = xr.concat(cropped_list, dim='stack')
             result = stacked.median(dim='stack')
-        else:
+        elif len(cropped_list) == 0:
             result = cropped_list[0]
+        else:
+            raise RuntimeError("Invalid input items. Are you using Sentinel2 L2A?")
 
         # Ensure result has spatial reference info
         result.rio.write_crs(result.rio.crs, inplace=True)
@@ -118,7 +124,8 @@ def crop_and_make_mosaic(items_paths, bbox) -> tempfile.TemporaryDirectory:
             )
         else:
             filename = a_filename.split(".")[0]
-        output_path = os.path.join(temp_dir.name, filename + ".tif")
+        # TODO here write to output s3
+        output_path = pathlib.Path(temp_dir.name, filename + ".tif")
         result.rio.to_raster(output_path)
 
     return temp_dir.name
