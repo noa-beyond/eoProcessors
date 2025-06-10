@@ -64,7 +64,7 @@ def get_bbox(geometry):
     lons = [pt[0] for pt in all_coords]
     lats = [pt[1] for pt in all_coords]
 
-    return tuple(min(lons), min(lats), max(lons), max(lats))
+    return tuple([min(lons), min(lats), max(lons), max(lats)])
 
 
 def crop_and_make_mosaic(items_paths, bbox) -> tempfile.TemporaryDirectory:
