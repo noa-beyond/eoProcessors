@@ -32,8 +32,6 @@ from noachdm.messaging.message import Message  # noqa:402 pylint:disable=wrong-i
 from noachdm.messaging import AbstractConsumer  # noqa:402 pylint:disable=wrong-import-position
 from noachdm.messaging.kafka_consumer import KafkaConsumer  # noqa:402 pylint:disable=wrong-import-position
 
-logger = logging.getLogger(__name__)
-
 
 PROCESSOR = "[NOA-ChDM]"
 
@@ -48,12 +46,12 @@ PROCESSOR = "[NOA-ChDM]"
 )
 @click.option(
     "--log",
-    default="warning",
-    help="Log level (optional, e.g. DEBUG. Default is WARNING)",
+    default="INFO",
+    help="Log level (optional, e.g. DEBUG. Default is INFO)",
 )
 def cli(log):
     """Click cli group for cli commands"""
-    numeric_level = getattr(logging, log.upper(), "DEBUG")
+    numeric_level = getattr(logging, log.upper(), "INFO")
     logging.basicConfig(
         format=f"[%(asctime)s.%(msecs)03d] [%(levelname)s] {PROCESSOR} %(message)s",
         level=numeric_level,
@@ -96,11 +94,14 @@ def produce(
         verbose (click.Option | bool): to show verbose
     """
 
+    logger = logging.getLogger(__name__)
     click.echo("Producing...\n")
     click.echo(output_path)
     chdm_producer = chdm.ChDM(
         output_path=output_path,
-        verbose=verbose
+        verbose=verbose,
+        is_service=False,
+        logger=logger
     )
     chdm_producer.produce(from_path, to_path)
 
@@ -259,23 +260,37 @@ def noa_pgaas_chdm(
                     f"Consumed ChDM message for orderId {order_id}"
                 )
 
-                try:
-                    utils.send_kafka_message(
-                        producer_bootstrap_servers,
-                        producer_topic,
-                        order_id,
-                        new_product_path
-                    )
-                    print(f"Kafka message of New ChDM Product sent to: {producer_topic}")
-                except BrokenPipeError as e:
-                    print(f"Error sending kafka message to: {producer_topic}")
-                    logger.warning("Error sending kafka message: %s ", e)
+                utils.send_kafka_message(
+                    producer_bootstrap_servers,
+                    producer_topic,
+                    result=0,
+                    order_id=order_id,
+                    product_path=new_product_path
+                )
             sleep(1)
-        except ValueError as e:
-            logger.error("Wrong input value error %s", e)
-        except (UnsupportedForMessageFormatError, InvalidMessageError) as e:
-            click.echo(f"Error in reading kafka message: {item}")
-            logger.warning("Error in reading kafka message: %s", e)
+        except (
+            RuntimeError,
+            ValueError,
+            UnsupportedForMessageFormatError,
+            InvalidMessageError,
+            NoBrokersAvailable,
+            BrokenPipeError
+        ) as e:
+            utils.send_kafka_message(
+                producer_bootstrap_servers,
+                producer_topic,
+                result=1,
+                order_id=order_id,
+                product_path=""
+            )
+            if isinstance(e, ValueError):
+                logger.error("Wrong input value error %s", e)
+            elif isinstance(e, RuntimeError):
+                logger.error("Runtime error %s", e)
+            elif isinstance(e, (UnsupportedForMessageFormatError, InvalidMessageError)):
+                logger.error("Error in reading kafka message: %s", e)
+            elif isinstance(e, (NoBrokersAvailable, BrokenPipeError)):
+                logger.error("Error in sending kafka message: %s", e)
             continue
 
 

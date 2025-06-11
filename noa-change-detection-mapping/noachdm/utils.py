@@ -1,9 +1,16 @@
+from __future__ import annotations
+
 import os
 import logging
 import tempfile
 import random
 import string
 import pathlib
+import datetime
+
+import requests
+from requests_aws4auth import AWS4Auth
+
 from collections import defaultdict
 
 import numpy as np
@@ -21,23 +28,29 @@ from noachdm.models.BIT import define_G
 from noachdm.messaging.kafka_producer import KafkaProducer
 from noachdm.messaging.message import Message
 
-logger = logging.getLogger(__name__)
 
-
-def send_kafka_message(bootstrap_servers, topic, order_id, product_path):
+def send_kafka_message(bootstrap_servers, topic, result, order_id, product_path):
+    logger = logging.getLogger(__name__)
     schema_def = Message.schema_response()
 
     try:
         producer = KafkaProducer(bootstrap_servers=bootstrap_servers, schema=schema_def)
         kafka_message = {
-            "result": 0,
+            "result": result,
             "orderId": order_id,
-            "chdm_product_path": product_path
+            "chdmProductPath": product_path
             }
         producer.send(topic=topic, key=None, value=kafka_message)
+        logger.debug(f"Kafka message of New ChDM Product sent to: {topic}")
     except NoBrokersAvailable as e:
         logger.warning("No brokers available. Continuing without Kafka. Error: %s", e)
         producer = None
+    except BrokenPipeError as e:
+        logger.error(
+            "Error sending kafka message to topic %s: %s ",
+            topic,
+            e
+        )
 
 
 def get_bbox(geometry):
@@ -67,7 +80,11 @@ def get_bbox(geometry):
     return tuple([min(lons), min(lats), max(lons), max(lats)])
 
 
-def crop_and_make_mosaic(items_paths, bbox) -> tempfile.TemporaryDirectory:
+def crop_and_make_mosaic(
+        items_paths,
+        bbox,
+        service=False
+) -> tempfile.TemporaryDirectory:
     """
     There is a lower (hardcoded for now) limit on kernel for images.
     Even though we say crop, if the bbox
@@ -84,6 +101,10 @@ def crop_and_make_mosaic(items_paths, bbox) -> tempfile.TemporaryDirectory:
     for band in bands:
         cropped_list = []
         for path in items_paths:
+            if service:
+                granule_path = pathlib.Path(path, "GRANULE")
+                dirs = [d for d in granule_path.iterdir() if d.is_dir]
+                path = pathlib.Path(granule_path, dirs[0], "IMG_DATA", "R10m")
             for raster in os.listdir(path):
                 # TODO construct band file path
                 if band in raster:
@@ -98,8 +119,10 @@ def crop_and_make_mosaic(items_paths, bbox) -> tempfile.TemporaryDirectory:
         if len(cropped_list) > 1:
             stacked = xr.concat(cropped_list, dim='stack')
             result = stacked.median(dim='stack')
-        else:
+        elif len(cropped_list) == 0:
             result = cropped_list[0]
+        else:
+            raise RuntimeError("Invalid input items. Are you using Sentinel2 L2A?")
 
         # Ensure result has spatial reference info
         result.rio.write_crs(result.rio.crs, inplace=True)
@@ -118,7 +141,7 @@ def crop_and_make_mosaic(items_paths, bbox) -> tempfile.TemporaryDirectory:
             )
         else:
             filename = a_filename.split(".")[0]
-        output_path = os.path.join(temp_dir.name, filename + ".tif")
+        output_path = pathlib.Path(temp_dir.name, filename + ".tif")
         result.rio.to_raster(output_path)
 
     return temp_dir.name
@@ -200,14 +223,19 @@ class SentinelChangeDataset(Dataset):
         return pre_patch, post_patch
 
 
-def predict_all_scenes_to_mosaic(model_weights_path, dataset, output_dir, device='cpu'):
-    # TODO ask why this network is chosen
+def predict_all_scenes_to_mosaic(
+    model_weights_path,
+    dataset,
+    output_dir: str | tempfile.TemporaryDirectory,
+    device="cpu",
+    service=False
+):
+    logger = logging.getLogger(__name__)
+
     model = define_G(net_G='base_transformer_pos_s4_dd8', input_nc=3)
     model = torch.load(model_weights_path, weights_only=False, map_location=torch.device(device))
     model.eval()
     model.to(device)
-
-    os.makedirs(output_dir, exist_ok=True)
 
     for scene_index, scene in enumerate(dataset.pre_scenes):
         tile = dataset.pre_scenes[0]['B04'].split("_")[-5]
@@ -275,12 +303,16 @@ def predict_all_scenes_to_mosaic(model_weights_path, dataset, output_dir, device
             "".join(random_choice)
         ]
         output_filename = "_".join(filename_parts)
+        output_filename_pred = output_filename + "_pred.tif"
+        output_filename_pred_logits = output_filename + "_pred_logits.tif"
+        output_path_pred = pathlib.Path(output_dir.name, output_filename_pred)
+        output_path_logits = pathlib.Path(output_dir.name, output_filename_pred_logits)
 
-        output_path = os.path.join(
-            output_dir,
-            output_filename + "_pred.tif")
+        if not service:
+            os.makedirs(output_dir, exist_ok=True)
+
         with rasterio.open(
-            output_path, 'w',
+            output_path_pred, 'w',
             driver='GTiff',
             height=h, width=w,
             count=1,
@@ -289,10 +321,6 @@ def predict_all_scenes_to_mosaic(model_weights_path, dataset, output_dir, device
             transform=transform
         ) as dst:
             dst.write(full_pred, 1)
-
-        output_path_logits = os.path.join(
-            output_dir,
-            output_filename + "_pred_logits.tif")
 
         with rasterio.open(
             output_path_logits, 'w',
@@ -304,4 +332,61 @@ def predict_all_scenes_to_mosaic(model_weights_path, dataset, output_dir, device
             transform=transform
         ) as dst:
             dst.write(full_pred_logits, 1)
-    return output_path
+
+        if service:
+            s3_upload_path = _upload_to_s3(output_path_pred, output_path_logits)
+            output_dir.cleanup()
+            return s3_upload_path
+        else:
+            logger.info(
+                "Succesfully created %s",
+                output_path_pred,
+            )
+            print(f"Created {output_path_pred}")
+            return str(output_path_pred)
+
+
+def _upload_to_s3(output_path_pred: pathlib.Path, output_path_logits: pathlib.Path):
+    logger = logging.getLogger(__name__)
+    region = os.getenv("CREODIAS_REGION", None)
+    service = "s3"
+    endpoint = os.getenv("CREODIAS_ENDPOINT", None)
+    bucket_name = os.getenv('CREODIAS_S3_BUCKET_PRODUCT_OUTPUT')
+    auth = AWS4Auth(
+        os.getenv("CREODIAS_S3_ACCESS_KEY"),
+        os.getenv("CREODIAS_S3_SECRET_KEY"),
+        region,
+        service
+    )
+    bucket_name = bucket_name + "/products"
+
+    current_date = datetime.datetime.now().strftime("%Y%m%d")
+
+    for product_path in [output_path_pred, output_path_logits]:
+        with open(product_path, 'rb') as file_data:
+            file_content = file_data.read()
+        headers = {
+            'Content-Length': str(len(file_content)),
+        }
+        url = f"{endpoint}/{bucket_name}/{current_date}/{str(product_path.name)}"
+
+        response = requests.put(url, data=file_content, headers=headers, auth=auth)
+
+        if response.status_code == 200:
+            logger.info(
+                "Succesfully uploaded %s to %s bucket in %s folder",
+                str(product_path.name),
+                bucket_name,
+                current_date
+            )
+            print(f"Uploaded successfully to {bucket_name}/{current_date}/{str(product_path.name)}")
+        else:
+            logger.error(
+                "Could not upload %s to %s: %s",
+                str(product_path.name),
+                bucket_name,
+                response.text
+            )
+            print(f"Upload failed with status {response.status_code}: {response.text}")
+
+    return f"{endpoint}/{bucket_name}/{current_date}/"
