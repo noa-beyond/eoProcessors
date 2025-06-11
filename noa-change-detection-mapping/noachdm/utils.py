@@ -29,21 +29,28 @@ from noachdm.messaging.kafka_producer import KafkaProducer
 from noachdm.messaging.message import Message
 
 
-def send_kafka_message(bootstrap_servers, topic, order_id, product_path):
+def send_kafka_message(bootstrap_servers, topic, result, order_id, product_path):
     logger = logging.getLogger(__name__)
     schema_def = Message.schema_response()
 
     try:
         producer = KafkaProducer(bootstrap_servers=bootstrap_servers, schema=schema_def)
         kafka_message = {
-            "result": 0,
+            "result": result,
             "orderId": order_id,
             "chdmProductPath": product_path
             }
         producer.send(topic=topic, key=None, value=kafka_message)
+        logger.debug(f"Kafka message of New ChDM Product sent to: {topic}")
     except NoBrokersAvailable as e:
         logger.warning("No brokers available. Continuing without Kafka. Error: %s", e)
         producer = None
+    except BrokenPipeError as e:
+        logger.error(
+            "Error sending kafka message to topic %s: %s ",
+            topic,
+            e
+        )
 
 
 def get_bbox(geometry):

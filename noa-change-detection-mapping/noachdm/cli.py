@@ -260,25 +260,37 @@ def noa_pgaas_chdm(
                     f"Consumed ChDM message for orderId {order_id}"
                 )
 
-                try:
-                    utils.send_kafka_message(
-                        producer_bootstrap_servers,
-                        producer_topic,
-                        order_id,
-                        new_product_path
-                    )
-                    print(f"Kafka message of New ChDM Product sent to: {producer_topic}")
-                except BrokenPipeError as e:
-                    print(f"Error sending kafka message to: {producer_topic}")
-                    logger.warning("Error sending kafka message: %s ", e)
+                utils.send_kafka_message(
+                    producer_bootstrap_servers,
+                    producer_topic,
+                    result=0,
+                    order_id=order_id,
+                    product_path=new_product_path
+                )
             sleep(1)
-        except RuntimeError:
-            continue
-        except ValueError as e:
-            logger.error("Wrong input value error %s", e)
-        except (UnsupportedForMessageFormatError, InvalidMessageError) as e:
-            click.echo(f"Error in reading kafka message: {item}")
-            logger.warning("Error in reading kafka message: %s", e)
+        except (
+            RuntimeError,
+            ValueError,
+            UnsupportedForMessageFormatError,
+            InvalidMessageError,
+            NoBrokersAvailable,
+            BrokenPipeError
+        ) as e:
+            utils.send_kafka_message(
+                producer_bootstrap_servers,
+                producer_topic,
+                result=1,
+                order_id=order_id,
+                product_path=""
+            )
+            if isinstance(e, ValueError):
+                logger.error("Wrong input value error %s", e)
+            elif isinstance(e, RuntimeError):
+                logger.error("Runtime error %s", e)
+            elif isinstance(e, (UnsupportedForMessageFormatError, InvalidMessageError)):
+                logger.error("Error in reading kafka message: %s", e)
+            elif isinstance(e, (NoBrokersAvailable, BrokenPipeError)):
+                logger.error("Error in sending kafka message: %s", e)
             continue
 
 
