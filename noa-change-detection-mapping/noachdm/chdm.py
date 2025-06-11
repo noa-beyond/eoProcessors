@@ -88,8 +88,9 @@ class ChDM:
         """
         Must accept list of s3 uris probably
         """
-        print("Must accept list of EO Data")
-        print(items_from, items_to)
+        self.logger.info("Processing incoming items lists")
+        self.logger.debug("Items from: %s", items_from)
+        self.logger.debug("Items to: %s", items_to)
 
         try:
             from_path = chdm_utils.crop_and_make_mosaic(
