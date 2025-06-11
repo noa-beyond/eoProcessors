@@ -80,7 +80,24 @@ noa-chdm produce -v [from_path] [to_path]
 ```
 
 ### PGaaS
-5.3 Run service:
+**5.3 Run service:**
+**5.3.1 Env vars**
+You need to provide the following ENV variables:
+
+```
+CREODIAS_S3_ACCESS_KEY=NONE
+CREODIAS_S3_SECRET_KEY=NONE
+CREODIAS_REGION=WAW4-1
+CREODIAS_ENDPOINT=https://s3.waw4-1.cloudferro.com
+CREODIAS_S3_BUCKET_PRODUCT_OUTPUT=noa
+```
+
+As you can see there are some default vars for endpoints and bucket.
+Please setup accordingly
+
+---
+
+**5.3.2 Execute**
 
 ```
 docker run -it \
