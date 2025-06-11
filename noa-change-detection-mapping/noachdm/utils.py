@@ -107,10 +107,11 @@ def crop_and_make_mosaic(
                 path = pathlib.Path(granule_path, dirs[0], "IMG_DATA", "R10m")
             for raster in os.listdir(path):
                 # TODO construct band file path
+                raster_path = pathlib.Path(path, raster)
                 if band in raster:
                     if a_filename == "":
-                        a_filename = pathlib.Path(raster).name
-                    da = rioxarray.open_rasterio(raster, masked=True).squeeze()
+                        a_filename = pathlib.Path(raster_path).name
+                    da = rioxarray.open_rasterio(raster_path, masked=True).squeeze()
                     da = da.rio.clip_box(*bbox)
                     cropped_list.append(da)
                     continue
@@ -132,12 +133,14 @@ def crop_and_make_mosaic(
             a_date = a_filename.split("_")[-4]
             a_tile = a_filename.split("_")[-5]
             filename = "_".join(
-                "composite",
-                a_tile,
-                a_date,
-                "composite",
-                "composite",
-                band,
+                [
+                    "composite",
+                    a_tile,
+                    a_date,
+                    "composite",
+                    "composite",
+                    band
+                ]
             )
         else:
             filename = a_filename.split(".")[0]

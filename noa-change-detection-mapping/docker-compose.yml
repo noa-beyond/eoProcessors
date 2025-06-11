@@ -5,27 +5,26 @@ services:
     build:
       context: .
       secrets:
-        - DB_USER
-        - DB_PASSWORD
-        - DB_HOST
-        - DB_PORT
-        - DB_NAME
+        - CREODIAS_S3_ACCESS_KEY
+        - CREODIAS_S3_SECRET_KEY
+        - CREODIAS_REGION
+        - CREODIAS_ENDPOINT
+        - CREODIAS_S3_BUCKET_PRODUCT_OUTPUT
     environment:
       KAFKA_BOOTSTRAP_SERVERS: "kafka1:9092,kafka2:9092,kafka3:9092"
     working_dir: /app    
     volumes:
       - ./config:/app/config
-      - /mnt/data/poc/products:/mnt/data/poc/products
     command: python /app/noachdm/cli.py --help
 
 secrets:
-  DB_USER:
-    environment: DB_USER
-  DB_PASSWORD:
-    environment: DB_PASSWORD
-  DB_HOST:
-    environment: DB_HOST
-  DB_PORT:
-    environment: DB_PORT
-  DB_NAME:
-    environment: DB_NAME
+  CREODIAS_S3_ACCESS_KEY:
+    environment: CREODIAS_S3_ACCESS_KEY
+  CREODIAS_S3_SECRET_KEY:
+    environment: CREODIAS_S3_SECRET_KEY
+  CREODIAS_REGION:
+    environment: CREODIAS_REGION
+  CREODIAS_ENDPOINT:
+    environment: CREODIAS_ENDPOINT
+  CREODIAS_S3_BUCKET_PRODUCT_OUTPUT:
+    environment: CREODIAS_S3_BUCKET_PRODUCT_OUTPUT
