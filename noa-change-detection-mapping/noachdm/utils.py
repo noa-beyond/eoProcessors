@@ -377,12 +377,13 @@ def _upload_to_s3(output_path_pred: pathlib.Path, output_path_logits: pathlib.Pa
 
         if response.status_code == 200:
             logger.info(
-                "Succesfully uploaded %s to %s bucket in %s folder",
+                "Succesfully uploaded %s to %s, %s bucket in %s folder",
                 str(product_path.name),
+                endpoint,
                 bucket_name,
                 current_date
             )
-            print(f"Uploaded successfully to {bucket_name}/{current_date}/{str(product_path.name)}")
+            print(f"Uploaded successfully to {endpoint}/{bucket_name}/{current_date}/{str(product_path.name)}")
         else:
             logger.error(
                 "Could not upload %s to %s: %s",
