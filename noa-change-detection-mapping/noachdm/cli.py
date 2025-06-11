@@ -32,8 +32,6 @@ from noachdm.messaging.message import Message  # noqa:402 pylint:disable=wrong-i
 from noachdm.messaging import AbstractConsumer  # noqa:402 pylint:disable=wrong-import-position
 from noachdm.messaging.kafka_consumer import KafkaConsumer  # noqa:402 pylint:disable=wrong-import-position
 
-logger = logging.getLogger(__name__)
-
 
 PROCESSOR = "[NOA-ChDM]"
 
@@ -48,12 +46,12 @@ PROCESSOR = "[NOA-ChDM]"
 )
 @click.option(
     "--log",
-    default="warning",
-    help="Log level (optional, e.g. DEBUG. Default is WARNING)",
+    default="INFO",
+    help="Log level (optional, e.g. DEBUG. Default is INFO)",
 )
 def cli(log):
     """Click cli group for cli commands"""
-    numeric_level = getattr(logging, log.upper(), "DEBUG")
+    numeric_level = getattr(logging, log.upper(), "INFO")
     logging.basicConfig(
         format=f"[%(asctime)s.%(msecs)03d] [%(levelname)s] {PROCESSOR} %(message)s",
         level=numeric_level,
@@ -96,11 +94,14 @@ def produce(
         verbose (click.Option | bool): to show verbose
     """
 
+    logger = logging.getLogger(__name__)
     click.echo("Producing...\n")
     click.echo(output_path)
     chdm_producer = chdm.ChDM(
         output_path=output_path,
-        verbose=verbose
+        verbose=verbose,
+        is_service=False,
+        logger=logger
     )
     chdm_producer.produce(from_path, to_path)
 
