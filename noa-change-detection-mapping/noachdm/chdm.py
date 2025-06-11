@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import os
 import json
+import tempfile
+
 import torch
 
 import logging
@@ -34,6 +36,7 @@ class ChDM:
             config_file (str): Config filename (json)
             verbose (bool - Optional): Verbose
         """
+        self._is_service = is_service
         self.logger = logger
 
         self._config = {}
@@ -53,6 +56,7 @@ class ChDM:
         """
         Could accept path full of tifs
         """
+        output_dir = "data/"
 
         dataset = chdm_utils.SentinelChangeDataset(pre_dir=from_path, post_dir=to_path)
         # getting the trained local model
@@ -61,24 +65,46 @@ class ChDM:
             "models_checkpoints",
             "BIT_final_refined.pth"
         )
-
+        if self._is_service:
+            # If to be saved in s3, we use a temp dir to save the product
+            output_dir = tempfile.TemporaryDirectory()
+        self.logger.info("Starting prediction")
         product_path = chdm_utils.predict_all_scenes_to_mosaic(
             model_weights_path=trained_model_path,
             dataset=dataset,
-            output_dir='data/',
-            device='cuda' if torch.cuda.is_available() else 'cpu')
+            output_dir=output_dir,
+            device="cuda" if torch.cuda.is_available() else "cpu",
+            service=self._is_service
+        )
         self.logger.info("Done already")
         return product_path
 
-    def produce_from_items_lists(self, items_from, items_to, bbox):
+    def produce_from_items_lists(
+        self,
+        items_from,
+        items_to,
+        bbox
+    ):
         """
         Must accept list of s3 uris probably
         """
         print("Must accept list of EO Data")
         print(items_from, items_to)
 
-        from_path = chdm_utils.crop_and_make_mosaic(items_from, bbox)
-        to_path = chdm_utils.crop_and_make_mosaic(items_to, bbox)
+        try:
+            from_path = chdm_utils.crop_and_make_mosaic(
+                items_from,
+                bbox,
+                self._is_service
+            )
+            to_path = chdm_utils.crop_and_make_mosaic(
+                items_to,
+                bbox,
+                self._is_service
+            )
+        except RuntimeError as e:
+            self.logger.error("Could not create or parse input items: %s", e)
+            raise
 
         new_product_path = ""
         new_product_path = self.produce(from_path=from_path, to_path=to_path)
