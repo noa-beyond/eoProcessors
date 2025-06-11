@@ -67,7 +67,11 @@ def get_bbox(geometry):
     return tuple([min(lons), min(lats), max(lons), max(lats)])
 
 
-def crop_and_make_mosaic(items_paths, bbox, s3=False) -> tempfile.TemporaryDirectory:
+def crop_and_make_mosaic(
+        items_paths,
+        bbox,
+        service=False
+) -> tempfile.TemporaryDirectory:
     """
     There is a lower (hardcoded for now) limit on kernel for images.
     Even though we say crop, if the bbox
@@ -84,7 +88,7 @@ def crop_and_make_mosaic(items_paths, bbox, s3=False) -> tempfile.TemporaryDirec
     for band in bands:
         cropped_list = []
         for path in items_paths:
-            if s3:
+            if service:
                 granule_path = pathlib.Path(path, "GRANULE")
                 dirs = [d for d in granule_path.iterdir() if d.is_dir]
                 path = pathlib.Path(granule_path, dirs[0], "IMG_DATA", "R10m")

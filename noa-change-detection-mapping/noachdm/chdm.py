@@ -34,6 +34,7 @@ class ChDM:
             config_file (str): Config filename (json)
             verbose (bool - Optional): Verbose
         """
+        self._is_service = is_service
         self.logger = logger
 
         self._config = {}
@@ -74,8 +75,7 @@ class ChDM:
         self,
         items_from,
         items_to,
-        bbox,
-        s3=False
+        bbox
     ):
         """
         Must accept list of s3 uris probably
@@ -84,8 +84,16 @@ class ChDM:
         print(items_from, items_to)
 
         try:
-            from_path = chdm_utils.crop_and_make_mosaic(items_from, bbox, s3)
-            to_path = chdm_utils.crop_and_make_mosaic(items_to, bbox, s3)
+            from_path = chdm_utils.crop_and_make_mosaic(
+                items_from,
+                bbox,
+                self._is_service
+            )
+            to_path = chdm_utils.crop_and_make_mosaic(
+                items_to,
+                bbox,
+                self._is_service
+            )
         except RuntimeError as e:
             self.logger.error("Could not create or parse input items: %s", e)
             raise

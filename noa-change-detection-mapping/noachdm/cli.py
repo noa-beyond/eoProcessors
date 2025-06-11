@@ -248,7 +248,7 @@ def noa_pgaas_chdm(
                     )
                     continue
                 new_product_path = chdm_producer.produce_from_items_lists(
-                    items_from, items_to, bbox, s3=True
+                    items_from, items_to, bbox
                 )
                 logger.info(
                     "Order ID: %s. New change detection mapping product at: %s",
