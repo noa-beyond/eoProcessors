@@ -8,7 +8,7 @@ The NOAChDM processor can be executed as:
 - Standalone [**Cli application**](#standalone-cli-execution) or
 - Inside a [**Container**](#docker-execution)
 - As a container, inside a Kubernetes environment with kafka, with a postgres database. This is a Beyond specific setup, where a user can instantiate NOAChDM and request the production of a single product.
-- As a microservice inside a Kubernetes environment with kafka, with a postgres database. Same as above, but now it can be deployed as a service: Product Generation as a Service (PGaaS). Please find info for that in section [PGaaS](#pgaas)
+- As a microservice inside a Kubernetes environment with kafka, with a postgres database. Same as above, but now it can be deployed as a service: Product Generation as a Service (PGaaS). The output is stored in an (envvar) s3 bucket. Please find info for that in section [PGaaS](#pgaas)
 
 ## Standalone CLI execution
 
@@ -80,6 +80,7 @@ noa-chdm produce -v [from_path] [to_path]
 ```
 
 ### PGaaS
+This is a microservice which reads kafka messages for eoPaths containing the input items, and outputs the result in an s3 bucket.
 **5.3 Run service:**
 **5.3.1 Env vars**
 You need to provide the following ENV variables:
