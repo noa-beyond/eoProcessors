@@ -78,7 +78,7 @@ def crop_and_make_mosaic(
     where the exact requested date was not found
     """
 
-    temp_dir = tempfile.TemporaryDirectory()
+    temp_dir = tempfile.TemporaryDirectory(delete=False)
     bands = ("B02", "B03", "B04")
     a_filename = ""
     for band in bands:
@@ -331,7 +331,6 @@ def predict_all_scenes_to_mosaic(
 
         if service:
             s3_upload_path = _upload_to_s3(output_path_pred, output_path_logits)
-            output_dir.cleanup()
             return s3_upload_path
         else:
             logger.info(
