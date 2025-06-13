@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import logging
 import tempfile
 import random
@@ -118,16 +119,22 @@ def crop_and_make_mosaic(
 
         # TODO add meaningful file name
         if len(cropped_list) > 1:
-            a_date = a_filename.split("_")[-4]
-            a_tile = a_filename.split("_")[-5]
+            tile_pattern = r"T\d{2}[A-Z]{3}"
+            date_pattern = r"\d{4}(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])"
+            band_pattern = r"B\d{2}"
+
+            tile_match = re.search(tile_pattern, a_filename)
+            date_match = re.search(date_pattern, a_filename)
+            band_match = re.search(band_pattern, a_filename)
+
             filename = "_".join(
                 [
                     "composite",
-                    a_tile,
-                    a_date,
+                    tile_match.group(),
+                    date_match.group(),
                     "composite",
                     "composite",
-                    band
+                    band_match.group()
                 ]
             )
         else:
