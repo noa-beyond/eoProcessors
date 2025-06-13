@@ -76,7 +76,7 @@ class ChDM:
             device="cuda" if torch.cuda.is_available() else "cpu",
             service=self._is_service
         )
-        self.logger.info("Done already")
+        self.logger.info("Products saved at s3 path: %s", product_path)
         return product_path
 
     def produce_from_items_lists(
@@ -105,7 +105,6 @@ class ChDM:
             )
         except RuntimeError as e:
             self.logger.error("Could not create or parse input items: %s", e)
-            raise
 
         new_product_path = ""
         new_product_path = self.produce(from_path=from_path, to_path=to_path)
