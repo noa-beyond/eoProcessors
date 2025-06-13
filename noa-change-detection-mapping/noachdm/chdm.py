@@ -105,7 +105,6 @@ class ChDM:
             )
         except RuntimeError as e:
             self.logger.error("Could not create or parse input items: %s", e)
-            raise
 
         new_product_path = ""
         new_product_path = self.produce(from_path=from_path, to_path=to_path)
