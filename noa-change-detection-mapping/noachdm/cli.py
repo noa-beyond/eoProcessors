@@ -232,9 +232,9 @@ def noa_pgaas_chdm(
                 now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 msg = f"Digesting Item from Topic {message.topic} ({now_time})..."
                 msg += "\n> Item: " + json.dumps(item)
-                logger.info("Received order id message: %s", item["orderId"])
-                logger.debug("Kafka message: %s", msg=msg)
+                logger.debug("Kafka message: %s", msg)
                 order_id = item["orderId"]
+                logger.info("Received order id message: %s", order_id)
                 items_from = item["initialSelectionProductPaths"]
                 items_to = item["finalSelectionProductPaths"]
                 try:
