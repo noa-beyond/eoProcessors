@@ -14,9 +14,11 @@ from requests_aws4auth import AWS4Auth
 from collections import defaultdict
 
 import numpy as np
-import rasterio
 import xarray as xr
 import rioxarray
+import rasterio
+import geopandas as gpd
+from shapely.geometry import shape, box
 
 import torch
 from torch.utils.data import Dataset
@@ -57,27 +59,7 @@ def get_bbox(geometry):
     """
     Extract a bbox from a Geojson Geometry
     """
-    def extract_coords(geom):
-        coords = geom.get("coordinates", [])
-        geometry_type = geom["type"]
-        if geometry_type == "Point":
-            return [coords]
-        elif geometry_type in ["LineString", "MultiPoint"]:
-            return coords
-        elif geometry_type in ["Polygon", "MultiLineString"]:
-            return [pt for ring in coords for pt in ring]
-        elif geometry_type == "MultiPolygon":
-            return [pt for poly in coords for ring in poly for pt in ring]
-        elif geometry_type == "GeometryCollection":
-            return [pt for g in geom["geometries"] for pt in extract_coords(g)]
-        else:
-            raise ValueError(f"Unsupported geometry type: {geometry_type}")
-
-    all_coords = extract_coords(geometry)
-    lons = [pt[0] for pt in all_coords]
-    lats = [pt[1] for pt in all_coords]
-
-    return tuple([min(lons), min(lats), max(lons), max(lats)])
+    return shape(geometry).bounds
 
 
 def crop_and_make_mosaic(
@@ -106,21 +88,22 @@ def crop_and_make_mosaic(
                 dirs = [d for d in granule_path.iterdir() if d.is_dir]
                 path = pathlib.Path(granule_path, dirs[0], "IMG_DATA", "R10m")
             for raster in os.listdir(path):
-                # TODO construct band file path
                 raster_path = pathlib.Path(path, raster)
                 if band in raster:
                     if a_filename == "":
                         a_filename = pathlib.Path(raster_path).name
-                    da = rioxarray.open_rasterio(raster_path, masked=True).squeeze()
-                    da = da.rio.clip_box(*bbox)
-                    cropped_list.append(da)
+                    da = rioxarray.open_rasterio(raster_path)
+                    gdf = gpd.GeoDataFrame(geometry=[box(*bbox)], crs="EPSG:4326")
+                    gdf_proj = gdf.to_crs(da.rio.crs)
+                    da_clipped = da.rio.clip(gdf_proj.geometry, gdf_proj.crs)
+                    cropped_list.append(da_clipped)
                     continue
 
         # If more than one path (bbox exceeds one tile or multiple dates)
         if len(cropped_list) > 1:
             stacked = xr.concat(cropped_list, dim='stack')
             result = stacked.median(dim='stack')
-        elif len(cropped_list) == 0:
+        elif len(cropped_list) == 1:
             result = cropped_list[0]
         else:
             raise RuntimeError("Invalid input items. Are you using Sentinel2 L2A?")
