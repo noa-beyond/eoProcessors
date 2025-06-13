@@ -333,7 +333,6 @@ def predict_all_scenes_to_mosaic(
                 "Succesfully created %s",
                 output_path_pred,
             )
-            print(f"Created {output_path_pred}")
             return str(output_path_pred)
 
 
@@ -371,7 +370,6 @@ def _upload_to_s3(output_path_pred: pathlib.Path, output_path_logits: pathlib.Pa
                 bucket_name,
                 current_date
             )
-            print(f"Uploaded successfully to {endpoint}/{bucket_name}/{current_date}/{str(product_path.name)}")
         else:
             logger.error(
                 "Could not upload %s to %s: %s",
@@ -379,6 +377,5 @@ def _upload_to_s3(output_path_pred: pathlib.Path, output_path_logits: pathlib.Pa
                 bucket_name,
                 response.text
             )
-            print(f"Upload failed with status {response.status_code}: {response.text}")
 
     return f"{endpoint}/{bucket_name}/{current_date}/"
