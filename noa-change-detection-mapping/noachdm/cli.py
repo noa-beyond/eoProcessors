@@ -289,7 +289,6 @@ def noa_pgaas_chdm(
                 logger.error("Error in reading kafka message: %s", e)
             elif isinstance(e, (NoBrokersAvailable, BrokenPipeError)):
                 logger.error("Error in sending kafka message: %s", e)
-            continue
 
 
 if __name__ == "__main__":  # pragma: no cover
