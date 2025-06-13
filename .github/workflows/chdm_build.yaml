@@ -1,0 +1,43 @@
+name: Build & Push Noa Change Detection Mapping
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set Version (From Latest Tag)
+        run: |
+          latest_tag=$(git tag -l --sort=-v:refname | head -n 1)
+          if [ -z "$latest_tag" ]; then
+            new_tag="v0.0.1"
+          else
+            new_tag=$(echo $latest_tag | sed 's/+.*//g')
+          fi
+          echo "TAG_VERSION=$new_tag" >> $GITHUB_ENV
+
+      - name: Build & Push Docker Image for Noa Change Detection Mapping
+
+        run: |
+          IMAGE_NAME="ghcr.io/noa-beyond/noa-change-detection-mapping"
+          docker build --no-cache -t $IMAGE_NAME:latest -t $IMAGE_NAME:${{ env.TAG_VERSION }} noa-change-detection-mapping
+          docker push $IMAGE_NAME:latest
+          docker push $IMAGE_NAME:${{ env.TAG_VERSION }}
