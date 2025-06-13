@@ -223,8 +223,7 @@ def noa_pgaas_chdm(
                     e
                 )
 
-    logger.info("Service started, subscribed to topics...")
-    click.echo(f"Service started. Output path: {output_path}\n")
+    logger.info("Service started, subscribed to topics %s", consumer_topics)
 
     while True:
         try:
@@ -233,9 +232,8 @@ def noa_pgaas_chdm(
                 now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 msg = f"Digesting Item from Topic {message.topic} ({now_time})..."
                 msg += "\n> Item: " + json.dumps(item)
-                logger.info(msg)
-                click.echo("Received lists use:")
-                click.echo(item)
+                logger.info("Received order id message: %s", item["orderId"])
+                logger.debug("Kafka message: %s", msg=msg)
                 order_id = item["orderId"]
                 items_from = item["initialSelectionProductPaths"]
                 items_to = item["finalSelectionProductPaths"]
@@ -284,14 +282,13 @@ def noa_pgaas_chdm(
                 product_path=""
             )
             if isinstance(e, ValueError):
-                logger.error("Wrong input value error %s", e)
+                logger.error("[Wrong input value error] %s", e)
             elif isinstance(e, RuntimeError):
-                logger.error("Runtime error %s", e)
+                logger.error("[Runtime error] %s", e)
             elif isinstance(e, (UnsupportedForMessageFormatError, InvalidMessageError)):
                 logger.error("Error in reading kafka message: %s", e)
             elif isinstance(e, (NoBrokersAvailable, BrokenPipeError)):
                 logger.error("Error in sending kafka message: %s", e)
-            continue
 
 
 if __name__ == "__main__":  # pragma: no cover
