@@ -101,7 +101,12 @@ def crop_and_make_mosaic(
 
         # If more than one path (bbox exceeds one tile or multiple dates)
         if len(cropped_list) > 1:
-            stacked = xr.concat(cropped_list, dim='stack')
+            reference = cropped_list[0]
+            reprojected = [
+                da.rio.reproject_match(reference)
+                for da in cropped_list
+            ]
+            stacked = xr.concat(reprojected, dim='stack')
             result = stacked.median(dim='stack')
         elif len(cropped_list) == 1:
             result = cropped_list[0]
