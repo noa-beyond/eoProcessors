@@ -67,7 +67,7 @@ class ChDM:
         )
         if self._is_service:
             # If to be saved in s3, we use a temp dir to save the product
-            output_dir = tempfile.TemporaryDirectory()
+            output_dir = tempfile.TemporaryDirectory(delete=False)
         self.logger.info("Starting prediction")
         product_path = chdm_utils.predict_all_scenes_to_mosaic(
             model_weights_path=trained_model_path,
