@@ -1,0 +1,53 @@
+name: Build & Push noa-harvester
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set Version (From Latest Tag)
+        run: |
+          latest_tag=$(git tag -l --sort=-v:refname | head -n 1)
+          if [ -z "$latest_tag" ]; then
+            new_tag="v0.0.1"
+          else
+            new_tag=$(echo $latest_tag | sed 's/+.*//g')
+          fi
+          echo "TAG_VERSION=$new_tag" >> $GITHUB_ENV
+
+      - name: Build & Push Docker Image for noa-harvester
+        env:
+          COPERNICUS_LOGIN: ${{ secrets.COPERNICUS_LOGIN }}
+          COPERNICUS_PASSWORD: ${{ secrets.COPERNICUS_PASSWORD }}
+          EARTHDATA_LOGIN: ${{ secrets.EARTHDATA_LOGIN }}
+          EARTHDATA_PASSWORD: ${{ secrets.EARTHDATA_PASSWORD }}
+        run: |
+          IMAGE_NAME="ghcr.io/noa-beyond/noa-harvester"
+          docker build --no-cache \
+            --secret id=COPERNICUS_LOGIN,env=COPERNICUS_LOGIN \
+            --secret id=COPERNICUS_PASSWORD,env=COPERNICUS_PASSWORD \
+            --secret id=EARTHDATA_LOGIN,env=EARTHDATA_LOGIN \
+            --secret id=EARTHDATA_PASSWORD,env=EARTHDATA_PASSWORD \
+            -t $IMAGE_NAME:latest -t $IMAGE_NAME:${{ env.TAG_VERSION }} noa-harvester
+
+          docker push $IMAGE_NAME:latest
+          docker push $IMAGE_NAME:${{ env.TAG_VERSION }}
