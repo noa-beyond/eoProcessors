@@ -78,7 +78,7 @@ def cli(log):
 )
 @click.argument("from_path", required=True)
 @click.argument("to_path", required=True)
-@click.option("--output_path", default="./data", help="Output path")
+@click.option("--output_path", default="./output", help="Output path")
 def produce(
     from_path: Argument | str,
     to_path: Argument | str,
@@ -95,8 +95,7 @@ def produce(
     """
 
     logger = logging.getLogger(__name__)
-    click.echo("Producing...\n")
-    click.echo(output_path)
+    logger.info("== Initializing ChDM processor ==")
     chdm_producer = chdm.ChDM(
         output_path=output_path,
         verbose=verbose,
@@ -127,7 +126,7 @@ def produce(
     help="Testing kafka receiving requests. No other functionality",
 )
 @click.argument("config_file", required=True)
-@click.option("--output_path", default="./data", help="Output path")
+@click.option("--output_path", default="./output", help="Output path")
 def noa_pgaas_chdm(
     config_file: str,
     output_path: str,
@@ -239,10 +238,10 @@ def noa_pgaas_chdm(
                 items_to = item["finalSelectionProductPaths"]
                 try:
                     bbox = utils.get_bbox(item["geometry"])
-                except (TypeError, Exception) as e:
+                except TypeError as e:
                     logger.error(
-                        "Could not extract bbox coordinates: %s, %s",
-                        bbox,
+                        "Could not extract bbox from geometry: %s, %s",
+                        item["geometry"],
                         e
                     )
                     continue
