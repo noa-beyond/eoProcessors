@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## [0.2.5] - 2025-06-15
+### Fixed
+- Sum up all latest hotfix bugs, use pathlib, correct logs (#156)
+- Correcting past mistakes (#154)
+- Revisiting paths (#152)
+
 ## [0.2.4] - 2025-06-13
 ### Fixed
 - Hotfix on wrong filename patterns (#150)

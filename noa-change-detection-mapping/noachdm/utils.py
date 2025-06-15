@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 import re
 import logging
-import tempfile
 import random
 import string
 import pathlib
@@ -44,7 +43,7 @@ def send_kafka_message(bootstrap_servers, topic, result, order_id, product_path)
             "chdmProductPath": product_path
             }
         producer.send(topic=topic, key=None, value=kafka_message)
-        logger.debug(f"Kafka message of New ChDM Product sent to: {topic}")
+        logger.debug("Kafka message of New ChDM Product sent to: %s", topic)
     except NoBrokersAvailable as e:
         logger.warning("No brokers available. Continuing without Kafka. Error: %s", e)
         producer = None
@@ -66,8 +65,9 @@ def get_bbox(geometry):
 def crop_and_make_mosaic(
         items_paths,
         bbox,
+        output_path,
         service=False
-) -> tempfile.TemporaryDirectory:
+) -> pathlib.Path:
     """
     There is a lower (hardcoded for now) limit on kernel for images.
     Even though we say crop, if the bbox
@@ -78,7 +78,6 @@ def crop_and_make_mosaic(
     where the exact requested date was not found
     """
 
-    temp_dir = tempfile.TemporaryDirectory(delete=False)
     bands = ("B02", "B03", "B04")
     a_filename = ""
     for band in bands:
@@ -137,10 +136,10 @@ def crop_and_make_mosaic(
             )
         else:
             filename = a_filename.split(".")[0]
-        output_path = pathlib.Path(temp_dir.name, filename + ".tif")
-        result.rio.to_raster(output_path)
+        output_filename = pathlib.Path(output_path, filename + ".tif")
+        result.rio.to_raster(output_filename)
 
-    return temp_dir.name
+    return output_filename
 
 
 def closest_power_of_two(n):
@@ -222,7 +221,7 @@ class SentinelChangeDataset(Dataset):
 def predict_all_scenes_to_mosaic(
     model_weights_path,
     dataset,
-    output_dir: str | tempfile.TemporaryDirectory,
+    output_dir: pathlib.Path,
     device="cpu",
     service=False
 ):
@@ -304,9 +303,6 @@ def predict_all_scenes_to_mosaic(
         output_path_pred = pathlib.Path(output_dir.name, output_filename_pred)
         output_path_logits = pathlib.Path(output_dir.name, output_filename_pred_logits)
 
-        if not service:
-            os.makedirs(output_dir, exist_ok=True)
-
         with rasterio.open(
             output_path_pred, 'w',
             driver='GTiff',
@@ -329,15 +325,16 @@ def predict_all_scenes_to_mosaic(
         ) as dst:
             dst.write(full_pred_logits, 1)
 
+        logger.info(
+            "Successfully created %s, %s",
+            output_path_pred,
+            output_path_logits
+        )
+
         if service:
             s3_upload_path = _upload_to_s3(output_path_pred, output_path_logits)
             return s3_upload_path
-        else:
-            logger.info(
-                "Succesfully created %s",
-                output_path_pred,
-            )
-            return str(output_path_pred)
+        return str(output_dir.resolve())
 
 
 def _upload_to_s3(output_path_pred: pathlib.Path, output_path_logits: pathlib.Path):
@@ -364,11 +361,14 @@ def _upload_to_s3(output_path_pred: pathlib.Path, output_path_logits: pathlib.Pa
         }
         url = f"{endpoint}/{bucket_name}/{current_date}/{str(product_path.name)}"
 
-        response = requests.put(url, data=file_content, headers=headers, auth=auth)
+        try:
+            response = requests.put(url, data=file_content, headers=headers, auth=auth, timeout=300)
+        except requests.exceptions.Timeout:
+            logger.error("Timeout when uploading %s", product_path)
 
         if response.status_code == 200:
             logger.info(
-                "Succesfully uploaded %s to %s, %s bucket in %s folder",
+                "Successfully uploaded %s to %s, %s bucket in %s folder",
                 str(product_path.name),
                 endpoint,
                 bucket_name,
