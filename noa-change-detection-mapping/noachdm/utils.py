@@ -156,6 +156,7 @@ class SentinelChangeDataset(Dataset):
         self.patch_coords = []
 
         for idx, scene in enumerate(self.pre_scenes):
+            print(f"SCENE: {scene}")
             with rasterio.open(scene["B04"]) as src:
                 h, w = src.height, src.width
                 min_dim = min(h, w)
@@ -174,16 +175,15 @@ class SentinelChangeDataset(Dataset):
                             x = w - self.patch_size
                         self.patch_coords.append((idx, y, x))
 
-    def _group_bands(self, folder):
+    def _group_bands(self, folder: pathlib.Path):
 
         grouped = defaultdict(dict)
-        for fname in sorted(os.listdir(folder)):
-            if not fname.endswith((".tif", ".jp2")):
-                continue
-            for band in ["B04", "B03", "B02"]:
-                if band in fname:
-                    scene_id = "_".join(fname.split("_")[:-1])
-                    grouped[scene_id][band] = os.path.join(folder, fname)
+        for fname in folder.iterdir():
+            if fname.is_file():
+                for band in ["B04", "B03", "B02"]:
+                    if band in fname.name:
+                        scene_id = "_".join(fname.name.split("_")[:-1])
+                        grouped[scene_id][band] = pathlib.Path(folder, fname)
         return list(grouped.values())
 
     def __len__(self):
@@ -223,10 +223,10 @@ def predict_all_scenes_to_mosaic(
     model.to(device)
 
     for scene_index, scene in enumerate(dataset.pre_scenes):
-        tile = dataset.pre_scenes[0]["B04"].split("_")[-5]
+        tile = dataset.pre_scenes[0]["B04"].split("_")[-4]
         random_choice = random.choices(string.ascii_letters + string.digits, k=6)
-        date_from = dataset.pre_scenes[0]["B04"].split("_")[-4]
-        date_to = dataset.post_scenes[0]["B04"].split("_")[-4]
+        date_from = dataset.pre_scenes[0]["B04"].split("_")[-3]
+        date_to = dataset.post_scenes[0]["B04"].split("_")[-3]
 
         with rasterio.open(scene["B04"]) as ref_src:
             h, w = ref_src.height, ref_src.width
