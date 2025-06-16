@@ -104,15 +104,10 @@ class ChDM:
             to_mosaic_filename,
         )
 
-        reference_path = next(
-            iter(sorted(from_path.glob("*.tif")) + sorted(from_path.glob("*.jp2"))),
-            None,
-        )
+        reference_path = sorted(from_path.glob("*.tif"))[0]
         raster_paths = (
             sorted(from_path.glob("*.tif"))
-            + sorted(from_path.glob("*.jp2"))
             + sorted(to_path.glob("*.tif"))
-            + sorted(to_path.glob("*.jp2"))
         )
         for path in raster_paths:
             cropped = False
