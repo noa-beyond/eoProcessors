@@ -33,7 +33,7 @@ class KafkaConsumer(noa_messaging.AbstractConsumer):
             *topics,
             bootstrap_servers=bootstrap_servers,
             group_id=group_id,
-            auto_offset_reset="earliest",
+            # auto_offset_reset="earliest",
             value_deserializer=lambda x: json.loads(x.decode("utf-8"))
         )
 

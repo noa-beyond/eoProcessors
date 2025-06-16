@@ -104,6 +104,8 @@ class ChDM:
             to_mosaic_filename,
         )
 
+        # We crop and "from" and "to" to same extent, in case after their mosaicing
+        # they have a different one. TODO need to find corner cases
         reference_path = sorted(from_path.glob("*.tif"))[0]
         raster_paths = (
             sorted(from_path.glob("*.tif"))
@@ -113,7 +115,7 @@ class ChDM:
             cropped = False
             cropped = chdm_utils.crop_to_reference(reference_path, path)
             if cropped:
-                self.logger.info("Needed to crop to same extend: %s", path)
+                self.logger.info("Needed to crop to same extent: %s", path)
 
         new_product_path = ""
         new_product_path = self.produce(from_path=from_path, to_path=to_path)
