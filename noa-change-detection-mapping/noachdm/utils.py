@@ -223,10 +223,10 @@ def predict_all_scenes_to_mosaic(
     model.to(device)
 
     for scene_index, scene in enumerate(dataset.pre_scenes):
-        tile = dataset.pre_scenes[0]["B04"].split("_")[-5]
+        tile = dataset.pre_scenes[0]["B04"].split("_")[-4]
         random_choice = random.choices(string.ascii_letters + string.digits, k=6)
-        date_from = dataset.pre_scenes[0]["B04"].split("_")[-4]
-        date_to = dataset.post_scenes[0]["B04"].split("_")[-4]
+        date_from = dataset.pre_scenes[0]["B04"].split("_")[-3]
+        date_to = dataset.post_scenes[0]["B04"].split("_")[-3]
 
         with rasterio.open(scene["B04"]) as ref_src:
             h, w = ref_src.height, ref_src.width
