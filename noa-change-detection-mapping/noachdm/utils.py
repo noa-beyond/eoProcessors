@@ -65,7 +65,7 @@ def get_bbox(geometry):
 def crop_and_make_mosaic(
         items_paths,
         bbox,
-        output_path,
+        output_path: pathlib.Path,
         service=False
 ) -> pathlib.Path:
     """
@@ -136,6 +136,7 @@ def crop_and_make_mosaic(
             )
         else:
             filename = a_filename.split(".")[0]
+        output_path.mkdir(parents=True, exist_ok=True)
         output_filename = pathlib.Path(output_path, filename + ".tif")
         result.rio.to_raster(output_filename)
 
