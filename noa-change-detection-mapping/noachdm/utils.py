@@ -48,7 +48,6 @@ def send_kafka_message(bootstrap_servers, topic, result, order_id, product_path)
         logger.debug("Kafka message of New ChDM Product sent to: %s", topic)
     except NoBrokersAvailable as e:
         logger.warning("No brokers available. Continuing without Kafka. Error: %s", e)
-        producer = None
     except BrokenPipeError as e:
         logger.error("Error sending kafka message to topic %s: %s ", topic, e)
 
@@ -73,19 +72,20 @@ def crop_and_make_mosaic(
     where the exact requested date was not found
     """
 
-    bands = ("B02", "B03", "B04")
-    a_filename = ""
+    bands = ["B02", "B03", "B04"]
     for band in bands:
+        a_filename = None
         cropped_list = []
         for path in items_paths:
+            resolved_path = path
             if service:
                 granule_path = pathlib.Path(path, "GRANULE")
                 dirs = [d for d in granule_path.iterdir() if d.is_dir]
-                path = pathlib.Path(granule_path, dirs[0], "IMG_DATA", "R10m")
-            for raster in os.listdir(path):
-                raster_path = pathlib.Path(path, raster)
+                resolved_path = pathlib.Path(granule_path, dirs[0], "IMG_DATA", "R10m")
+            for raster in os.listdir(resolved_path):
+                raster_path = pathlib.Path(resolved_path, raster)
                 if band in raster:
-                    if a_filename == "":
+                    if a_filename is None:
                         a_filename = pathlib.Path(raster_path).name
                     da = rioxarray.open_rasterio(raster_path)
                     gdf = gpd.GeoDataFrame(geometry=[box(*bbox)], crs="EPSG:4326")
@@ -93,7 +93,6 @@ def crop_and_make_mosaic(
                     da_clipped = da.rio.clip(gdf_proj.geometry, gdf_proj.crs)
                     cropped_list.append(da_clipped)
                     continue
-
         # If more than one path (bbox exceeds one tile or multiple dates)
         if len(cropped_list) > 1:
             reference = cropped_list[0]
@@ -109,28 +108,26 @@ def crop_and_make_mosaic(
         result.rio.write_crs(result.rio.crs, inplace=True)
 
         # TODO add meaningful file name
-        if len(cropped_list) > 1:
-            tile_pattern = r"T\d{2}[A-Z]{3}"
-            date_pattern = r"\d{4}(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])"
+        tile_pattern = r"T\d{2}[A-Z]{3}"
+        date_pattern = r"\d{4}(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])"
 
-            tile_match = re.search(tile_pattern, a_filename)
-            date_match = re.search(date_pattern, a_filename)
+        tile_match = re.search(tile_pattern, a_filename)
+        date_match = re.search(date_pattern, a_filename)
 
-            filename = "_".join(
-                [
-                    "composite",
-                    tile_match.group(),
-                    date_match.group(),
-                    "composite",
-                    "composite",
-                    band,
-                ]
-            )
-        else:
-            filename = a_filename.split(".")[0]
+        filename = "_".join(
+            [
+                tile_match.group(),
+                date_match.group(),
+                band,
+                "composite",
+            ]
+        )
         output_path.mkdir(parents=True, exist_ok=True)
         output_filename = pathlib.Path(output_path, filename + ".tif")
-        result.rio.to_raster(output_filename)
+        result.rio.to_raster(
+            output_filename,
+            driver="GTiff",
+        )
 
     return output_filename
 
