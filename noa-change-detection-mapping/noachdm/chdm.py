@@ -1,6 +1,7 @@
 """
 Change detection mapping class
 """
+
 from __future__ import annotations
 
 import os
@@ -21,13 +22,14 @@ class ChDM:
 
     Methods:
     """
+
     def __init__(
         self,
         config_file: str = None,
         output_path: str = "./output",
         verbose: bool = False,
         is_service: bool = False,
-        logger: logging.Logger = logging.getLogger(__name__)
+        logger: logging.Logger = logging.getLogger(__name__),
     ) -> ChDM:
         """
         ChDM class. Constructor reads and loads the config if any
@@ -63,9 +65,7 @@ class ChDM:
         dataset = chdm_utils.SentinelChangeDataset(pre_dir=from_path, post_dir=to_path)
         # getting the trained local model
         trained_model_path = os.path.join(
-            os.path.dirname(__file__),
-            "models_checkpoints",
-            "BIT_final_refined.pth"
+            os.path.dirname(__file__), "models_checkpoints", "BIT_final_refined.pth"
         )
         self.logger.info("Starting prediction")
         product_path = chdm_utils.predict_all_scenes_to_mosaic(
@@ -73,17 +73,12 @@ class ChDM:
             dataset=dataset,
             output_dir=self._output_path,
             device="cuda" if torch.cuda.is_available() else "cpu",
-            service=self._is_service
+            service=self._is_service,
         )
         self.logger.info("Products saved at: %s", product_path)
         return product_path
 
-    def produce_from_items_lists(
-        self,
-        items_from,
-        items_to,
-        bbox
-    ):
+    def produce_from_items_lists(self, items_from, items_to, bbox):
         """
         Must accept list of s3 uris probably
         """
@@ -94,17 +89,11 @@ class ChDM:
         try:
             from_path = pathlib.Path(self._temp_path, "from_date")
             from_mosaic_filename = chdm_utils.crop_and_make_mosaic(
-                items_from,
-                bbox,
-                output_path=from_path,
-                service=self._is_service
+                items_from, bbox, output_path=from_path, service=self._is_service
             )
             to_path = pathlib.Path(self._temp_path, "to_date")
             to_mosaic_filename = chdm_utils.crop_and_make_mosaic(
-                items_to,
-                bbox,
-                output_path=to_path,
-                service=self._is_service
+                items_to, bbox, output_path=to_path, service=self._is_service
             )
         except RuntimeError as e:
             self.logger.error("Could not create or parse input items: %s", e)
@@ -112,7 +101,7 @@ class ChDM:
         self.logger.debug(
             "Creating product from mosaics: %s, %s",
             from_mosaic_filename,
-            to_mosaic_filename
+            to_mosaic_filename,
         )
         new_product_path = ""
         new_product_path = self.produce(from_path=from_path, to_path=to_path)
