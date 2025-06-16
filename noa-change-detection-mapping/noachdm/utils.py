@@ -155,9 +155,11 @@ class SentinelChangeDataset(Dataset):
         # Dynamically compute patch sizes and strides per scene
         self.patch_coords = []
 
-        for idx, scene in enumerate(self.pre_scenes):
-            print(f"SCENE: {scene}")
-            with rasterio.open(scene["B04"]) as src:
+        # for idx, scene in enumerate(self.pre_scenes):
+        for idx in range(len(self.pre_scenes)):
+            print(f"idx: {idx} SCENE: {self.pre_scenes[idx]}")
+            # with rasterio.open(scene["B04"]) as src:
+            with rasterio.open(self.pre_scenes[idx]["B04"]) as src:
                 h, w = src.height, src.width
                 min_dim = min(h, w)
                 patch_size = max(128, min((3 * min_dim) // 4, 2048))
