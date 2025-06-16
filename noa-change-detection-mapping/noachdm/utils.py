@@ -114,6 +114,10 @@ def crop_and_make_mosaic(
         tile_match = re.search(tile_pattern, a_filename)
         date_match = re.search(date_pattern, a_filename)
 
+        # TODO still needs a better naming, but be careful to have the band at the end
+        # or change code below at "group_bands" function, at line
+        # `scene_id = "_".join(fname.name.split("_")[:-1])` to get the scene id.
+        # Of course, with proper testing, you can avoid all this
         filename = "_".join(
             [
                 tile_match.group(),
