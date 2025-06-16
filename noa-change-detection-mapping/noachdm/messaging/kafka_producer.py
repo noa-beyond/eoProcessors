@@ -12,6 +12,7 @@ class KafkaProducer(noa_messaging.AbstractProducer):
     """
     Kafka Producer using https://kafka-python.readthedocs.io/ with JSON serialization.
     """
+
     def __init__(self, bootstrap_servers: list, schema: dict) -> None:
         """
         Create the Producer instance.
@@ -21,7 +22,7 @@ class KafkaProducer(noa_messaging.AbstractProducer):
         )
         self.producer = k_KafkaProducer(
             bootstrap_servers=bootstrap_servers,
-            value_serializer=lambda x: json.dumps(x).encode('utf-8')
+            value_serializer=lambda x: json.dumps(x).encode("utf-8"),
         )
 
     def send(self, topic: str, key: str, value: dict) -> None:

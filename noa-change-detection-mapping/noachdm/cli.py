@@ -21,16 +21,23 @@ from kafka.errors import (
     InvalidTopicError,
     UnknownTopicOrPartitionError,
     UnsupportedForMessageFormatError,
-    InvalidMessageError
+    InvalidMessageError,
 )
+
 # Appending the module path in order to have a kind of cli "dry execution"
 sys.path.append(str(Path(__file__).parent / ".."))
 
 from noachdm import chdm  # noqa:402 pylint:disable=wrong-import-position
 from noachdm import utils  # noqa:402 pylint:disable=wrong-import-position
-from noachdm.messaging.message import Message  # noqa:402 pylint:disable=wrong-import-position
-from noachdm.messaging import AbstractConsumer  # noqa:402 pylint:disable=wrong-import-position
-from noachdm.messaging.kafka_consumer import KafkaConsumer  # noqa:402 pylint:disable=wrong-import-position
+from noachdm.messaging.message import (  # noqa:402 pylint:disable=wrong-import-position
+    Message,
+)
+from noachdm.messaging import (  # noqa:402 pylint:disable=wrong-import-position
+    AbstractConsumer,
+)
+from noachdm.messaging.kafka_consumer import (  # noqa:402 pylint:disable=wrong-import-position
+    KafkaConsumer,
+)
 
 
 PROCESSOR = "[NOA-ChDM]"
@@ -97,10 +104,7 @@ def produce(
     logger = logging.getLogger(__name__)
     logger.info("== Initializing ChDM processor ==")
     chdm_producer = chdm.ChDM(
-        output_path=output_path,
-        verbose=verbose,
-        is_service=False,
-        logger=logger
+        output_path=output_path, verbose=verbose, is_service=False, logger=logger
     )
     chdm_producer.produce(from_path, to_path)
 
@@ -128,10 +132,7 @@ def produce(
 @click.argument("config_file", required=True)
 @click.option("--output_path", default="./output", help="Output path")
 def noa_pgaas_chdm(
-    config_file: str,
-    output_path: str,
-    test: bool,
-    verbose: bool
+    config_file: str, output_path: str, test: bool, verbose: bool
 ) -> None:
     """
     Instantiate ChDM class and activate service, listening to kafka topic.
@@ -152,7 +153,7 @@ def noa_pgaas_chdm(
         output_path=output_path,
         verbose=verbose,
         is_service=True,
-        logger=logger
+        logger=logger,
     )
 
     # Consumer
@@ -160,31 +161,26 @@ def noa_pgaas_chdm(
     # Warning: topics is a list, even if there is only one topic
     # So it should be set as a list in the config file
     consumer_topics = chdm_producer.config.get(
-        "topics_consumer", os.environ.get(
-            "KAFKA_INPUT_TOPICS", ["noa.chdm.request"]
-        )
+        "topics_consumer", os.environ.get("KAFKA_INPUT_TOPICS", ["noa.chdm.request"])
     )
     schema_def = Message.schema_request()
     consumer_bootstrap_servers = chdm_producer.config.get(
         "kafka_bootstrap_servers",
-        (os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"))
+        (os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")),
     )
     kafka_group_id = chdm_producer.config.get(
         "kafka_request_group_id",
-        (os.getenv("KAFKA_REQUEST_GROUP_ID", "chdm-group-request"))
+        (os.getenv("KAFKA_REQUEST_GROUP_ID", "chdm-group-request")),
     )
 
     # Producer
     producer_bootstrap_servers = chdm_producer.config.get(
         "kafka_bootstrap_servers",
-        os.getenv(
-            "KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"
-        )
+        os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"),
     )
 
     producer_topic = chdm_producer.config.get(
-        "topic_producer", os.environ.get(
-            "KAFKA_OUTPUT_TOPIC", "noa.chdm.response")
+        "topic_producer", os.environ.get("KAFKA_OUTPUT_TOPIC", "noa.chdm.response")
     )
 
     retries = 0
@@ -194,20 +190,20 @@ def noa_pgaas_chdm(
                 bootstrap_servers=consumer_bootstrap_servers,
                 group_id=kafka_group_id,
                 topics=consumer_topics,
-                schema=schema_def
+                schema=schema_def,
             )
             consumer.subscribe_to_topics(consumer_topics)
         except NoBrokersAvailable as e:
             logger.error(
                 "Kafka configuration error, no brokers available for (%s) : %s ",
                 consumer_bootstrap_servers,
-                e
+                e,
             )
             raise
         except (
             UnknownTopicOrPartitionError,
             TopicAuthorizationFailedError,
-            InvalidTopicError
+            InvalidTopicError,
         ) as e:
             if retries < 5:
                 logger.warning("Could not subscribe to Topic(s): %s", consumer_topics)
@@ -217,9 +213,7 @@ def noa_pgaas_chdm(
                     continue
             else:
                 logger.error(
-                    "Kafka Error on Topic subscription after %i retries: %s",
-                    retries,
-                    e
+                    "Kafka Error on Topic subscription after %i retries: %s", retries, e
                 )
 
     logger.info("Service started, subscribed to topics %s", consumer_topics)
@@ -242,7 +236,7 @@ def noa_pgaas_chdm(
                     logger.error(
                         "Could not extract bbox from geometry: %s, %s",
                         item["geometry"],
-                        e
+                        e,
                     )
                     continue
                 new_product_path = chdm_producer.produce_from_items_lists(
@@ -251,18 +245,16 @@ def noa_pgaas_chdm(
                 logger.info(
                     "Order ID: %s. New change detection mapping product at: %s",
                     order_id,
-                    new_product_path
+                    new_product_path,
                 )
-                click.echo(
-                    f"Consumed ChDM message for orderId {order_id}"
-                )
+                click.echo(f"Consumed ChDM message for orderId {order_id}")
 
                 utils.send_kafka_message(
                     producer_bootstrap_servers,
                     producer_topic,
                     result=0,
                     order_id=order_id,
-                    product_path=new_product_path
+                    product_path=new_product_path,
                 )
             sleep(1)
         except (
@@ -271,14 +263,14 @@ def noa_pgaas_chdm(
             UnsupportedForMessageFormatError,
             InvalidMessageError,
             NoBrokersAvailable,
-            BrokenPipeError
+            BrokenPipeError,
         ) as e:
             utils.send_kafka_message(
                 producer_bootstrap_servers,
                 producer_topic,
                 result=1,
                 order_id=order_id,
-                product_path=""
+                product_path="",
             )
             if isinstance(e, ValueError):
                 logger.error("[Wrong input value error] %s", e)

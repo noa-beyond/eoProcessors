@@ -40,19 +40,15 @@ def send_kafka_message(bootstrap_servers, topic, result, order_id, product_path)
         kafka_message = {
             "result": result,
             "orderId": order_id,
-            "chdmProductPath": product_path
-            }
+            "chdmProductPath": product_path,
+        }
         producer.send(topic=topic, key=None, value=kafka_message)
         logger.debug("Kafka message of New ChDM Product sent to: %s", topic)
     except NoBrokersAvailable as e:
         logger.warning("No brokers available. Continuing without Kafka. Error: %s", e)
         producer = None
     except BrokenPipeError as e:
-        logger.error(
-            "Error sending kafka message to topic %s: %s ",
-            topic,
-            e
-        )
+        logger.error("Error sending kafka message to topic %s: %s ", topic, e)
 
 
 def get_bbox(geometry):
@@ -63,10 +59,7 @@ def get_bbox(geometry):
 
 
 def crop_and_make_mosaic(
-        items_paths,
-        bbox,
-        output_path: pathlib.Path,
-        service=False
+    items_paths, bbox, output_path: pathlib.Path, service=False
 ) -> pathlib.Path:
     """
     There is a lower (hardcoded for now) limit on kernel for images.
@@ -102,12 +95,9 @@ def crop_and_make_mosaic(
         # If more than one path (bbox exceeds one tile or multiple dates)
         if len(cropped_list) > 1:
             reference = cropped_list[0]
-            reprojected = [
-                da.rio.reproject_match(reference)
-                for da in cropped_list
-            ]
-            stacked = xr.concat(reprojected, dim='stack')
-            result = stacked.median(dim='stack')
+            reprojected = [da.rio.reproject_match(reference) for da in cropped_list]
+            stacked = xr.concat(reprojected, dim="stack")
+            result = stacked.median(dim="stack")
         elif len(cropped_list) == 1:
             result = cropped_list[0]
         else:
@@ -131,7 +121,7 @@ def crop_and_make_mosaic(
                     date_match.group(),
                     "composite",
                     "composite",
-                    band
+                    band,
                 ]
             )
         else:
@@ -167,7 +157,7 @@ class SentinelChangeDataset(Dataset):
         self.patch_coords = []
 
         for idx, scene in enumerate(self.pre_scenes):
-            with rasterio.open(scene['B04']) as src:
+            with rasterio.open(scene["B04"]) as src:
                 h, w = src.height, src.width
                 min_dim = min(h, w)
                 patch_size = max(128, min((3 * min_dim) // 4, 2048))
@@ -191,7 +181,7 @@ class SentinelChangeDataset(Dataset):
         for fname in sorted(os.listdir(folder)):
             if not fname.endswith(".tif"):
                 continue
-            for band in ['B04', 'B03', 'B02']:
+            for band in ["B04", "B03", "B02"]:
                 if band in fname:
                     scene_id = "_".join(fname.split("_")[:-1])
                     grouped[scene_id][band] = os.path.join(folder, fname)
@@ -205,9 +195,11 @@ class SentinelChangeDataset(Dataset):
 
         def read_patch(band_paths):
             patch = []
-            for b in ['B04', 'B03', 'B02']:
+            for b in ["B04", "B03", "B02"]:
                 with rasterio.open(band_paths[b]) as src:
-                    window = rasterio.windows.Window(x, y, self.patch_size, self.patch_size)
+                    window = rasterio.windows.Window(
+                        x, y, self.patch_size, self.patch_size
+                    )
                     patch.append(src.read(1, window=window))
             patch = np.stack(patch)
             patch = np.clip(patch / 15000.0, 0, 1)
@@ -220,26 +212,24 @@ class SentinelChangeDataset(Dataset):
 
 
 def predict_all_scenes_to_mosaic(
-    model_weights_path,
-    dataset,
-    output_dir: pathlib.Path,
-    device="cpu",
-    service=False
+    model_weights_path, dataset, output_dir: pathlib.Path, device="cpu", service=False
 ):
     logger = logging.getLogger(__name__)
 
-    model = define_G(net_G='base_transformer_pos_s4_dd8', input_nc=3)
-    model = torch.load(model_weights_path, weights_only=False, map_location=torch.device(device))
+    model = define_G(net_G="base_transformer_pos_s4_dd8", input_nc=3)
+    model = torch.load(
+        model_weights_path, weights_only=False, map_location=torch.device(device)
+    )
     model.eval()
     model.to(device)
 
     for scene_index, scene in enumerate(dataset.pre_scenes):
-        tile = dataset.pre_scenes[0]['B04'].split("_")[-5]
+        tile = dataset.pre_scenes[0]["B04"].split("_")[-5]
         random_choice = random.choices(string.ascii_letters + string.digits, k=6)
-        date_from = dataset.pre_scenes[0]['B04'].split("_")[-4]
-        date_to = dataset.post_scenes[0]['B04'].split("_")[-4]
+        date_from = dataset.pre_scenes[0]["B04"].split("_")[-4]
+        date_to = dataset.post_scenes[0]["B04"].split("_")[-4]
 
-        with rasterio.open(scene['B04']) as ref_src:
+        with rasterio.open(scene["B04"]) as ref_src:
             h, w = ref_src.height, ref_src.width
             transform = ref_src.transform
             crs = ref_src.crs
@@ -260,22 +250,25 @@ def predict_all_scenes_to_mosaic(
                 output = model(pre_tensor, post_tensor)
                 # pred_patch = torch.argmax(output, dim=1).cpu().numpy().astype(np.uint8)
                 pred_patch_logits = (
-                    torch.softmax(output, dim=1).detach().cpu().numpy()[0, 1, :, :]*100
+                    torch.softmax(output, dim=1).detach().cpu().numpy()[0, 1, :, :]
+                    * 100
                 ).astype(np.uint8)
 
             y_shift = pred_patch_logits.shape[0]
             x_shift = pred_patch_logits.shape[1]
-            y = min(y, h-y_shift)
-            x = min(x, w-x_shift)
+            y = min(y, h - y_shift)
+            x = min(x, w - x_shift)
             # full_pred[y:y+y_shift, x:x+x_shift] = pred_patch
-            full_pred_logits[y:y+y_shift, x:x+x_shift] = pred_patch_logits
+            full_pred_logits[y : y + y_shift, x : x + x_shift] = pred_patch_logits
 
         full_pred_logits = full_pred_logits.astype(np.float32)
 
         # Standardize
         mean_val = np.mean(full_pred_logits)
         std_val = np.std(full_pred_logits)
-        std_logits = (full_pred_logits - mean_val) / (std_val + 1e-8)  # avoid division by zero
+        std_logits = (full_pred_logits - mean_val) / (
+            std_val + 1e-8
+        )  # avoid division by zero
 
         # Optionally scale to 0–100 for visualization
         full_pred_logits = (std_logits * 10 + 50).clip(0, 100).astype(np.uint8)
@@ -291,13 +284,7 @@ def predict_all_scenes_to_mosaic(
 
         # Save individual scene prediction
         # ChDM_S2_20220215_20230316_TJ35_AD6548_pred.tif
-        filename_parts = [
-            "ChDM_S2",
-            date_from,
-            date_to,
-            tile,
-            "".join(random_choice)
-        ]
+        filename_parts = ["ChDM_S2", date_from, date_to, tile, "".join(random_choice)]
         output_filename = "_".join(filename_parts)
         output_filename_pred = output_filename + "_pred.tif"
         output_filename_pred_logits = output_filename + "_pred_logits.tif"
@@ -305,32 +292,32 @@ def predict_all_scenes_to_mosaic(
         output_path_logits = pathlib.Path(output_dir.name, output_filename_pred_logits)
 
         with rasterio.open(
-            output_path_pred, 'w',
-            driver='GTiff',
-            height=h, width=w,
+            output_path_pred,
+            "w",
+            driver="GTiff",
+            height=h,
+            width=w,
             count=1,
             dtype=full_pred.dtype,
             crs=crs,
-            transform=transform
+            transform=transform,
         ) as dst:
             dst.write(full_pred, 1)
 
         with rasterio.open(
-            output_path_logits, 'w',
-            driver='GTiff',
-            height=h, width=w,
+            output_path_logits,
+            "w",
+            driver="GTiff",
+            height=h,
+            width=w,
             count=1,
             dtype=full_pred_logits.dtype,
             crs=crs,
-            transform=transform
+            transform=transform,
         ) as dst:
             dst.write(full_pred_logits, 1)
 
-        logger.info(
-            "Successfully created %s, %s",
-            output_path_pred,
-            output_path_logits
-        )
+        logger.info("Successfully created %s, %s", output_path_pred, output_path_logits)
 
         if service:
             s3_upload_path = _upload_to_s3(output_path_pred, output_path_logits)
@@ -343,27 +330,29 @@ def _upload_to_s3(output_path_pred: pathlib.Path, output_path_logits: pathlib.Pa
     region = os.getenv("CREODIAS_REGION", None)
     service = "s3"
     endpoint = os.getenv("CREODIAS_ENDPOINT", None)
-    bucket_name = os.getenv('CREODIAS_S3_BUCKET_PRODUCT_OUTPUT')
+    bucket_name = os.getenv("CREODIAS_S3_BUCKET_PRODUCT_OUTPUT")
     auth = AWS4Auth(
         os.getenv("CREODIAS_S3_ACCESS_KEY"),
         os.getenv("CREODIAS_S3_SECRET_KEY"),
         region,
-        service
+        service,
     )
     bucket_name = bucket_name + "/products"
 
     current_date = datetime.datetime.now().strftime("%Y%m%d")
 
     for product_path in [output_path_pred, output_path_logits]:
-        with open(product_path, 'rb') as file_data:
+        with open(product_path, "rb") as file_data:
             file_content = file_data.read()
         headers = {
-            'Content-Length': str(len(file_content)),
+            "Content-Length": str(len(file_content)),
         }
         url = f"{endpoint}/{bucket_name}/{current_date}/{str(product_path.name)}"
 
         try:
-            response = requests.put(url, data=file_content, headers=headers, auth=auth, timeout=300)
+            response = requests.put(
+                url, data=file_content, headers=headers, auth=auth, timeout=300
+            )
         except requests.exceptions.Timeout:
             logger.error("Timeout when uploading %s", product_path)
 
@@ -373,14 +362,14 @@ def _upload_to_s3(output_path_pred: pathlib.Path, output_path_logits: pathlib.Pa
                 str(product_path.name),
                 endpoint,
                 bucket_name,
-                current_date
+                current_date,
             )
         else:
             logger.error(
                 "Could not upload %s to %s: %s",
                 str(product_path.name),
                 bucket_name,
-                response.text
+                response.text,
             )
 
     return f"{endpoint}/{bucket_name}/{current_date}/"

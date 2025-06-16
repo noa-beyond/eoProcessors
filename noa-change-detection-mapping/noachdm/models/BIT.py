@@ -67,9 +67,7 @@ def get_norm_layer(norm_type="instance"):
     We do not track running statistics.
     """
     if norm_type == "batch":
-        return functools.partial(
-            nn.BatchNorm2d, affine=True, track_running_stats=True
-        )
+        return functools.partial(nn.BatchNorm2d, affine=True, track_running_stats=True)
     elif norm_type == "instance":
         return functools.partial(
             nn.InstanceNorm2d, affine=False, track_running_stats=False
@@ -380,13 +378,11 @@ class BASE_Transformer(ResNet):
         # b,c,h,w = x.shape
         if self.pool_mode == "max":
             x = nn.functional.adaptive_max_pool2d(
-                x,
-                [self.pooling_size, self.pooling_size]
+                x, [self.pooling_size, self.pooling_size]
             )
         elif self.pool_mode == "ave":
             x = nn.functional.adaptive_avg_pool2d(
-                x,
-                [self.pooling_size, self.pooling_size]
+                x, [self.pooling_size, self.pooling_size]
             )
         else:
             x = x
