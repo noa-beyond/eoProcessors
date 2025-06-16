@@ -99,10 +99,27 @@ class ChDM:
             self.logger.error("Could not create or parse input items: %s", e)
 
         self.logger.debug(
-            "Creating product from mosaics: %s, %s",
+            "Creating products from mosaics (for all bands): %s, %s",
             from_mosaic_filename,
             to_mosaic_filename,
         )
+
+        reference_path = next(
+            iter(sorted(from_path.glob("*.tif")) + sorted(from_path.glob("*.jp2"))),
+            None,
+        )
+        raster_paths = (
+            sorted(from_path.glob("*.tif"))
+            + sorted(from_path.glob("*.jp2"))
+            + sorted(to_path.glob("*.tif"))
+            + sorted(to_path.glob("*.jp2"))
+        )
+        for path in raster_paths:
+            cropped = False
+            cropped = chdm_utils.crop_to_reference(reference_path, path)
+            if cropped:
+                self.logger.info("Needed to crop to same extend: %s", path)
+
         new_product_path = ""
         new_product_path = self.produce(from_path=from_path, to_path=to_path)
 

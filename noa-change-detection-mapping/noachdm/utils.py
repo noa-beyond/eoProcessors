@@ -17,6 +17,8 @@ import numpy as np
 import xarray as xr
 import rioxarray
 import rasterio
+from rasterio.windows import from_bounds
+
 import geopandas as gpd
 from shapely.geometry import shape, box
 
@@ -179,7 +181,7 @@ class SentinelChangeDataset(Dataset):
 
         grouped = defaultdict(dict)
         for fname in sorted(os.listdir(folder)):
-            if not fname.endswith(".tif"):
+            if not fname.endswith((".tif", ".jp2")):
                 continue
             for band in ["B04", "B03", "B02"]:
                 if band in fname:
@@ -373,3 +375,39 @@ def _upload_to_s3(output_path_pred: pathlib.Path, output_path_logits: pathlib.Pa
             )
 
     return f"{endpoint}/{bucket_name}/{current_date}/"
+
+
+def crop_to_reference(reference_path: pathlib.Path, raster_path: pathlib.Path):
+
+    with rasterio.open(reference_path) as ref:
+        ref_bounds = ref.bounds
+        ref_transform = ref.transform
+        ref_nodata = ref.nodata if ref.nodata is not None else 0
+        ref_profile = ref.profile.copy()
+        ref_profile.update({"nodata": ref_nodata})
+
+    with rasterio.open(raster_path) as src:
+        if src.bounds == ref_bounds and src.transform == ref_transform:
+            return False
+
+        window = from_bounds(*ref_bounds, transform=src.transform)
+        window = window.round_offsets().round_lengths()
+        try:
+            data = src.read(window=window, boundless=True, fill_value=ref_nodata)
+        except Exception as e:
+            raise RuntimeError(f"Error reading {raster_path.name}: {e}")
+
+        transform = src.window_transform(window)
+        profile = src.profile.copy()
+        profile.update(
+            {
+                "height": data.shape[1],
+                "width": data.shape[2],
+                "transform": transform,
+                "nodata": ref_nodata,
+            }
+        )
+
+    with rasterio.open(raster_path, "w", **profile) as dst:
+        dst.write(data)
+    return True
