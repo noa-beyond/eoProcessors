@@ -247,8 +247,6 @@ def noa_pgaas_chdm(
                     order_id,
                     new_product_path,
                 )
-                click.echo(f"Consumed ChDM message for orderId {order_id}")
-
                 utils.send_kafka_message(
                     producer_bootstrap_servers,
                     producer_topic,
@@ -256,7 +254,6 @@ def noa_pgaas_chdm(
                     order_id=order_id,
                     product_path=new_product_path,
                 )
-            sleep(1)
         except (
             RuntimeError,
             ValueError,
@@ -280,6 +277,8 @@ def noa_pgaas_chdm(
                 logger.error("Error in reading kafka message: %s", e)
             elif isinstance(e, (NoBrokersAvailable, BrokenPipeError)):
                 logger.error("Error in sending kafka message: %s", e)
+        finally:
+            continue
 
 
 if __name__ == "__main__":  # pragma: no cover
