@@ -7,44 +7,40 @@ class Message:
         "namespace": "noa.chdm.request",
         "type": "object",
         "properties": {
-            "orderId": {
-                "type": "string"
-            },
+            "orderId": {"type": "string"},
             "initialSelectionProductPaths": {
                 "type": "array",
                 "items": {
                     "type": "string",
                     "uniqueItems": True,
-                }
+                },
             },
             "finalSelectionProductPaths": {
                 "type": "array",
                 "items": {
                     "type": "string",
                     "uniqueItems": True,
-                }
+                },
             },
             "geometry": {
                 "type": "object",
                 "properties": {
-                    "type": {
-                        "type": "string"
-                    },
+                    "type": {"type": "string"},
                     "coordinates": {
                         "type": "array",
                         "items": {
                             "type": "array",
-                        }
-                    }
-                }
-            }
+                        },
+                    },
+                },
+            },
         },
         "required": [
             "orderId",
             "initialSelectionProductPaths",
             "finalSelectionProductPaths",
-            "geometry"
-        ]
+            "geometry",
+        ],
     }
 
     # NOTE product path which includes the two sub-products: binary and confidence
@@ -60,13 +56,9 @@ class Message:
             },
             "chdmProductPath": {
                 "type": "string",
-            }
+            },
         },
-        "required": [
-            "result",
-            "orderId",
-            "chdmProductPath"
-        ]
+        "required": ["result", "orderId", "chdmProductPath"],
     }
 
     @staticmethod
