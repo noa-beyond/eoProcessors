@@ -228,7 +228,7 @@ def noa_pgaas_chdm(
                 msg += "\n> Item: " + json.dumps(item)
                 logger.debug("Kafka message: %s", msg)
                 order_id = item["orderId"]
-                logger.info("Received order id message: %s", order_id)
+                logger.info("Received order message: %s", item)
                 items_from = item["initialSelectionProductPaths"]
                 items_to = item["finalSelectionProductPaths"]
                 try:
