@@ -34,6 +34,7 @@ class KafkaConsumer(noa_messaging.AbstractConsumer):
             bootstrap_servers=bootstrap_servers,
             group_id=group_id,
             # auto_offset_reset="earliest",
+            max_poll_interval_ms=900000,
             value_deserializer=lambda x: json.loads(x.decode("utf-8"))
         )
 

@@ -16,6 +16,7 @@ import click
 from click import Argument, Option
 from kafka import KafkaConsumer as k_KafkaConsumer
 from kafka.errors import (
+    KafkaError,
     NoBrokersAvailable,
     TopicAuthorizationFailedError,
     InvalidTopicError,
@@ -227,7 +228,7 @@ def noa_pgaas_chdm(
                 msg += "\n> Item: " + json.dumps(item)
                 logger.debug("Kafka message: %s", msg)
                 order_id = item["orderId"]
-                logger.info("Received order id message: %s", order_id)
+                logger.info("Received order message: %s", item)
                 items_from = item["initialSelectionProductPaths"]
                 items_to = item["finalSelectionProductPaths"]
                 try:
@@ -259,8 +260,10 @@ def noa_pgaas_chdm(
             ValueError,
             UnsupportedForMessageFormatError,
             InvalidMessageError,
+            KafkaError,
             NoBrokersAvailable,
             BrokenPipeError,
+            Exception
         ) as e:
             utils.send_kafka_message(
                 producer_bootstrap_servers,
@@ -273,10 +276,21 @@ def noa_pgaas_chdm(
                 logger.error("[Wrong input value error] %s", e)
             elif isinstance(e, RuntimeError):
                 logger.error("[Runtime error] %s", e)
+            elif isinstance(e, KafkaError):
+                logger.error("[Kafka error] %s", e)
+                consumer = KafkaConsumer(
+                    bootstrap_servers=consumer_bootstrap_servers,
+                    group_id=kafka_group_id,
+                    topics=consumer_topics,
+                    schema=schema_def,
+                )
+                consumer.subscribe_to_topics(consumer_topics)
             elif isinstance(e, (UnsupportedForMessageFormatError, InvalidMessageError)):
                 logger.error("Error in reading kafka message: %s", e)
             elif isinstance(e, (NoBrokersAvailable, BrokenPipeError)):
                 logger.error("Error in sending kafka message: %s", e)
+            elif isinstance(e, (Exception)):
+                logger.error("Too general exception to be caught... : %s", e)
         finally:
             continue
 
