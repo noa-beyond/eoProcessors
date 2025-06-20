@@ -42,7 +42,7 @@ class ChDM:
         self.logger = logger
 
         self._config = {}
-        self._output_path = pathlib.Path(output_path)
+        self._output_path = pathlib.Path(output_path).resolve()
         self._verbose = verbose
 
         if config_file:

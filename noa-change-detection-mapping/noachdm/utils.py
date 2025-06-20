@@ -291,8 +291,9 @@ def predict_all_scenes_to_mosaic(
         output_filename = "_".join(filename_parts)
         output_filename_pred = output_filename + "_pred.tif"
         output_filename_pred_logits = output_filename + "_pred_logits.tif"
-        output_path_pred = pathlib.Path(output_dir.name, output_filename_pred)
-        output_path_logits = pathlib.Path(output_dir.name, output_filename_pred_logits)
+        output_dir.resolve().mkdir(parents=True, exist_ok=True)
+        output_path_pred = pathlib.Path(output_dir.resolve(), output_filename_pred)
+        output_path_logits = pathlib.Path(output_dir.resolve(), output_filename_pred_logits)
 
         with rasterio.open(
             output_path_pred,
