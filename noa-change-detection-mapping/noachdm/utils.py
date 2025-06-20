@@ -187,7 +187,7 @@ class SentinelChangeDataset(Dataset):
                 for band in ["B04", "B03", "B02"]:
                     if band in fname.name:
                         scene_id = "_".join(fname.name.split("_")[:-1])
-                        grouped[scene_id][band] = pathlib.Path(folder, fname)
+                        grouped[scene_id][band] = str(pathlib.Path(folder, fname))
         return list(grouped.values())
 
     def __len__(self):
@@ -215,7 +215,7 @@ class SentinelChangeDataset(Dataset):
 
 
 def predict_all_scenes_to_mosaic(
-    model_weights_path, dataset, output_dir: pathlib.Path, device="cpu", service=False
+    model_weights_path, dataset: SentinelChangeDataset, output_dir: pathlib.Path, device="cpu", service=False
 ):
     logger = logging.getLogger(__name__)
 
