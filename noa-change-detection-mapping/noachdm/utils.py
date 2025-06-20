@@ -215,10 +215,12 @@ class SentinelChangeDataset(Dataset):
 
 
 def predict_all_scenes_to_mosaic(
-    model_weights_path, dataset: SentinelChangeDataset, output_dir: pathlib.Path, device="cpu", service=False
+    model_weights_path, dataset: SentinelChangeDataset,
+    output_dir: pathlib.Path,
+    device="cpu",
+    service=False,
+    logger=logging.getLogger(__name__)
 ):
-    logger = logging.getLogger(__name__)
-
     model = define_G(net_G="base_transformer_pos_s4_dd8", input_nc=3)
     model = torch.load(
         model_weights_path, weights_only=False, map_location=torch.device(device)
@@ -226,12 +228,13 @@ def predict_all_scenes_to_mosaic(
     model.eval()
     model.to(device)
 
-    for scene_index, scene in enumerate(dataset.pre_scenes):
-        tile = dataset.pre_scenes[0]["B04"].split("_")[-4]
-        random_choice = random.choices(string.ascii_letters + string.digits, k=6)
-        date_from = dataset.pre_scenes[0]["B04"].split("_")[-3]
-        date_to = dataset.post_scenes[0]["B04"].split("_")[-3]
+    date_from = dataset.pre_scenes[0]["B04"].split("_")[1]
+    date_to = dataset.post_scenes[0]["B04"].split("_")[1]
+    tile = dataset.pre_scenes[0]["B04"].split("_")[0]
+    random_choice = random.choices(string.ascii_letters + string.digits, k=6)
+    logger.info("Filename parts: %s, %s, %s, %s", date_from, date_to, tile, random_choice)
 
+    for scene_index, scene in enumerate(dataset.pre_scenes):
         with rasterio.open(scene["B04"]) as ref_src:
             h, w = ref_src.height, ref_src.width
             transform = ref_src.transform

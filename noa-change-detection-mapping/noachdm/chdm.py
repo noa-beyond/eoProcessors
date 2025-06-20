@@ -74,6 +74,7 @@ class ChDM:
             output_dir=self._output_path,
             device="cuda" if torch.cuda.is_available() else "cpu",
             service=self._is_service,
+            logger=self.logger
         )
         self.logger.info("Products saved at: %s", product_path)
         return product_path
