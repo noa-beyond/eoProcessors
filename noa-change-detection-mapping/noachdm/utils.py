@@ -228,9 +228,25 @@ def predict_all_scenes_to_mosaic(
     model.eval()
     model.to(device)
 
-    date_from = dataset.pre_scenes[0]["B04"].split("_")[1]
-    date_to = dataset.post_scenes[0]["B04"].split("_")[1]
-    tile = dataset.pre_scenes[0]["B04"].split("_")[0]
+    tile_pattern = r"T\d{2}[A-Z]{3}"
+    date_pattern = r"\d{4}(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])"
+
+    tile_match = re.search(
+        tile_pattern,
+        pathlib.Path(dataset.pre_scenes[0]["B04"]).name
+    )
+    date_match_from = re.search(
+        date_pattern,
+        pathlib.Path(dataset.pre_scenes[0]["B04"]).name
+    )
+    date_match_to = re.search(
+        date_pattern,
+        pathlib.Path(dataset.post_scenes[0]["B04"]).name
+    )
+
+    date_from = date_match_from.group()
+    date_to = date_match_to.group()
+    tile = tile_match.group()
     random_choice = random.choices(string.ascii_letters + string.digits, k=6)
     logger.info("Filename parts: %s, %s, %s, %s", date_from, date_to, tile, random_choice)
 
