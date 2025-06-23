@@ -221,43 +221,59 @@ def noa_pgaas_chdm(
 
     while True:
         try:
-            for message in consumer.read():
-                item = message.value
-                now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                msg = f"Digesting Item from Topic {message.topic} ({now_time})..."
-                msg += "\n> Item: " + json.dumps(item)
-                logger.debug("Kafka message: %s", msg)
-                order_id = item["orderId"]
-                logger.info("Received order message: %s", item)
-                items_from = item["initialSelectionProductPaths"]
-                items_to = item["finalSelectionProductPaths"]
-                try:
-                    bbox = utils.get_bbox(item["geometry"])
-                except TypeError as e:
-                    logger.error(
-                        "Could not extract bbox from geometry: %s, %s",
-                        item["geometry"],
-                        e,
+            msgs = consumer.poll(timeout_ms=2000)
+            for tp, messages in msgs.items():  # consumer.read():
+                for message in messages:
+                    item = message.value
+                    now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    msg = f"Digesting Item from Topic {message.topic} ({now_time})..."
+                    msg += "\n> Item: " + json.dumps(item)
+                    logger.debug("Kafka message: %s", msg)
+                    order_id = item["orderId"]
+                    logger.info("Received order message: %s", item)
+                    items_from = item["initialSelectionProductPaths"]
+                    items_to = item["finalSelectionProductPaths"]
+                    try:
+                        bbox = utils.get_bbox(item["geometry"])
+                    except TypeError as e:
+                        logger.error(
+                            "Could not extract bbox from geometry: %s, %s",
+                            item["geometry"],
+                            e,
+                        )
+                        continue
+                    try:
+                        new_product_path = chdm_producer.produce_from_items_lists(
+                            items_from, items_to, bbox
+                        )
+                        logger.info(
+                            "Order ID: %s. New change detection mapping product at: %s",
+                            order_id,
+                            new_product_path,
+                        )
+                        consumer.commit()
+                    except (RuntimeError, ValueError, Exception) as e:
+                        if isinstance(e, ValueError):
+                            logger.error("[Wrong input value error] %s", e)
+                        elif isinstance(e, RuntimeError):
+                            logger.error("[Runtime error] %s", e)
+                        elif isinstance(e, (Exception)):
+                            logger.error("Too general exception to be caught... : %s", e)
+                        utils.send_kafka_message(
+                            producer_bootstrap_servers,
+                            producer_topic,
+                            result=1,
+                            order_id=order_id,
+                            product_path="",
+                        )
+                    utils.send_kafka_message(
+                        producer_bootstrap_servers,
+                        producer_topic,
+                        result=0,
+                        order_id=order_id,
+                        product_path=new_product_path,
                     )
-                    continue
-                new_product_path = chdm_producer.produce_from_items_lists(
-                    items_from, items_to, bbox
-                )
-                logger.info(
-                    "Order ID: %s. New change detection mapping product at: %s",
-                    order_id,
-                    new_product_path,
-                )
-                utils.send_kafka_message(
-                    producer_bootstrap_servers,
-                    producer_topic,
-                    result=0,
-                    order_id=order_id,
-                    product_path=new_product_path,
-                )
         except (
-            RuntimeError,
-            ValueError,
             UnsupportedForMessageFormatError,
             InvalidMessageError,
             KafkaError,
@@ -272,11 +288,7 @@ def noa_pgaas_chdm(
                 order_id=order_id,
                 product_path="",
             )
-            if isinstance(e, ValueError):
-                logger.error("[Wrong input value error] %s", e)
-            elif isinstance(e, RuntimeError):
-                logger.error("[Runtime error] %s", e)
-            elif isinstance(e, KafkaError):
+            if isinstance(e, KafkaError):
                 logger.error("[Kafka error] %s", e)
                 consumer = KafkaConsumer(
                     bootstrap_servers=consumer_bootstrap_servers,
@@ -291,8 +303,6 @@ def noa_pgaas_chdm(
                 logger.error("Error in sending kafka message: %s", e)
             elif isinstance(e, (Exception)):
                 logger.error("Too general exception to be caught... : %s", e)
-        finally:
-            continue
 
 
 if __name__ == "__main__":  # pragma: no cover
