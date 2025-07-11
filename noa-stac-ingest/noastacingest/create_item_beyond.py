@@ -168,6 +168,7 @@ def create_chdm_items(
             )
             url = f'/vsicurl/{url_part}'
 
+            # TODO check if this if else is needed. Maybe both .Env could work
             if s3_paths:
                 with rasterio.Env():
                     with rasterio.open(url) as src:
