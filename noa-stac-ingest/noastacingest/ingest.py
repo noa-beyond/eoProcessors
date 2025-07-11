@@ -10,7 +10,8 @@ import tempfile
 
 import boto3
 
-from pystac import Catalog, Item
+from pystac import Catalog, Collection, Item, CatalogType
+from pystac.layout import APILayoutStrategy
 
 from noastacingest import utils
 from noastacingest.db import utils as db_utils
@@ -47,17 +48,36 @@ class Ingest:
 
         # TODO check if is necessary to copy or just keep reference
         if "https://s3" in self._config["catalog_path"]:
-            s3 = boto3.resource(
-                "s3",
-                aws_access_key_id=os.getenv("CREODIAS_S3_ACCESS_KEY"),
-                aws_secret_access_key=os.getenv("CREODIAS_S3_SECRET_KEY"),
+            s3_client = boto3.client(
+                's3',
                 endpoint_url=os.getenv("CREODIAS_ENDPOINT", None),
-                region_name=os.getenv("CREODIAS_REGION", None)
+                aws_access_key_id=os.getenv("CREODIAS_S3_ACCESS_KEY"),
+                aws_secret_access_key=os.getenv("CREODIAS_S3_SECRET_KEY")
             )
-            with tempfile.NamedTemporaryFile(suffix='.json') as tmp:
-                bucket = s3.Bucket(os.getenv("CREODIAS_S3_BUCKET_STAC", None))
-                bucket.download_file("catalog.json", tmp.name)
-                self._catalog = Catalog.from_file(tmp.name).clone()
+            # with tempfile.NamedTemporaryFile() as tmp:
+            # bucket = s3.Bucket(os.getenv("CREODIAS_S3_BUCKET_STAC", None))
+            response = s3_client.get_object(Bucket=os.getenv("CREODIAS_S3_BUCKET_STAC"), Key="catalog.json")
+            catalog_dict = json.loads(response['Body'].read())
+            # Step 2: Create a Catalog instance
+            self._catalog = Catalog.from_dict(catalog_dict)
+            self._catalog.set_self_href(
+                f"{os.getenv('CREODIAS_ENDPOINT')}/{os.getenv('CREODIAS_S3_BUCKET_STAC')}/catalog.json"
+            )
+            self._catalog.resolve_links()
+            Path("/tmp/", "stac").mkdir(exist_ok=True, parents=True)
+
+            print("Catalog href:", self._catalog.get_self_href())
+
+            self._local_root = Path("/tmp/", "stac")
+            self._catalog.normalize_and_save(
+                root_href=f"{os.getenv('CREODIAS_ENDPOINT')}/{os.getenv('CREODIAS_S3_BUCKET_STAC')}/catalog.json",
+                strategy=APILayoutStrategy(),
+                catalog_type=CatalogType.RELATIVE_PUBLISHED,
+                dest_href=str(self._local_root)
+            )
+
+            # bucket.download_file("catalog.json", tmp.name)
+            # self._catalog = Catalog.from_file(tmp.name).clone()
         else:
             self._catalog = Catalog.from_file(
                 Path(self._config["catalog_path"], self._config["catalog_filename"])
@@ -84,33 +104,53 @@ class Ingest:
         item.set_root(self._catalog)
 
         if s3:
-            s3 = boto3.client(
+            s3_client = boto3.client(
                 's3',
                 endpoint_url=os.getenv("CREODIAS_ENDPOINT", None),
                 aws_access_key_id=os.getenv("CREODIAS_S3_ACCESS_KEY", None),
                 aws_secret_access_key=os.getenv("CREODIAS_S3_SECRET_KEY", None)
             )
+            collection_path = Path(self._local_root, "collections", collection, "collection.json")
+            print(collection_path)
+            collection_instance = Collection.from_file(str(collection_path))
+            item_path = Path(collection_path.parent, "/items/", item.id)
+            item.set_self_href(str(item_path,  f"{item.id}.json"))
+            item.set_parent(collection_instance)
+            collection_instance.add_item(item, strategy='only_links')
+            item.save_object(include_self_link=False)
+            collection_instance.save_object(include_self_link=False)
+            for path in self._local_root.rglob('*'):
+                if path.is_file():
+                    relative_key = str(path.relative_to(self._local_root))
+                    s3_key = f'{relative_key}'.replace('\\', '/')
+                    s3_client.upload_file(str(path), os.getenv("CREODIAS_S3_BUCKET_STAC"), s3_key)
+                    print(f'Uploaded: {s3_key}')
 
-        collection_instance = self._catalog.get_child(collection)
-        item.set_collection(collection_instance)
-        # TODO most providers do not have a direct collection/items relation
-        # Rather, they provide an items link, where all items are present
-        # e.g. https://earth-search.aws.element84.com/v1/
-        # collections/sentinel-2-l2a/items
-        # Like so, I do not know if an "extent" property is needed.
-        # If it is, update it:
-        # TODO fix spatial and temporal extent when new item is added
-        collection_instance.update_extent_from_items()
-        collection_instance.normalize_and_save(
-            self._config.get("collection_path") + collection + "/"
-        )
+        else:
+            collection_instance = self._catalog.get_child(collection)
+            item.set_collection(collection_instance)
+
+            # TODO most providers do not have a direct collection/items relation
+            # Rather, they provide an items link, where all items are present
+            # e.g. https://earth-search.aws.element84.com/v1/
+            # collections/sentinel-2-l2a/items
+            # Like so, I do not know if an "extent" property is needed.
+            # If it is, update it:
+            # TODO fix spatial and temporal extent when new item is added
+            collection_instance.update_extent_from_items()
+            print(item)
+            collection_instance.normalize_and_save(
+                self._config.get("collection_path") + collection + "/"
+            )
         if update_db:
             db_utils.load_stac_items_to_pgstac(
                 [collection_instance.to_dict()], collection=True
             )
 
-        item.set_self_href(json_file_path)
-        item.save_object(include_self_link=True)
+        if not s3:
+            item.set_self_href(json_file_path)
+            print(item)
+            item.save_object(include_self_link=True)
         if update_db:
             db_utils.load_stac_items_to_pgstac(
                 [collection_instance.to_dict()], True
@@ -158,6 +198,8 @@ class Ingest:
                 additional_providers=additional_providers
             )
         print("Created Item ids:")
+        # TODO is s3 true correct?
+        # TODO take care of logs
         for item in created_items:
             result = self._save_item_add_to_collection(
                 item=item,
