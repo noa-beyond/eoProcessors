@@ -103,7 +103,7 @@ def get_collection_from_path(pathname: Path | str) -> str:
         return collection
 
 
-def s3_catalog_to_local(s3_key):
+def s3_catalog_to_local(s3_key) -> Catalog:
     """
     Getting a STAC object (Catalog)
     from an s3 bucket based on the bucket and key,
@@ -136,7 +136,7 @@ def s3_catalog_to_local(s3_key):
     return catalog
 
 
-def s3_collection_to_local(s3_key):
+def s3_collection_to_local(s3_key) -> Collection:
     """
     Getting a STAC object (Collection)
     from an s3 bucket based on the bucket and key,
