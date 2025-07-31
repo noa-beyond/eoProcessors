@@ -3,10 +3,10 @@
 from __future__ import annotations
 import os
 
-from pathlib import Path
+from pathlib import Path, PurePosixPath
+from urllib.parse import urlparse, urlunparse
 import json
 import logging
-import tempfile
 
 import boto3
 
@@ -54,11 +54,8 @@ class Ingest:
                 aws_access_key_id=os.getenv("CREODIAS_S3_ACCESS_KEY"),
                 aws_secret_access_key=os.getenv("CREODIAS_S3_SECRET_KEY")
             )
-            # with tempfile.NamedTemporaryFile() as tmp:
-            # bucket = s3.Bucket(os.getenv("CREODIAS_S3_BUCKET_STAC", None))
             response = s3_client.get_object(Bucket=os.getenv("CREODIAS_S3_BUCKET_STAC"), Key="catalog.json")
             catalog_dict = json.loads(response['Body'].read())
-            # Step 2: Create a Catalog instance
             self._catalog = Catalog.from_dict(catalog_dict)
             self._catalog.set_self_href(
                 f"{os.getenv('CREODIAS_ENDPOINT')}/{os.getenv('CREODIAS_S3_BUCKET_STAC')}/catalog.json"
@@ -75,6 +72,7 @@ class Ingest:
                 catalog_type=CatalogType.RELATIVE_PUBLISHED,
                 dest_href=str(self._local_root)
             )
+            print(f"CATALOG AFTER INIT: {self._catalog.to_dict}")
 
             # bucket.download_file("catalog.json", tmp.name)
             # self._catalog = Catalog.from_file(tmp.name).clone()
@@ -99,32 +97,34 @@ class Ingest:
             self._config.get("collection_path") + collection + "/items/" + item.id
         )
         # TODO throw error if collection or catalog are not in path
-        json_file_path = str(Path(item_path, item.id + ".json"))
+        json_file_path = item_path + "/" + item.id + ".json"
         # Catalog and Collections must exist
         item.set_root(self._catalog)
 
         if s3:
+            collection_key = f"collections/{collection}/collection.json"
+            stac_collection = utils.s3_collection_to_local(collection_key)
+            collection_path = urlparse(stac_collection.get_self_href()).path
+
+            item_path = PurePosixPath(collection_path).parent / "items" / item.id
+            item.set_self_href((str(item_path) + "/" + f"{item.id}.json"))
+            item.set_parent(stac_collection)
+            stac_collection.add_item(item, strategy='only_links')
+            # item.save_object(include_self_link=False)
+            # collection_instance.save_object(include_self_link=False)
             s3_client = boto3.client(
                 's3',
                 endpoint_url=os.getenv("CREODIAS_ENDPOINT", None),
-                aws_access_key_id=os.getenv("CREODIAS_S3_ACCESS_KEY", None),
-                aws_secret_access_key=os.getenv("CREODIAS_S3_SECRET_KEY", None)
+                aws_access_key_id=os.getenv("CREODIAS_S3_ACCESS_KEY"),
+                aws_secret_access_key=os.getenv("CREODIAS_S3_SECRET_KEY")
             )
-            collection_path = Path(self._local_root, "collections", collection, "collection.json")
-            print(collection_path)
-            collection_instance = Collection.from_file(str(collection_path))
-            item_path = Path(collection_path.parent, "/items/", item.id)
-            item.set_self_href(str(item_path,  f"{item.id}.json"))
-            item.set_parent(collection_instance)
-            collection_instance.add_item(item, strategy='only_links')
-            item.save_object(include_self_link=False)
-            collection_instance.save_object(include_self_link=False)
-            for path in self._local_root.rglob('*'):
-                if path.is_file():
-                    relative_key = str(path.relative_to(self._local_root))
-                    s3_key = f'{relative_key}'.replace('\\', '/')
-                    s3_client.upload_file(str(path), os.getenv("CREODIAS_S3_BUCKET_STAC"), s3_key)
-                    print(f'Uploaded: {s3_key}')
+            s3_client.put_object(
+                bucket=os.getenv("CREODIAS_S3_BUCKET_STAC"),
+                key=f"collections/{collection}/items/{item.id}/{item.id}.json",
+                body=json.dumps(item.to_dict(), indent=2),
+                contentType="application/json"
+            )
+            print(f'Uploaded: {item.get_self_href()}')
 
         else:
             collection_instance = self._catalog.get_child(collection)
@@ -210,6 +210,7 @@ class Ingest:
             if result:
                 print(item.id)
                 # append to return list??
+        # TODO if s3, need to re-upload the updated collection with the new extent
 
     # TODO to be refactored somehow, so that name has a meaning:
     # "single item" makes sense mostly for CDSE products, where
