@@ -153,23 +153,23 @@ def create_chdm_items(
                 parts[-2]  # random number
             ])
 
-            s3_client = boto3.client(
-                service_name="s3",
-                aws_access_key_id=os.getenv("CREODIAS_S3_ACCESS_KEY", None),
-                aws_secret_access_key=os.getenv("CREODIAS_S3_SECRET_KEY", None),
-                region_name=os.getenv("CREODIAS_REGION", None),
-                endpoint_url=os.getenv("CREODIAS_ENDPOINT", None)
-            )
-
-            url_part = s3_client.generate_presigned_url(
-                'get_object',
-                Params={'Bucket': 'noa', 'Key': str(image).strip("noa/")},
-                ExpiresIn=3600  # 1 hour validity
-            )
-            url = f'/vsicurl/{url_part}'
-
             # TODO check if this if else is needed. Maybe both .Env could work
             if s3_paths:
+                s3_client = boto3.client(
+                    service_name="s3",
+                    aws_access_key_id=os.getenv("CREODIAS_S3_ACCESS_KEY", None),
+                    aws_secret_access_key=os.getenv("CREODIAS_S3_SECRET_KEY", None),
+                    region_name=os.getenv("CREODIAS_REGION", None),
+                    endpoint_url=os.getenv("CREODIAS_ENDPOINT", None)
+                )
+
+                url_part = s3_client.generate_presigned_url(
+                    'get_object',
+                    Params={'Bucket': 'noa', 'Key': str(image).strip("noa/")},
+                    ExpiresIn=3600  # 1 hour validity
+                )
+                url = f'/vsicurl/{url_part}'
+
                 with rasterio.Env():
                     with rasterio.open(url) as src:
                         bounds = src.bounds
