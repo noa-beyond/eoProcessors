@@ -7,17 +7,11 @@ class Message:
         "namespace": "noa.stacingest.request",
         "type": "object",
         "properties": {
-            "orderId": {
-                "type": "string"
-            },
-            "noaId": {
-                "type": "string"
-            },
-            "noaS3Path": {
-                "type": "string"
-            },
+            "orderId": {"type": "string"},
+            "noaId": {"type": "string"},
+            "noaS3Path": {"type": "string"},
         },
-        "required": ["orderId", "noaId", "noaS3Path"]
+        "required": ["orderId", "noaId", "noaS3Path"],
     }
 
     _schema_request_def = {
@@ -29,10 +23,10 @@ class Message:
                 "items": {
                     "type": "string",
                     "uniqueItems": True,
-                }
+                },
             }
         },
-        "required": ["Ids"]
+        "required": ["Ids"],
     }
 
     _schema_response_def = {
@@ -44,31 +38,24 @@ class Message:
                 "items": {
                     "type": "string",
                     "uniqueItems": True,
-                }
+                },
             },
             "failed": {
                 "type": "array",
                 "items": {
                     "type": "string",
                     "uniqueItems": True,
-                }
-            }
+                },
+            },
         },
-        "required": ["succeeded", "failed"]
+        "required": ["succeeded", "failed"],
     }
 
     _schema_response_chdm_def = {
         "namespace": "noa.stacingest.response",
         "type": "object",
-        "properties": {
-            "orderId": {
-                "type": "string"
-            },
-            "result": {
-                "type": "number"
-            }
-        },
-        "required": ["orderId", "result"]
+        "properties": {"orderId": {"type": "string"}, "result": {"type": "number"}},
+        "required": ["orderId", "result"],
     }
 
     @staticmethod

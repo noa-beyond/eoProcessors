@@ -89,7 +89,9 @@ def main(config_file):
             )
 
         catalog.add_link(
-            Link(rel="data", target=config["collection_path"], media_type=MediaType.JSON)
+            Link(
+                rel="data", target=config["collection_path"], media_type=MediaType.JSON
+            )
         )
         catalog.add_child(
             new_collection,
@@ -97,7 +99,9 @@ def main(config_file):
             AsIsLayoutStrategy(),
         )
         catalog.save()
-        collection_path_str = str(config["collection_path"] + collection_id + "/collection.json")
+        collection_path_str = str(
+            config["collection_path"] + collection_id + "/collection.json"
+        )
 
         print(f"Created Collection {collection_id} json at {collection_path_str}")
 
