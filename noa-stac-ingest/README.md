@@ -35,11 +35,22 @@ STACDB_DBNAME
 - Also, check the fs mounts (mount the _root_ folder of products and STAC files)
 - Please note that this service works for ingesting Sentinel 1,2 and 3 SAFE (or SEN3) directories, and also for some Beyond products: ChDM and CFM (ask infrastructure.beyond at noa dot gr for more info)
 
+**NOTES FOR S3 (Items and STAC Collections)**
+- Service is the same. Ingestion is decided based on the incoming kafka message **path**
+- Please note to use **config_service_s3.json** if you are using an s3 instead of cluster mounts.
+- Processor needs the following env vars (aside from STAC_DB creds as noted before):
+CREODIAS_S3_ACCESS_KEY=***
+CREODIAS_S3_SECRET_KEY=***
+CREODIAS_REGION=WAW4-1
+CREODIAS_ENDPOINT=https://s3.waw4-1.cloudferro.com
+CREODIAS_S3_BUCKET_PRODUCT_OUTPUT=noa
+CREODIAS_S3_BUCKET_STAC=stac
+
 ```
 docker run -it \
--v ./config/config_service.json:/app/config/config_service.json \
+-v ./config/config_service**_s3**.json:/app/config/config_service**_s3**.json \
 -v /mnt/data/poc/:/mnt/data/poc/ \
-noastacingest noa-stac-ingest-service -db config/config_service.json
+noastacingest noa-stac-ingest-service -db config/config_service**_s3**.json
 ```
 
 Also mind any port forwarding needed for kafka or pgSTAC.
