@@ -4,11 +4,15 @@ Generic helper functions for creating Beyond specific STAC items
 
 from typing import Final
 
+import os
+import urllib
+import fnmatch
 from pathlib import Path
 from datetime import datetime, timezone
 import logging
 
 import antimeridian
+import boto3
 
 from shapely import Geometry
 from shapely.geometry import mapping as shapely_mapping
@@ -77,14 +81,51 @@ def create_chdm_items(
     1) For every raster (.tif) in path
 
     """
+    image_paths = []
+    s3_paths = False
+    parts = None
     processed = set()
     created_items = set()
 
     # _pred is the binary prediction
     # _pred_logits shows the confidence
-    for image in path.glob("*_pred.tif"):
-        print(image)
-        parts = image.stem.split("_")
+    if "https://s3" in path:
+        s3_paths = True
+        bucket = ""
+        try:
+            parsed = urllib.parse.urlparse(path)
+            parts = parsed.path.strip("/").split("/")
+            products_date = parts[-1]
+            s3 = boto3.resource(
+                "s3",
+                aws_access_key_id=os.getenv("CREODIAS_S3_ACCESS_KEY", None),
+                aws_secret_access_key=os.getenv("CREODIAS_S3_SECRET_KEY", None),
+                endpoint_url=os.getenv("CREODIAS_ENDPOINT", None),
+                region_name=os.getenv("CREODIAS_REGION", None),
+            )
+            pattern = "*_pred.tif"
+            matched_files = []
+            bucket = s3.Bucket(os.getenv("CREODIAS_S3_BUCKET_PRODUCT_OUTPUT"))
+            for obj in bucket.objects.filter(Prefix=f"products/{products_date}/"):
+                key = obj.key
+                if fnmatch.fnmatch(key, pattern):
+                    matched_files.append(key)
+            for matched_file in matched_files:
+                image_paths.append("/".join([bucket.name, matched_file]))
+        except Exception as issue:
+            print("The following error occurred:")
+            print(issue)
+            return
+    # _pred is the binary prediction
+    # _pred_logits shows the confidence
+    else:
+        image_paths = path.glob("*_pred.tif")
+    for image in image_paths:
+        if s3_paths:
+            parts = image.split("_")
+
+        else:
+            parts = image.stem.split("_")
 
         # TODO add further checks. we might end up ingesting anything
         # Need to add name specific patterns for the products we create
@@ -103,37 +144,77 @@ def create_chdm_items(
         area_dates = "_".join(parts[:-2])
         if area_dates not in processed:
             processed.add(area_dates)
-            scene_id = "_".join([
-                "ChDM",
-                "S2",
-                parts[-5],  # date from
-                parts[-4],  # date to
-                parts[-3],  # tile
-                parts[-2]  # random number
-            ])
+            scene_id = "_".join(
+                [
+                    "ChDM",
+                    "S2",
+                    parts[-5],  # date from
+                    parts[-4],  # date to
+                    parts[-3],  # tile
+                    parts[-2],  # random number
+                ]
+            )
 
-            with rasterio.open(image) as src:
-                bounds = src.bounds
-                bbox = [bounds.left, bounds.bottom, bounds.right, bounds.top]
-                geometry = {
-                    "type": "Polygon",
-                    "coordinates": [
-                        [
-                            [bounds.left, bounds.bottom],
-                            [bounds.left, bounds.top],
-                            [bounds.right, bounds.top],
-                            [bounds.right, bounds.bottom],
-                            [bounds.left, bounds.bottom],
-                        ]
-                    ],
-                }
-                crs = src.crs.to_epsg()
-                transform = src.transform
-                shape = [src.height, src.width]
-            start_datetime = datetime.strptime(parts[-5], "%Y-%m-%d").replace(
+            # TODO check if this if else is needed. Maybe both .Env could work
+            if s3_paths:
+                s3_client = boto3.client(
+                    service_name="s3",
+                    aws_access_key_id=os.getenv("CREODIAS_S3_ACCESS_KEY", None),
+                    aws_secret_access_key=os.getenv("CREODIAS_S3_SECRET_KEY", None),
+                    region_name=os.getenv("CREODIAS_REGION", None),
+                    endpoint_url=os.getenv("CREODIAS_ENDPOINT", None),
+                )
+
+                url_part = s3_client.generate_presigned_url(
+                    "get_object",
+                    Params={"Bucket": "noa", "Key": str(image).strip("noa/")},
+                    ExpiresIn=900,  # 15minutes validity
+                )
+                url = f"/vsicurl/{url_part}"
+
+                with rasterio.Env():
+                    with rasterio.open(url) as src:
+                        bounds = src.bounds
+                        bbox = [bounds.left, bounds.bottom, bounds.right, bounds.top]
+                        geometry = {
+                            "type": "Polygon",
+                            "coordinates": [
+                                [
+                                    [bounds.left, bounds.bottom],
+                                    [bounds.left, bounds.top],
+                                    [bounds.right, bounds.top],
+                                    [bounds.right, bounds.bottom],
+                                    [bounds.left, bounds.bottom],
+                                ]
+                            ],
+                        }
+                        crs = src.crs.to_epsg()
+                        transform = src.transform
+                        shape = [src.height, src.width]
+            else:
+                with rasterio.open(image) as src:
+                    bounds = src.bounds
+                    bbox = [bounds.left, bounds.bottom, bounds.right, bounds.top]
+                    geometry = {
+                        "type": "Polygon",
+                        "coordinates": [
+                            [
+                                [bounds.left, bounds.bottom],
+                                [bounds.left, bounds.top],
+                                [bounds.right, bounds.top],
+                                [bounds.right, bounds.bottom],
+                                [bounds.left, bounds.bottom],
+                            ]
+                        ],
+                    }
+                    crs = src.crs.to_epsg()
+                    transform = src.transform
+                    shape = [src.height, src.width]
+
+            start_datetime = datetime.strptime(parts[-5], "%Y%m%d").replace(
                 tzinfo=timezone.utc
             )
-            end_datetime = datetime.strptime(parts[-4], "%Y-%m-%d").replace(
+            end_datetime = datetime.strptime(parts[-4], "%Y%m%d").replace(
                 tzinfo=timezone.utc
             )
 
@@ -165,25 +246,55 @@ def create_chdm_items(
 
             binary_title = "Change Detection Mapping - binary"
             confidence_title = "Change Detection Mapping - confidence"
-            confidence_file = Path(image.parent, parts[:-1] + "_pred_logits.tif")
+            if s3_paths:
+                confidence_file = "_".join(parts[:-1]) + "_pred_logits.tif"
+            else:
+                confidence_file = Path(image.parent, parts[:-1] + "_pred_logits.tif")
 
             sub_products[binary_title] = image
             sub_products[confidence_title] = confidence_file
 
-            for band_name, band_path in sub_products:
-                with rasterio.open(band_path) as src:
-                    dtype = src.dtypes[0]
-                    nodata = src.nodata
-                    resolution = (src.res[0], src.res[1])
-                    shape = [src.height, src.width]
-                    transform = src.transform
-                    crs = src.crs.to_epsg()
+            for band_name, band_path in sub_products.items():
+                if s3_paths:
+                    with rasterio.Env():
+                        url_part = s3_client.generate_presigned_url(
+                            "get_object",
+                            Params={
+                                "Bucket": "noa",
+                                "Key": str(band_path).strip("noa/"),
+                            },
+                            ExpiresIn=3600,  # 1 hour validity
+                        )
+                        url = f"/vsicurl/{url_part}"
+                        with rasterio.open(url) as src:
+                            dtype = src.dtypes[0]
+                            nodata = src.nodata
+                            resolution = (src.res[0], src.res[1])
+                            shape = [src.height, src.width]
+                            transform = src.transform
+                            crs = src.crs.to_epsg()
+                        band_path = (
+                            os.getenv("CREODIAS_ENDPOINT", None) + "/" + band_path
+                        )
+
+                else:
+                    with rasterio.open(band_path) as src:
+                        dtype = src.dtypes[0]
+                        nodata = src.nodata
+                        resolution = (src.res[0], src.res[1])
+                        shape = [src.height, src.width]
+                        transform = src.transform
+                        crs = src.crs.to_epsg()
 
                 resolution = 10  # that's hardcoded: resolution of S2 RGB bands
 
                 asset_id = band_name
                 asset = Asset(
-                    href=str(band_path.resolve()),
+                    href=(
+                        str(band_path.resolve())
+                        if type(band_path) is Path
+                        else band_path
+                    ),
                     media_type=pystac.MediaType.GEOTIFF,
                     roles=["data", "aggregation"],
                     title=asset_id,

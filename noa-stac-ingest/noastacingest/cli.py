@@ -28,14 +28,14 @@ from kafka.errors import (
 sys.path.append(str(Path(__file__).parent / ".."))
 
 from noastacingest import ingest  # noqa:402 pylint:disable=wrong-import-position
-from noastacingest import utils
+from noastacingest import utils  # noqa:402 pylint:disable=wrong-import-position
 from noastacingest.messaging.message import (  # noqa:402 pylint:disable=wrong-import-position
     Message,
 )
 from noastacingest.messaging import (  # noqa:402 pylint:disable=wrong-import-position
     AbstractConsumer,
 )
-from noastacingest.messaging.kafka_consumer import ( # noqa:402 pylint:disable=wrong-import-position
+from noastacingest.messaging.kafka_consumer import (  # noqa:402 pylint:disable=wrong-import-position
     KafkaConsumer,
 )
 
@@ -50,12 +50,12 @@ PROCESSOR = "[NOA-STACIngest]"
 )
 @click.option(
     "--log",
-    default="warning",
-    help="Log level (optional, e.g. DEBUG. Default is WARNING)",
+    default="INFO",
+    help="Log level (optional, e.g. DEBUG. Default is INFO)",
 )
 def cli(log):
     """Click cli group for query, download, describe cli commands"""
-    numeric_level = getattr(logging, log.upper(), "WARNING")
+    numeric_level = getattr(logging, log.upper(), "DEBUG")
     logging.basicConfig(
         format=f"[%(asctime)s.%(msecs)03d] [%(levelname)s] {PROCESSOR} %(message)s",
         level=numeric_level,
@@ -101,7 +101,7 @@ def create_item_from_path(
     # TODO needs refactor. Updating/creating items can be done in batches, (e.g in db)
     logger = logging.getLogger(__name__)
     logger.info("Cli STAC ingest using config file: %s", config)
-    ingestor = ingest.Ingest(config=config)
+    ingestor = ingest.Ingest(config=config, service=False, logger=logger)
 
     if recursive:
         click.echo(f"Ingesting items recursively from path {input_path}\n")
@@ -149,7 +149,7 @@ def ingest_from_path(
     # TODO needs refactor. Updating/creating items can be done in batches, (e.g in db)
     logger = logging.getLogger(__name__)
     logger.info("Cli STAC ingest using config file: %s", config)
-    ingestor = ingest.Ingest(config=config)
+    ingestor = ingest.Ingest(config=config, service=False, logger=logger)
 
     if recursive:
         click.echo(f"Ingesting items recursively from path {input_path}\n")
@@ -159,7 +159,7 @@ def ingest_from_path(
                 config=config,
                 collection=collection,
                 recursive=True,
-                update_db=update_db
+                update_db=update_db,
             )
     ingestor.ingest_directory(Path(input_path), collection, update_db)
 
@@ -215,7 +215,10 @@ def noa_stac_ingest_service(
     logger = logging.getLogger(__name__)
     logger.debug("Starting NOA-STAC-Ingest service...")
 
-    ingestor = ingest.Ingest(config=config_file)
+    ingestor = ingest.Ingest(config=config_file, service=True, logger=logger)
+
+    # test: product_path = "https://s3.waw4-1.cloudferro.com/noa/products/20250611/"
+    # ingestor.ingest_directory(product_path, None, db_ingest)
 
     logger.info("Configuration: %s ", ingestor.config)
 
@@ -301,23 +304,18 @@ def noa_stac_ingest_service(
                         logger.debug("Ingested items: %s", ingested)
                         if failed:
                             logger.error("Failed uuids: %s", failed)
-                    elif "noaId" in item:
+                    elif "noaS3Path" in item:
                         # NOTE this s3 path is mounted. We run on Cloudferro
                         # Run either as mounted or s3 directly
                         # TODO pass through NOAId and return orderId
                         # TODO refactor: kafka response sent at cli level
                         product_path = item["noaS3Path"]
                         order_id = item["orderId"]
-                        ingestor.ingest_directory(
-                            product_path,
-                            None,
-                            db_ingest
-                        )
+                        ingestor.ingest_directory(product_path, None, db_ingest)
                         kafka_topic = ingestor.config.get(
                             "topic_producer",
                             os.environ.get(
-                                "KAFKA_OUTPUT_TOPIC",
-                                "noa.stacingest.response"
+                                "KAFKA_OUTPUT_TOPIC", "noa.stacingest.response"
                             ),
                         )
                         logger.debug("Sending message to topic %s", kafka_topic)
@@ -335,7 +333,7 @@ def noa_stac_ingest_service(
                             logger.info(
                                 "Sending message to Kafka consumer. %s %s",
                                 order_id,
-                                result
+                                result,
                             )
                         except BrokenPipeError as e:
                             logger.error("Error sending kafka message: %s", e)

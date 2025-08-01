@@ -2,6 +2,7 @@ class AbstractProducer(object):
     """
     Abstract Kafka Producer doing nothing.
     """
+
     def __init__(self, bootstrap_servers: list, schema: dict) -> None:
         """
         Create the Producer instance.
@@ -15,11 +16,14 @@ class AbstractProducer(object):
         """
 
 
-class AbstractConsumer():
+class AbstractConsumer:
     """
     Abstract Kafka Consumer doing nothing.
     """
-    def __init__(self, bootstrap_servers: list, group_id: str, topics: list, schema: dict) -> None:
+
+    def __init__(
+        self, bootstrap_servers: list, group_id: str, topics: list, schema: dict
+    ) -> None:
         """
         Create the Consumer instance.
         """
@@ -28,7 +32,9 @@ class AbstractConsumer():
         self.topics = topics
         self.schema = schema
 
-    def create_topics(self, topics: list, num_partitions: int = 2, replication_factor: int = 1):
+    def create_topics(
+        self, topics: list, num_partitions: int = 2, replication_factor: int = 1
+    ):
         """
         Create the specified list of Topics.
         """
