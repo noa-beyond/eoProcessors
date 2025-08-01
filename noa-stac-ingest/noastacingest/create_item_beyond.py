@@ -101,7 +101,7 @@ def create_chdm_items(
                 aws_access_key_id=os.getenv("CREODIAS_S3_ACCESS_KEY", None),
                 aws_secret_access_key=os.getenv("CREODIAS_S3_SECRET_KEY", None),
                 endpoint_url=os.getenv("CREODIAS_ENDPOINT", None),
-                region_name=os.getenv("CREODIAS_REGION", None)
+                region_name=os.getenv("CREODIAS_REGION", None),
             )
             pattern = "*_pred.tif"
             matched_files = []
@@ -144,14 +144,16 @@ def create_chdm_items(
         area_dates = "_".join(parts[:-2])
         if area_dates not in processed:
             processed.add(area_dates)
-            scene_id = "_".join([
-                "ChDM",
-                "S2",
-                parts[-5],  # date from
-                parts[-4],  # date to
-                parts[-3],  # tile
-                parts[-2]  # random number
-            ])
+            scene_id = "_".join(
+                [
+                    "ChDM",
+                    "S2",
+                    parts[-5],  # date from
+                    parts[-4],  # date to
+                    parts[-3],  # tile
+                    parts[-2],  # random number
+                ]
+            )
 
             # TODO check if this if else is needed. Maybe both .Env could work
             if s3_paths:
@@ -160,15 +162,15 @@ def create_chdm_items(
                     aws_access_key_id=os.getenv("CREODIAS_S3_ACCESS_KEY", None),
                     aws_secret_access_key=os.getenv("CREODIAS_S3_SECRET_KEY", None),
                     region_name=os.getenv("CREODIAS_REGION", None),
-                    endpoint_url=os.getenv("CREODIAS_ENDPOINT", None)
+                    endpoint_url=os.getenv("CREODIAS_ENDPOINT", None),
                 )
 
                 url_part = s3_client.generate_presigned_url(
-                    'get_object',
-                    Params={'Bucket': 'noa', 'Key': str(image).strip("noa/")},
-                    ExpiresIn=900  # 15minutes validity
+                    "get_object",
+                    Params={"Bucket": "noa", "Key": str(image).strip("noa/")},
+                    ExpiresIn=900,  # 15minutes validity
                 )
-                url = f'/vsicurl/{url_part}'
+                url = f"/vsicurl/{url_part}"
 
                 with rasterio.Env():
                     with rasterio.open(url) as src:
@@ -256,11 +258,14 @@ def create_chdm_items(
                 if s3_paths:
                     with rasterio.Env():
                         url_part = s3_client.generate_presigned_url(
-                            'get_object',
-                            Params={'Bucket': 'noa', 'Key': str(band_path).strip("noa/")},
-                            ExpiresIn=3600  # 1 hour validity
+                            "get_object",
+                            Params={
+                                "Bucket": "noa",
+                                "Key": str(band_path).strip("noa/"),
+                            },
+                            ExpiresIn=3600,  # 1 hour validity
                         )
-                        url = f'/vsicurl/{url_part}'
+                        url = f"/vsicurl/{url_part}"
                         with rasterio.open(url) as src:
                             dtype = src.dtypes[0]
                             nodata = src.nodata
@@ -268,7 +273,9 @@ def create_chdm_items(
                             shape = [src.height, src.width]
                             transform = src.transform
                             crs = src.crs.to_epsg()
-                        band_path = os.getenv("CREODIAS_ENDPOINT", None) + "/" + band_path
+                        band_path = (
+                            os.getenv("CREODIAS_ENDPOINT", None) + "/" + band_path
+                        )
 
                 else:
                     with rasterio.open(band_path) as src:
@@ -283,7 +290,11 @@ def create_chdm_items(
 
                 asset_id = band_name
                 asset = Asset(
-                    href=str(band_path.resolve()) if type(band_path) is Path else band_path,
+                    href=(
+                        str(band_path.resolve())
+                        if type(band_path) is Path
+                        else band_path
+                    ),
                     media_type=pystac.MediaType.GEOTIFF,
                     roles=["data", "aggregation"],
                     title=asset_id,

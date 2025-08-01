@@ -1,6 +1,7 @@
 """
 Generic helper functions for creating Copernicus specific STAC items
 """
+
 from pathlib import Path
 
 from pystac import Provider
@@ -15,9 +16,7 @@ FILETYPES = ("SAFE", "SEN3")
 
 
 def create_copernicus_item(
-        path: Path,
-        collection: str | None,
-        additional_providers: list[Provider]
+    path: Path, collection: str | None, additional_providers: list[Provider]
 ):
     item = {}
     if path.name.endswith(FILETYPES):

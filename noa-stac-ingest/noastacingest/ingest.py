@@ -19,7 +19,7 @@ from noastacingest.create_item_copernicus import create_copernicus_item
 from noastacingest.create_item_beyond import (
     create_wrf_item,
     create_sentinel_2_monthly_median_items,
-    create_chdm_items
+    create_chdm_items,
 )
 
 
@@ -32,7 +32,7 @@ class Ingest:
         self,
         config: str | None,
         service: bool = False,
-        logger=logging.getLogger(__name__)
+        logger=logging.getLogger(__name__),
     ) -> Ingest:
         """
         Ingest main class implementing single and batch item creation.
@@ -49,21 +49,22 @@ class Ingest:
         # TODO check if is necessary to copy or just keep reference
         if "https://s3" in self._config["catalog_path"]:
             s3_client = boto3.client(
-                's3',
+                "s3",
                 endpoint_url=os.getenv("CREODIAS_ENDPOINT", None),
                 aws_access_key_id=os.getenv("CREODIAS_S3_ACCESS_KEY"),
-                aws_secret_access_key=os.getenv("CREODIAS_S3_SECRET_KEY")
+                aws_secret_access_key=os.getenv("CREODIAS_S3_SECRET_KEY"),
             )
             response = s3_client.get_object(
-                Bucket=os.getenv("CREODIAS_S3_BUCKET_STAC"),
-                Key="catalog.json"
+                Bucket=os.getenv("CREODIAS_S3_BUCKET_STAC"), Key="catalog.json"
             )
-            catalog_dict = json.loads(response['Body'].read())
+            catalog_dict = json.loads(response["Body"].read())
             self._catalog = Catalog.from_dict(catalog_dict)
             self._catalog.set_self_href(
                 f"{os.getenv('CREODIAS_ENDPOINT')}/{os.getenv('CREODIAS_S3_BUCKET_STAC')}/catalog.json"
             )
-            self._catalog.normalize_hrefs(f"{os.getenv('CREODIAS_ENDPOINT')}/{os.getenv('CREODIAS_S3_BUCKET_STAC')}/catalog.json")
+            self._catalog.normalize_hrefs(
+                f"{os.getenv('CREODIAS_ENDPOINT')}/{os.getenv('CREODIAS_S3_BUCKET_STAC')}/catalog.json"
+            )
             self._catalog.resolve_links()
         else:
             self._catalog = Catalog.from_file(
@@ -76,11 +77,7 @@ class Ingest:
         return self._config
 
     def _save_item_add_to_collection(
-        self,
-        item: Item,
-        collection: str,
-        update_db: bool,
-        s3=False
+        self, item: Item, collection: str, update_db: bool, s3=False
     ):
         item_path = (
             self._config.get("collection_path") + collection + "/items/" + item.id
@@ -92,35 +89,42 @@ class Ingest:
 
         if s3:
             collection_key = f"collections/{collection}/collection.json"
-            stac_collection = utils.s3_collection_to_local(collection_key, self._catalog)
+            stac_collection = utils.s3_collection_to_local(
+                collection_key, self._catalog
+            )
             collection_path = urlparse(stac_collection.get_self_href()).path
 
             item_path = PurePosixPath(collection_path).parent / "items" / item.id
-            item.set_self_href(f"{os.getenv('CREODIAS_ENDPOINT')}" + str(item_path) + "/" + f"{item.id}.json")
+            item.set_self_href(
+                f"{os.getenv('CREODIAS_ENDPOINT')}"
+                + str(item_path)
+                + "/"
+                + f"{item.id}.json"
+            )
             item.set_parent(stac_collection)
 
             stac_collection.add_item(item, strategy=AsIsLayoutStrategy())
             stac_collection.update_extent_from_items()
 
             s3_client = boto3.client(
-                's3',
+                "s3",
                 endpoint_url=os.getenv("CREODIAS_ENDPOINT", None),
                 aws_access_key_id=os.getenv("CREODIAS_S3_ACCESS_KEY"),
-                aws_secret_access_key=os.getenv("CREODIAS_S3_SECRET_KEY")
+                aws_secret_access_key=os.getenv("CREODIAS_S3_SECRET_KEY"),
             )
             s3_client.put_object(
                 Bucket=os.getenv("CREODIAS_S3_BUCKET_STAC"),
                 Key=f"collections/{collection}/items/{item.id}/{item.id}.json",
                 Body=json.dumps(item.to_dict(), indent=2),
-                ContentType="application/json"
+                ContentType="application/json",
             )
             s3_client.put_object(
                 Bucket=os.getenv("CREODIAS_S3_BUCKET_STAC"),
                 Key=f"collections/{collection}/collection.json",
                 Body=json.dumps(stac_collection.to_dict(), indent=2),
-                ContentType="application/json"
+                ContentType="application/json",
             )
-            print(f'Uploaded: {item.get_self_href()}')
+            print(f"Uploaded: {item.get_self_href()}")
 
         else:
             collection_instance = self._catalog.get_child(collection)
@@ -148,17 +152,12 @@ class Ingest:
             print(item)
             item.save_object(include_self_link=True)
         if update_db:
-            db_utils.load_stac_items_to_pgstac(
-                [collection_instance.to_dict()], True
-            )
+            db_utils.load_stac_items_to_pgstac([collection_instance.to_dict()], True)
             db_utils.load_stac_items_to_pgstac([item.to_dict()])
         return True
 
     def ingest_directory(
-        self,
-        input_path: Path | str,
-        collection: str | None,
-        update_db: bool
+        self, input_path: Path | str, collection: str | None, update_db: bool
     ) -> bool:
         # TODO create noa-product-id
         """
@@ -185,23 +184,18 @@ class Ingest:
         created_items = set()
         if collection == "s2_monthly_median":
             created_items = create_sentinel_2_monthly_median_items(
-                path=input_path,
-                additional_providers=additional_providers
+                path=input_path, additional_providers=additional_providers
             )
         elif collection == "chdm_s2":
             created_items = create_chdm_items(
-                path=input_path,
-                additional_providers=additional_providers
+                path=input_path, additional_providers=additional_providers
             )
         print("Created Item ids:")
         # TODO is s3 true correct?
         # TODO take care of logs
         for item in created_items:
             result = self._save_item_add_to_collection(
-                item=item,
-                collection=collection,
-                update_db=update_db,
-                s3=True
+                item=item, collection=collection, update_db=update_db, s3=True
             )
             if result:
                 print(item.id)
@@ -232,24 +226,19 @@ class Ingest:
         additional_providers = utils.get_additional_providers(collection=collection)
 
         if collection == "wrf":
-            item = create_wrf_item(
-                path=path,
-                additional_providers=additional_providers
-            )
+            item = create_wrf_item(path=path, additional_providers=additional_providers)
         else:
             item = create_copernicus_item(
                 path=path,
                 collection=collection,
-                additional_providers=additional_providers
+                additional_providers=additional_providers,
             )
         if not item:
             self.logger.error("Could not create STAC Item")
             return False
         item.properties["noa_product_id"] = noa_product_id
         result = self._save_item_add_to_collection(
-            item=item,
-            collection=collection,
-            update_db=update_db
+            item=item, collection=collection, update_db=update_db
         )
         if result:
             print(f"Created: {item.id}")
@@ -289,10 +278,7 @@ class Ingest:
                     ingested_items.append(str(single_uuid))
                     self.logger.debug("Ingested item from %s", item_path)
                 else:
-                    raise RuntimeError(
-                        "Could not create the STAC Item",
-                        single_uuid
-                    )
+                    raise RuntimeError("Could not create the STAC Item", single_uuid)
             except RuntimeError as e:
                 self.logger.error(
                     "Item could not be ingested to pgSTAC: %s", str(single_uuid)
@@ -317,7 +303,7 @@ class Ingest:
             self.logger.info(
                 "Ingested %d items (%d failed). Sending message to Kafka consumer",
                 len(ingested_items),
-                len(failed_items)
+                len(failed_items),
             )
         except BrokenPipeError as e:
             self.logger.error("Error sending kafka message: %s", e)

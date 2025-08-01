@@ -35,7 +35,7 @@ from noastacingest.messaging.message import (  # noqa:402 pylint:disable=wrong-i
 from noastacingest.messaging import (  # noqa:402 pylint:disable=wrong-import-position
     AbstractConsumer,
 )
-from noastacingest.messaging.kafka_consumer import ( # noqa:402 pylint:disable=wrong-import-position
+from noastacingest.messaging.kafka_consumer import (  # noqa:402 pylint:disable=wrong-import-position
     KafkaConsumer,
 )
 
@@ -159,7 +159,7 @@ def ingest_from_path(
                 config=config,
                 collection=collection,
                 recursive=True,
-                update_db=update_db
+                update_db=update_db,
             )
     ingestor.ingest_directory(Path(input_path), collection, update_db)
 
@@ -218,11 +218,7 @@ def noa_stac_ingest_service(
     ingestor = ingest.Ingest(config=config_file, service=True, logger=logger)
 
     product_path = "https://s3.waw4-1.cloudferro.com/noa/products/20250611/"
-    ingestor.ingest_directory(
-        product_path,
-        None,
-        db_ingest
-    )
+    ingestor.ingest_directory(product_path, None, db_ingest)
     return 0
 
     logger.info("Configuration: %s ", ingestor.config)
@@ -316,16 +312,11 @@ def noa_stac_ingest_service(
                         # TODO refactor: kafka response sent at cli level
                         product_path = item["noaS3Path"]
                         order_id = item["orderId"]
-                        ingestor.ingest_directory(
-                            product_path,
-                            None,
-                            db_ingest
-                        )
+                        ingestor.ingest_directory(product_path, None, db_ingest)
                         kafka_topic = ingestor.config.get(
                             "topic_producer",
                             os.environ.get(
-                                "KAFKA_OUTPUT_TOPIC",
-                                "noa.stacingest.response"
+                                "KAFKA_OUTPUT_TOPIC", "noa.stacingest.response"
                             ),
                         )
                         logger.debug("Sending message to topic %s", kafka_topic)
@@ -343,7 +334,7 @@ def noa_stac_ingest_service(
                             logger.info(
                                 "Sending message to Kafka consumer. %s %s",
                                 order_id,
-                                result
+                                result,
                             )
                         except BrokenPipeError as e:
                             logger.error("Error sending kafka message: %s", e)

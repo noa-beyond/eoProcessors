@@ -1,4 +1,5 @@
 """Utility functions"""
+
 from __future__ import annotations
 
 import os
@@ -80,7 +81,7 @@ def get_collection_from_path(pathname: Path | str) -> str:
             aws_access_key_id=os.getenv("CREODIAS_S3_ACCESS_KEY", None),
             aws_secret_access_key=os.getenv("CREODIAS_S3_SECRET_KEY", None),
             endpoint_url=os.getenv("CREODIAS_ENDPOINT", None),
-            region_name=os.getenv("CREODIAS_REGION", None)
+            region_name=os.getenv("CREODIAS_REGION", None),
         )
 
         bucket = s3.Bucket(os.getenv("CREODIAS_S3_BUCKET_PRODUCT_OUTPUT"))
@@ -117,21 +118,23 @@ def s3_catalog_to_local(s3_key) -> Catalog:
     # s3_key = "collections/chdm_s2/collection.json"
 
     s3_client = boto3.client(
-        's3',
+        "s3",
         endpoint_url=os.getenv("CREODIAS_ENDPOINT", None),
         aws_access_key_id=os.getenv("CREODIAS_S3_ACCESS_KEY"),
-        aws_secret_access_key=os.getenv("CREODIAS_S3_SECRET_KEY")
+        aws_secret_access_key=os.getenv("CREODIAS_S3_SECRET_KEY"),
     )
 
-    response = s3_client.get_object(Bucket=os.getenv("CREODIAS_S3_BUCKET_STAC"), Key=s3_key)
-    catalog = Catalog.from_dict(json.loads(response['Body'].read()))
+    response = s3_client.get_object(
+        Bucket=os.getenv("CREODIAS_S3_BUCKET_STAC"), Key=s3_key
+    )
+    catalog = Catalog.from_dict(json.loads(response["Body"].read()))
     catalog.set_self_href(
         f"{os.getenv('CREODIAS_ENDPOINT')}/{os.getenv('CREODIAS_S3_BUCKET_STAC')}/catalog.json"
     )
     catalog.normalize_and_save(
         root_href=f"{os.getenv('CREODIAS_ENDPOINT')}/{os.getenv('CREODIAS_S3_BUCKET_STAC')}/catalog.json",
         strategy=APILayoutStrategy(),
-        catalog_type=CatalogType.RELATIVE_PUBLISHED
+        catalog_type=CatalogType.RELATIVE_PUBLISHED,
     )
     return catalog
 
@@ -150,14 +153,16 @@ def s3_collection_to_local(s3_key, catalog) -> Collection:
     s3_key = "collections/chdm_s2/collection.json"
 
     s3_client = boto3.client(
-        's3',
+        "s3",
         endpoint_url=os.getenv("CREODIAS_ENDPOINT", None),
         aws_access_key_id=os.getenv("CREODIAS_S3_ACCESS_KEY"),
-        aws_secret_access_key=os.getenv("CREODIAS_S3_SECRET_KEY")
+        aws_secret_access_key=os.getenv("CREODIAS_S3_SECRET_KEY"),
     )
 
-    response = s3_client.get_object(Bucket=os.getenv("CREODIAS_S3_BUCKET_STAC"), Key=s3_key)
-    collection = Collection.from_dict(json.loads(response['Body'].read()))
+    response = s3_client.get_object(
+        Bucket=os.getenv("CREODIAS_S3_BUCKET_STAC"), Key=s3_key
+    )
+    collection = Collection.from_dict(json.loads(response["Body"].read()))
     collection.set_self_href(
         f"{os.getenv('CREODIAS_ENDPOINT')}/{os.getenv('CREODIAS_S3_BUCKET_STAC')}/{s3_key}"
     )
