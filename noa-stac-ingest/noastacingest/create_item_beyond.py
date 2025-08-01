@@ -166,7 +166,7 @@ def create_chdm_items(
                 url_part = s3_client.generate_presigned_url(
                     'get_object',
                     Params={'Bucket': 'noa', 'Key': str(image).strip("noa/")},
-                    ExpiresIn=3600  # 1 hour validity
+                    ExpiresIn=900  # 15minutes validity
                 )
                 url = f'/vsicurl/{url_part}'
 
@@ -268,7 +268,8 @@ def create_chdm_items(
                             shape = [src.height, src.width]
                             transform = src.transform
                             crs = src.crs.to_epsg()
-                        band_path = url_part
+                        band_path = os.getenv("CREODIAS_ENDPOINT", None) + "/" + band_path
+
                 else:
                     with rasterio.open(band_path) as src:
                         dtype = src.dtypes[0]

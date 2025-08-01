@@ -136,7 +136,7 @@ def s3_catalog_to_local(s3_key) -> Catalog:
     return catalog
 
 
-def s3_collection_to_local(s3_key) -> Collection:
+def s3_collection_to_local(s3_key, catalog) -> Collection:
     """
     Getting a STAC object (Collection)
     from an s3 bucket based on the bucket and key,
@@ -161,9 +161,5 @@ def s3_collection_to_local(s3_key) -> Collection:
     collection.set_self_href(
         f"{os.getenv('CREODIAS_ENDPOINT')}/{os.getenv('CREODIAS_S3_BUCKET_STAC')}/{s3_key}"
     )
-    collection.normalize_and_save(
-        root_href=f"{os.getenv('CREODIAS_ENDPOINT')}/{os.getenv('CREODIAS_S3_BUCKET_STAC')}/{s3_key}",
-        strategy=APILayoutStrategy(),
-        catalog_type=CatalogType.RELATIVE_PUBLISHED
-    )
+    collection.set_root(catalog)
     return collection
