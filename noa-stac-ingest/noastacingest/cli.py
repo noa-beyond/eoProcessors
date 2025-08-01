@@ -217,9 +217,8 @@ def noa_stac_ingest_service(
 
     ingestor = ingest.Ingest(config=config_file, service=True, logger=logger)
 
-    product_path = "https://s3.waw4-1.cloudferro.com/noa/products/20250611/"
-    ingestor.ingest_directory(product_path, None, db_ingest)
-    return 0
+    # test: product_path = "https://s3.waw4-1.cloudferro.com/noa/products/20250611/"
+    # ingestor.ingest_directory(product_path, None, db_ingest)
 
     logger.info("Configuration: %s ", ingestor.config)
 
