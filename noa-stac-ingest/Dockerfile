@@ -1,10 +1,11 @@
 # Use the official Python 3.12 image as the base image
-FROM python:3.11.12-slim
+FROM python:3.11-slim
 
 RUN pip install --upgrade pip setuptools
 RUN apt-get update
 
-RUN apt-get install -y expat
+RUN apt-get install -y gcc-c++ expat expat-devel libexpat1
+
 # Set the working directory in the container to /app
 WORKDIR /app
 
