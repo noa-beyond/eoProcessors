@@ -4,7 +4,7 @@ FROM python:3.11-slim
 RUN pip install --upgrade pip setuptools
 RUN apt-get update
 
-RUN apt-get install -y gcc-c++ libexpat1 libexpat1-dev
+RUN apt-get install -y gcc-c++ expat libexpat1 libexpat1-dev
 
 # Set the working directory in the container to /app
 WORKDIR /app
