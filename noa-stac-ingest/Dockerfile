@@ -1,11 +1,13 @@
 # Use the official Python 3.12 image as the base image
-FROM python:3.11.10-slim
+FROM python:3.11.12-slim
 
 RUN pip install --upgrade pip setuptools
 RUN apt-get update && apt-get install -y \
     build-essential \
     libexpat1 \
-    libexpat1-dev
+    libexpat1-dev && \
+    expat && \
+    ldconfig
 
 # Set the working directory in the container to /app
 WORKDIR /app
@@ -13,6 +15,8 @@ WORKDIR /app
 # Copy the Python script into the container at /app
 COPY requirements.txt .
 COPY . .
+
+ENV LD_LIBRARY_PATH="/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH"
 
 ENV CREODIAS_S3_ACCESS_KEY=NONE
 ENV CREODIAS_S3_SECRET_KEY=NONE
