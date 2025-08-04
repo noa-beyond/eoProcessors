@@ -4,6 +4,8 @@ FROM python:3.12.10-slim
 RUN pip install --upgrade pip setuptools
 RUN apt-get update
 
+RUN apt-get install -y libexpat1
+
 # Set the working directory in the container to /app
 WORKDIR /app
 
@@ -22,7 +24,7 @@ ENV CREODIAS_S3_BUCKET_STAC=stac
 # If you don't have a requirements.txt, you'll need to create one with the necessary packages
 RUN pip install -r requirements.txt --no-cache-dir
 
-# Create a default Products download dir
+# Create a default Products download dir, even if not using it
 RUN mkdir -p /mnt/data/poc/
 
 # Command to run the script when the container starts
