@@ -1,11 +1,10 @@
 # Use the official Python 3.12 image as the base image
-FROM python:3.12.10-slim
+FROM python:3.11.12-slim
 
 RUN pip install --upgrade pip setuptools
 RUN apt-get update
 
-RUN apt-get install -y libexpat1
-
+RUN apt-get install -y expat
 # Set the working directory in the container to /app
 WORKDIR /app
 
@@ -20,6 +19,7 @@ ENV CREODIAS_ENDPOINT=https://s3.waw4-1.cloudferro.com
 ENV CREODIAS_S3_BUCKET_PRODUCT_OUTPUT=noa
 ENV CREODIAS_S3_BUCKET_STAC=stac
 
+RUN chmod +x /app/noastacingest/cli.py
 # Install the required Python packages specified in a requirements.txt file
 # If you don't have a requirements.txt, you'll need to create one with the necessary packages
 RUN pip install -r requirements.txt --no-cache-dir
