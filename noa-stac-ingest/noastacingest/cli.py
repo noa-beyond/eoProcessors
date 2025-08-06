@@ -316,9 +316,10 @@ def noa_stac_ingest_service(
                         # Run either as mounted or s3 directly
                         # TODO pass through NOAId and return orderId
                         # TODO refactor: kafka response sent at cli level
-                        product_path = item["noaS3Path"]
+                        product_paths = item["noaS3Path"]
                         order_id = item["orderId"]
-                        ingestor.ingest_directory(product_path, None, db_ingest)
+                        for product_path in product_paths:
+                            ingestor.ingest_directory(product_path, None, db_ingest)
                         try:
                             result = 0
                             # TODO, also this: we should have one message schema
