@@ -125,6 +125,7 @@ class Ingest:
                 ContentType="application/json",
             )
             print(f"Uploaded: {item.get_self_href()}")
+            collection_instance = stac_collection
 
         else:
             collection_instance = self._catalog.get_child(collection)
