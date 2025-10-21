@@ -10,6 +10,7 @@ import datetime
 
 import requests
 from requests_aws4auth import AWS4Auth
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from collections import defaultdict
 
@@ -31,6 +32,51 @@ from noachdm.models.BIT import define_G
 
 from noachdm.messaging.kafka_producer import KafkaProducer
 from noachdm.messaging.message import Message
+
+from typing import Tuple, Optional
+
+from numcodecs import Blosc
+
+
+def _write_cog(
+    path: pathlib.Path,
+    array: np.ndarray,
+    *,
+    height: int,
+    width: int,
+    dtype,
+    crs,
+    transform,
+    nodata=None,
+    compress: str = "DEFLATE",
+    blocksize: int = 512,
+    bigtiff: str = "IF_SAFER",
+    overview_resampling: str = "NEAREST",
+    num_threads: str = "ALL_CPUS",
+    count: int = 1,
+):
+    """
+    Writes a GeoTIFF as Cloud-Optimized GeoTIFF (COG).
+    """
+    profile = {
+        "driver": "COG",
+        "height": height,
+        "width": width,
+        "count": count,
+        "dtype": dtype,
+        "crs": crs,
+        "transform": transform,
+        "nodata": nodata,
+        # COG creation options (GDAL)
+        "compress": compress,
+        "blocksize": blocksize,
+        "bigtiff": bigtiff,
+        "num_threads": num_threads,
+        "overview_resampling": overview_resampling,
+    }
+
+    with rasterio.open(path, "w", **profile) as dst:
+        dst.write(array, 1)
 
 
 def send_kafka_message(bootstrap_servers, topic, result, order_id, product_path):
@@ -118,14 +164,7 @@ def crop_and_make_mosaic(
         # or change code below at "group_bands" function, at line
         # `scene_id = "_".join(fname.name.split("_")[:-1])` to get the scene id.
         # Of course, with proper testing, you can avoid all this
-        filename = "_".join(
-            [
-                tile_match.group(),
-                date_match.group(),
-                "composite",
-                band
-            ]
-        )
+        filename = "_".join([tile_match.group(), date_match.group(), "composite", band])
         output_path.mkdir(parents=True, exist_ok=True)
         output_filename = pathlib.Path(output_path, filename + ".tif")
         result.rio.to_raster(
@@ -215,11 +254,12 @@ class SentinelChangeDataset(Dataset):
 
 
 def predict_all_scenes_to_mosaic(
-    model_weights_path, dataset: SentinelChangeDataset,
+    model_weights_path,
+    dataset: SentinelChangeDataset,
     output_dir: pathlib.Path,
     device="cpu",
     service=False,
-    logger=logging.getLogger(__name__)
+    logger=logging.getLogger(__name__),
 ):
     model = define_G(net_G="base_transformer_pos_s4_dd8", input_nc=3)
     model = torch.load(
@@ -232,23 +272,22 @@ def predict_all_scenes_to_mosaic(
     date_pattern = r"\d{4}(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])"
 
     tile_match = re.search(
-        tile_pattern,
-        pathlib.Path(dataset.pre_scenes[0]["B04"]).name
+        tile_pattern, pathlib.Path(dataset.pre_scenes[0]["B04"]).name
     )
     date_match_from = re.search(
-        date_pattern,
-        pathlib.Path(dataset.pre_scenes[0]["B04"]).name
+        date_pattern, pathlib.Path(dataset.pre_scenes[0]["B04"]).name
     )
     date_match_to = re.search(
-        date_pattern,
-        pathlib.Path(dataset.post_scenes[0]["B04"]).name
+        date_pattern, pathlib.Path(dataset.post_scenes[0]["B04"]).name
     )
 
     date_from = date_match_from.group()
     date_to = date_match_to.group()
     tile = tile_match.group()
     random_choice = random.choices(string.ascii_letters + string.digits, k=6)
-    logger.info("Filename parts: %s, %s, %s, %s", date_from, date_to, tile, random_choice)
+    logger.info(
+        "Filename parts: %s, %s, %s, %s", date_from, date_to, tile, random_choice
+    )
 
     for scene_index, scene in enumerate(dataset.pre_scenes):
         with rasterio.open(scene["B04"]) as ref_src:
@@ -281,7 +320,7 @@ def predict_all_scenes_to_mosaic(
             y = min(y, h - y_shift)
             x = min(x, w - x_shift)
             # full_pred[y:y+y_shift, x:x+x_shift] = pred_patch
-            full_pred_logits[y : y + y_shift, x : x + x_shift] = pred_patch_logits
+            full_pred_logits[y: y + y_shift, x: x + x_shift] = pred_patch_logits
 
         full_pred_logits = full_pred_logits.astype(np.float32)
 
@@ -312,43 +351,77 @@ def predict_all_scenes_to_mosaic(
         output_filename_pred_logits = output_filename + "_pred_logits.tif"
         output_dir.resolve().mkdir(parents=True, exist_ok=True)
         output_path_pred = pathlib.Path(output_dir.resolve(), output_filename_pred)
-        output_path_logits = pathlib.Path(output_dir.resolve(), output_filename_pred_logits)
+        output_path_logits = pathlib.Path(
+            output_dir.resolve(), output_filename_pred_logits
+        )
 
-        with rasterio.open(
-            output_path_pred,
-            "w",
-            driver="GTiff",
+        _write_cog(
+            path=output_path_pred,
+            array=full_pred,
             height=h,
             width=w,
-            count=1,
             dtype=full_pred.dtype,
             crs=crs,
             transform=transform,
-        ) as dst:
-            dst.write(full_pred, 1)
+            nodata=None,
+            compress="DEFLATE",
+            blocksize=512,
+            bigtiff="IF_SAFER",
+            overview_resampling="NEAREST",
+            num_threads="ALL_CPUS",
+        )
 
-        with rasterio.open(
-            output_path_logits,
-            "w",
-            driver="GTiff",
+        _write_cog(
+            path=output_path_logits,
+            array=full_pred_logits,
             height=h,
             width=w,
-            count=1,
             dtype=full_pred_logits.dtype,
             crs=crs,
             transform=transform,
-        ) as dst:
-            dst.write(full_pred_logits, 1)
+            nodata=None,
+            compress="DEFLATE",
+            blocksize=512,
+            bigtiff="IF_SAFER",
+            overview_resampling="NEAREST",
+            num_threads="ALL_CPUS",
+        )
 
-        logger.info("Successfully created %s, %s", output_path_pred, output_path_logits)
+        logger.info(
+            f"Successfully created COGs: {output_path_pred}, {output_path_logits}"
+        )
+
+        out_zarr = output_dir.resolve() / f"{output_filename}.zarr"
+
+        try:
+            zarr_path = stack_geotiffs_to_zarr(
+                pred_path=output_path_pred,
+                logits_path=output_path_logits,
+                out_zarr=out_zarr,
+                chunks=(1024, 1024),
+                add_time_dim=True,
+                time_coord="start",
+            )
+            logger.info(f"Zarr stacked at {zarr_path}")
+
+        except Exception as e:
+            logger.exception(
+                f"Failed to build Zarr from {output_path_pred} and {output_path_logits}: {e}"
+            )
 
         if service:
-            s3_upload_path = _upload_to_s3(output_path_pred, output_path_logits)
+            s3_upload_path = _upload_to_s3(
+                output_path_pred, output_path_logits, zarr_path
+            )
             return s3_upload_path
         return str(output_dir.resolve())
 
 
-def _upload_to_s3(output_path_pred: pathlib.Path, output_path_logits: pathlib.Path):
+def _upload_to_s3(
+    output_path_pred: pathlib.Path,
+    output_path_logits: pathlib.Path,
+    zarr_path: pathlib.Path,
+):
     logger = logging.getLogger(__name__)
     region = os.getenv("CREODIAS_REGION", None)
     service = "s3"
@@ -396,6 +469,9 @@ def _upload_to_s3(output_path_pred: pathlib.Path, output_path_logits: pathlib.Pa
                 bucket_name,
                 response.text,
             )
+        upload_zarr_folder(
+            zarr_path, auth, endpoint, bucket_name, current_date_plus_random
+        )
 
     return f"{endpoint}/{bucket_name}/{current_date_plus_random}/"
 
@@ -434,3 +510,183 @@ def crop_to_reference(reference_path: pathlib.Path, raster_path: pathlib.Path):
     with rasterio.open(raster_path, "w", **profile) as dst:
         dst.write(data)
     return True
+
+
+def _parse_dates_from_standard_name(p: pathlib.Path) -> tuple[str, str]:
+    """
+    Assumption that the filename will always be in the form of:
+    ChDM_S2_<DATE_FROM>_<DATE_TO>_<TILE>_<RAND>_(pred|pred_logits).tif
+
+    Returns (DATE_FROM, DATE_TO) as 'YYYYMMDD' strings.
+    """
+    stem = p.stem
+    parts = stem.split("_")
+
+    assert (
+        len(parts) >= 7 and parts[0] == "ChDM"
+    ), f"Unexpected filename format: {p.name}"
+
+    return parts[2], parts[3]
+
+
+def _date_to_datetime(s: str) -> np.datetime64:
+    """
+    Convert 'YYYYMMDD' to numpy.datetime64 with ns precision.
+    """
+    return np.datetime64(datetime.datetime.strptime(s, "%Y%m%d"), "ns")
+
+
+def stack_geotiffs_to_zarr(
+    pred_path: pathlib.Path,
+    logits_path: pathlib.Path,
+    out_zarr: pathlib.Path,
+    chunks: Tuple[int, int] = (1024, 1024),
+    time_from: Optional[str] = None,
+    time_to: Optional[str] = None,
+    add_time_dim: bool = True,
+    time_coord: str = "start",  # supports 'start' | 'end' | 'midpoint'
+) -> pathlib.Path:
+    """
+    Stack a binary mask (pred) and score (logits) GeoTIFFs into a single Zarr store.
+    """
+    logger = logging.getLogger(__name__)
+
+    logger.info(
+        f"Stacking GeoTIFFs to Zarr: pred={pred_path} logits={logits_path} -> {out_zarr}"
+    )
+    logger.debug(f"Chunking configured as (y, x)={chunks}")
+
+    crop_to_reference(pred_path, logits_path)
+
+    # Open and squeeze band -> (y, x), while it keeps chunking
+    predictions = (
+        rioxarray.open_rasterio(pred_path, chunks={"y": chunks[0], "x": chunks[1]})
+        .squeeze("band", drop=True)
+        .astype("uint8")
+    )
+
+    logits = (
+        rioxarray.open_rasterio(logits_path, chunks={"y": chunks[0], "x": chunks[1]})
+        .squeeze("band", drop=True)
+        .astype("uint8")
+    )
+    logger.debug(
+        f"Opened rasters: pred shape={predictions.shape}, logits shape={logits.shape}"
+    )
+    logger.debug(f"CRS: pred={predictions.rio.crs}, logits={logits.rio.crs}")
+
+    # Reproject/align if needed (shouldn't be, after crop)
+    if logits.rio.crs != predictions.rio.crs or logits.shape != predictions.shape:
+        logger.info("Reprojecting logits to match pred")
+        logits = logits.rio.reproject_match(predictions)
+
+    predictions.name = "change"
+    logits.name = "score"
+
+    ds = xr.Dataset({"change": predictions, "score": logits})
+    ds = ds.assign_coords(x=predictions.x, y=predictions.y)
+    ds.rio.write_crs(predictions.rio.crs, inplace=True)
+
+    ds["change"].attrs.update(
+        {"long_name": "Binary change mask", "flag_values": [0, 1]}
+    )
+    ds["score"].attrs.update({"long_name": "Change score (0-100)"})
+
+    # add time metadata
+    if time_from is None or time_to is None:
+        parsed_time_from, parsed_time_to = _parse_dates_from_standard_name(pred_path)
+        time_from = time_from or parsed_time_from
+        time_to = time_to or parsed_time_to
+
+    t_start = _date_to_datetime(time_from)
+    t_end = _date_to_datetime(time_to)
+
+    ds = ds.assign_coords(
+        time_start=xr.DataArray(t_start),
+        time_end=xr.DataArray(t_end),
+        period=f"{time_from}-{time_to}",
+    )
+
+    if add_time_dim:
+        if time_coord == "start":
+            t = t_start
+        elif time_coord == "end":
+            t = t_end
+        else:
+            raise ValueError(
+                f"Invalid time_coord='{time_coord}'. Use 'start'|'end'|'midpoint'."
+            )
+
+        ds = ds.expand_dims({"time": [t]})
+        logger.debug(f"Added time dim with coord={time_coord} value={t}")
+
+    # Compression --> chunked Zarr
+    compressor = Blosc(cname="zstd", clevel=3, shuffle=Blosc.BITSHUFFLE)
+    encoding = {
+        "change": {"compressor": compressor, "chunks": (chunks[0], chunks[1])},
+        "score": {"compressor": compressor, "chunks": (chunks[0], chunks[1])},
+    }
+
+    out_zarr = pathlib.Path(out_zarr)
+    logger.info(f"Writing Zarr -> {out_zarr}")
+
+    ds.to_zarr(out_zarr, mode="w", consolidated=True, encoding=encoding)
+    logger.info(f"Zarr write complete: {out_zarr}")
+
+    return out_zarr
+
+
+def upload_file(local_path, url, auth):
+    """Upload single file to an HTTP endpoint."""
+    with open(local_path, "rb") as f:
+        file_data = f.read()
+    headers = {"Content-Length": str(len(file_data))}
+    response = requests.put(url, headers=headers, auth=auth, data=file_data)
+    response.raise_for_status()
+    return url
+
+
+def upload_zarr_folder(
+    local_zarr_path, auth, endpoint, bucket_name, prefix, max_workers=8
+):
+    """
+    Upload a zarr directory to S3
+
+    Args:
+        local_zarr_path (str): Path to the local .zarr directory
+        auth (requests_aws4auth.AWS4Auth): authentication instance
+        endpoint (str): Base endpoint URL
+        bucket_name (str): Bucket name
+        prefix (str): Remote prefix (e.g. current_date_plus_random)
+        max_workers (int): Number of parallel uploads
+    """
+    logger = logging.getLogger(__name__)
+    upload_tasks = []
+    for root, _, files in os.walk(local_zarr_path):
+        for file_name in files:
+            local_path = os.path.join(root, file_name)
+            rel_path = os.path.relpath(local_path, local_zarr_path)
+            url = f"{endpoint}/{bucket_name}/{prefix}/{rel_path}"
+            upload_tasks.append((local_path, url))
+
+    # Move .zmetadata to the end of the upload list
+    upload_tasks.sort(key=lambda x: x[0].endswith(".zmetadata"))
+
+    logger.info(
+        f"Uploading {len(upload_tasks)} files from {local_zarr_path}"
+        f"to {endpoint}/{bucket_name}/{prefix}/"
+    )
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(upload_file, path, url, auth): (path, url)
+            for path, url in upload_tasks
+        }
+        for future in as_completed(futures):
+            path, url = futures[future]
+            try:
+                future.result()
+                logger.info(f"Uploaded: {os.path.relpath(path, local_zarr_path)}")
+            except Exception as e:
+                logger.info(f"Failed: {os.path.relpath(path, local_zarr_path)} — {e}")
+    logger.info("Zarr uploaded successfully.")
