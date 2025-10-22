@@ -469,9 +469,9 @@ def _upload_to_s3(
                 bucket_name,
                 response.text,
             )
-        upload_zarr_folder(
-            zarr_path, auth, endpoint, bucket_name, current_date_plus_random
-        )
+    upload_zarr_folder(
+        zarr_path, auth, endpoint, bucket_name, current_date_plus_random
+    )
 
     return f"{endpoint}/{bucket_name}/{current_date_plus_random}/"
 
@@ -666,7 +666,7 @@ def upload_zarr_folder(
         for file_name in files:
             local_path = os.path.join(root, file_name)
             rel_path = os.path.relpath(local_path, local_zarr_path)
-            url = f"{endpoint}/{bucket_name}/{prefix}/{rel_path}"
+            url = f"{endpoint}/{bucket_name}/{prefix}/{prefix}.zarr/{rel_path}"
             upload_tasks.append((local_path, url))
 
     # Move .zmetadata to the end of the upload list
@@ -674,7 +674,7 @@ def upload_zarr_folder(
 
     logger.info(
         f"Uploading {len(upload_tasks)} files from {local_zarr_path}"
-        f"to {endpoint}/{bucket_name}/{prefix}/"
+        f"to {endpoint}/{bucket_name}/{prefix}/{prefix}.zarr/"
     )
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
