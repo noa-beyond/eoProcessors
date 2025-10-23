@@ -139,7 +139,7 @@ def create_chdm_items(
             """
             logger.error(
                 error_message,
-                image.name,
+                str(image),
             )
             continue
 
@@ -321,7 +321,7 @@ def create_chdm_items(
                 ]
 
                 item.add_asset(band_name, asset)
-            zarr_path = Path(image.parent, parts[:-1], ".zarr")
+            zarr_path = Path("_".join(parts[:-1]), ".zarr")
             item.add_asset(
                 "zarr",
                 Asset(
