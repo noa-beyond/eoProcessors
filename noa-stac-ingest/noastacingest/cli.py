@@ -227,7 +227,7 @@ def noa_stac_ingest_service(
     # So it should be defined as a list in the config json file
     consumer_topics = ingestor.config.get(
         "topics_consumer",
-        os.environ.get("KAFKA_INPUT_TOPICS", ["noa.stacingest.request"]),
+        os.environ.get("KAFKA_INPUT_TOPICS", ["noa.stac.request"]),
     )
     schema_def = Message.schema_request()
     consumer_bootstrap_servers = ingestor.config.get(
@@ -246,7 +246,7 @@ def noa_stac_ingest_service(
     )
 
     producer_topic = ingestor.config.get(
-        "topic_producer", os.environ.get("KAFKA_OUTPUT_TOPIC", "noa.stacingest.response")
+        "topic_producer", os.environ.get("KAFKA_OUTPUT_TOPIC", "noa.stac.response")
     )
 
     retries = 0

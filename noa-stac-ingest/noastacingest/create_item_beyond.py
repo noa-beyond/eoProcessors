@@ -23,6 +23,8 @@ import pystac
 from pystac import Asset, Item, Provider
 from pystac.utils import now_to_rfc3339_str
 
+# TODO zarr is essentially a datacube. Add it as such
+# from pystac.extensions.datacube import DatacubeExtension
 from pystac.extensions.eo import EOExtension
 from pystac.extensions.projection import ProjectionExtension
 from pystac.extensions.raster import RasterExtension, RasterBand
@@ -240,7 +242,8 @@ def create_chdm_items(
             }
 
             RasterExtension.add_to(item)
-
+            # TODO:
+            # DatacubeExtension.add_to(item)
             # TODO take care code duplication with other products
             sub_products = {}
 
@@ -318,6 +321,16 @@ def create_chdm_items(
                 ]
 
                 item.add_asset(band_name, asset)
+            zarr_path = Path(image.parent, parts[:-1], ".zarr")
+            item.add_asset(
+                "zarr",
+                Asset(
+                    href=zarr_path,
+                    media_type="application/vnd+zarr",
+                    roles=["data", "cube"],
+                    title="Multiband dataset (Zarr)"
+                )
+            )
             created_items.add(item)
     return created_items
 

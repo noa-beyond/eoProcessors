@@ -4,7 +4,7 @@ class Message:
     """
 
     _schema_request_chdm_def = {
-        "namespace": "noa.stacingest.request",
+        "namespace": "noa.stac.request",
         "type": "object",
         "properties": {
             "orderId": {"type": "string"},
@@ -52,7 +52,7 @@ class Message:
     }
 
     _schema_response_chdm_def = {
-        "namespace": "noa.stacingest.response",
+        "namespace": "noa.stac.response",
         "type": "object",
         "properties": {"orderId": {"type": "string"}, "result": {"type": "number"}},
         "required": ["orderId", "result"],
