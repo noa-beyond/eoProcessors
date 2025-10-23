@@ -319,9 +319,12 @@ def noa_stac_ingest_service(
                         product_paths = item["noaS3Path"]
                         order_id = item["orderId"]
                         for product_path in product_paths:
-                            ingestor.ingest_directory(product_path, None, db_ingest)
+                            try:
+                                ingestor.ingest_directory(product_path, None, db_ingest)
+                            except RuntimeError as e:
+                                logger.error("Could not ingest %s: %s", product_path, e)
+                                result = 1
                         try:
-                            result = 0
                             # TODO, also this: we should have one message schema
                             # for response
                             utils.send_kafka_message_chdm(
