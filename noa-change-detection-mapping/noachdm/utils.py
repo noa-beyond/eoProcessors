@@ -647,7 +647,7 @@ def upload_file(local_path, url, auth):
 
 
 def upload_zarr_folder(
-    local_zarr_path, auth, endpoint, bucket_name, prefix, max_workers=8
+    local_zarr_path: pathlib.Path, auth, endpoint, bucket_name, prefix, max_workers=8
 ):
     """
     Upload a zarr directory to S3
@@ -666,14 +666,14 @@ def upload_zarr_folder(
         for file_name in files:
             local_path = os.path.join(root, file_name)
             rel_path = os.path.relpath(local_path, local_zarr_path)
-            url = f"{endpoint}/{bucket_name}/{prefix}/{prefix}.zarr/{rel_path}"
+            url = f"{endpoint}/{bucket_name}/{prefix}/{local_zarr_path.name}/{rel_path}"
             upload_tasks.append((local_path, url))
 
     # Move .zmetadata to the end of the upload list
     upload_tasks.sort(key=lambda x: x[0].endswith(".zmetadata"))
 
     logger.info(
-        f"Uploading {len(upload_tasks)} files from {local_zarr_path}"
+        f"Uploading {len(upload_tasks)} files from {local_zarr_path} "
         f"to {endpoint}/{bucket_name}/{prefix}/{prefix}.zarr/"
     )
 
