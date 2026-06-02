@@ -171,16 +171,18 @@ class Preprocess:
             if file.endswith(default_s1_raster_suffix):
                 # absoluteOrbitNumber
                 filename_parts = Path(file).name.split("-")
-                orbit_number = filename_parts[-3]
-                year = filename_parts[-5].split("T")[0][:4]
-                month = filename_parts[-5].split("T")[0][4:6]
-                day = filename_parts[-5].split("T")[0][6:8]
+                # orbit_number = filename_parts[-3]
+                year = filename_parts[-5].lower().split("t")[0][:4]
+                month = filename_parts[-5].lower().split("t")[0][4:6]
+                day = filename_parts[-5].lower().split("t")[0][6:8]
                 data = archive.read(file, self._input_path)
                 output_file_path = Path(
-                    self._output_path, orbit_number, year, month, day, Path(file).name
+                    # self._output_path, orbit_number, year, month, day, Path(file).name
+                    self._output_path, year, month, day, Path(file).name
                 )
                 os.makedirs(
-                    Path(self._output_path, orbit_number, year, month, day),
+                    # Path(self._output_path, orbit_number, year, month, day),
+                    Path(self._output_path, year, month, day),
                     exist_ok=True,
                 )
                 output_file_path.write_bytes(data)
