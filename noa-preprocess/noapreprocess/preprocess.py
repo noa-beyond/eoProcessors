@@ -363,6 +363,8 @@ class Preprocess:
                         destination=rio.band(mem, band_idx),
                         src_crs=gcp_crs,
                         gcps=gcps,
+                        src_nodata=0,
+                        dst_nodata=0,
                         dst_transform=transform,
                         dst_crs=dst_crs,
                         resampling=Resampling.bilinear,
