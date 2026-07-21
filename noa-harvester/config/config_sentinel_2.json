@@ -1,17 +1,16 @@
 [
     {   
         "provider": "copernicus",
-        "collection": "Sentinel2",
+        "collection": "SENTINEL-2",
         "search_terms":
         {
-            "maxRecords": "100",
-            "startDate": "2019-12-15",
-            "completionDate": "2021-01-15",
-            "box": "24.15943,38.50005,24.24733,38.55608",
+            "top": "100",
+            "contentDateStartGt": "2020-12-15",
+            "contentDateStartLe": "2021-01-15",
+            "geometry": "POLYGON((21.90 38.95, 23.30 38.95, 23.30 40.10, 21.90 40.10, 21.90 38.95))",           
             "productType": "S2MSI2A",
-            "tileId": "34SEJ",
-            "cloudCover": "[0,20]",
-            "publishedAfter": "2022-01-23"
+            "cloudCover": "[0,50]",
+            "publicationDateGt": "2022-01-23"
         }
     }
 ]

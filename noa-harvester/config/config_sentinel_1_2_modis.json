@@ -1,25 +1,25 @@
 [
     {   
         "provider": "copernicus",
-        "collection": "Sentinel1",
+        "collection": "SENTINEL-1",
         "search_terms":
         {
-            "maxRecords": "100",
-            "startDate": "2024-01-06",
-            "completionDate": "2024-01-10",
-            "box": "24.15943,38.50005,24.24733,38.55608",
+            "top": "100",
+            "contentDateStartGe": "2024-01-06",
+            "contentDateStartLe": "2024-01-10",
+            "geometry": "POLYGON((24.15943 38.50005, 24.19733 38.50005, 24.19733 38.51608, 24.15943 38.51608, 24.15943 38.50005))",
             "productType": "IW_GRDH_1S-COG"
         }
     },
     {   
         "provider": "copernicus",
-        "collection": "Sentinel2",
+        "collection": "SENTINEL-2",
         "search_terms":
         {
-            "maxRecords": "100",
-            "startDate": "2024-01-01",
-            "completionDate": "2024-01-10",
-            "box": "24.15943,38.50005,24.24733,38.55608",
+            "top": "100",
+            "contentDateStartGe": "2024-01-01",
+            "contentDateStartLe": "2024-01-10",
+            "geometry": "POLYGON((24.15943 38.50005, 24.19733 38.50005, 24.19733 38.51608, 24.15943 38.51608, 24.15943 38.50005))",
             "productType": "S2MSI2A"
         }
     },

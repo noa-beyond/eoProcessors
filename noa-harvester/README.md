@@ -156,7 +156,7 @@ Take a look at the sample config.json.
         "collection": "Sentinel1",
         "search_terms":        
         {
-            "maxRecords": "100",
+            "top": "100",
             "startDate": "2024-01-06",
             .....
         }
@@ -166,7 +166,7 @@ Take a look at the sample config.json.
         "collection": "MODIS",
         "search_terms":
         {
-            "maxRecords": "100",
+            "top": "100",
             "startDate": "2019-01-01",
             .....
         }
@@ -178,7 +178,7 @@ Take a look at the sample config.json.
         "assets": ["visual"],
         "search_terms":
         {
-            "maxRecords": "100",
+            "top": "100",
             "startDate": "2023-05-01",
             "cloud_cover_lt": 90,
             .....

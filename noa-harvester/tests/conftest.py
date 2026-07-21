@@ -6,7 +6,7 @@ import pytest
 
 
 CONTENT = (
-    '[{"provider":"copernicus","collection":"Sentinel1","search_terms":{}},'
+    '[{"provider":"copernicus","collection":"SENTINEL-1","search_terms":{}},'
     '{"provider":"earthdata","collection":"MODIS","search_terms":{}}]'
 )
 

@@ -1,10 +1,12 @@
-cdsetool==0.2.13
+cdsetool==0.3.1
 click==8.1.7
 earthaccess==0.9.0
 kafka-python-ng==2.2.3
-psycopg==3.2.3
+psycopg[binary]==3.2.3
+PyJWT<2.6
 pyproj==3.6.1
 pyshp==2.3.1
 pystac-client==0.8.2
 pytest==8.1.1
 pytest-cov==4.1.0
+setuptools==80.0.0

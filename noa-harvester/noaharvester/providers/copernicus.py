@@ -141,11 +141,8 @@ class Copernicus(DataProvider):
         initial_query_return = len(features)
 
         for feature in features:
-            # if feature["properties"]["status"] == "ONLINE":
-            if feature.get("Online") is True:
-                # if feature["id"] not in self._downloaded_feature_ids:
+            if feature['Online']:
                 if feature["Id"] not in self._downloaded_feature_ids:
-                    # self._downloaded_feature_ids.append(feature["id"])
                     self._downloaded_feature_ids.append(feature["Id"])
                 else:
                     features.remove(feature)
