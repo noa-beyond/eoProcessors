@@ -11,6 +11,7 @@ from pathlib import Path, PurePath
 import rasterio as rio
 from rasterio.io import MemoryFile
 from rasterio.mask import mask
+from rasterio.warp import calculate_default_transform, reproject, Resampling
 from rio_cogeo.profiles import cog_profiles
 from rio_cogeo.cogeo import cog_translate
 from shapely.geometry import box, shape, mapping
@@ -292,32 +293,98 @@ class Preprocess:
         )
 
     # Based on https://guide.cloudnativegeo.org/cloud-optimized-geotiffs/writing-cogs-in-python.html
-    def _convert_to_cog(self, original_raster, cog_filename):
+    def _convert_to_cog(self, original_raster, cog_filename, dst_crs="EPSG:4326"):
+        """
+        Convert a raster (S1 GRD tiff or S2 jp2 band) into a Cloud-Optimized GeoTIFF.
 
+        S2 bands arrive with real georeferencing (CRS + affine transform) and are
+        repackaged as-is. Raw S1 GRD products arrive in radar geometry, referenced
+        only by GCPs (crs=None, identity transform) - these must be warped onto a
+        real coordinate grid before COG creation, otherwise the output silently
+        inherits the missing georeferencing
+
+        Parameters:
+            original_raster: path to the source raster.
+            cog_filename: output COG path.
+            dst_crs: target CRS used only when the source is GCP-referenced
+                (ignored for already-georeferenced sources like S2 bands).
+        """
         with rio.Env(GDAL_DRIVER_NAME="JP2OpenJPEG"):
             with rio.open(original_raster, "r") as src:
-                arr = src.read()
-                kwargs = src.meta
-                kwargs.update(driver="GTiff", predictor=2)
-                config = {"GDAL_NUM_THREADS": "ALL_CPUS", "TILED": "TRUE"}
+                if self._is_gcp_referenced(src):
+                    self._warp_gcps_to_cog(src, cog_filename, dst_crs)
+                else:
+                    self._passthrough_to_cog(src, cog_filename)
 
-            with MemoryFile() as memfile:
-                # Opening an empty MemoryFile for in memory operation - faster
-                with memfile.open(**kwargs) as mem:
-                    # Writing the array values to MemoryFile using the rasterio.io module
-                    # https://rasterio.readthedocs.io/en/stable/api/rasterio.io.html
-                    mem.write(arr)
+    @staticmethod
+    def _is_gcp_referenced(src) -> bool:
+        """True if the source has no real CRS/transform and relies on GCPs instead."""
+        gcps, _ = src.gcps
+        return src.crs is None and bool(gcps)
 
-                    dst_profile = cog_profiles.get("lerc_deflate")
+    def _passthrough_to_cog(self, src, cog_filename):
+        """Repackage an already-georeferenced raster (e.g. S2 band) as a COG."""
+        arr = src.read()
+        kwargs = src.meta.copy()
+        kwargs.update(driver="GTiff", predictor=2)
 
-                    # Creating destination COG
-                    cog_translate(
-                        mem,
-                        cog_filename,
-                        dst_profile,
-                        config=config,
-                        forward_band_tags=True,
-                        forward_ns_tags=True,
-                        use_cog_driver=True,
-                        in_memory=False,
+        with MemoryFile() as memfile:
+            with memfile.open(**kwargs) as mem:
+                mem.write(arr)
+                self._write_cog(mem, cog_filename)
+
+    def _warp_gcps_to_cog(self, src, cog_filename, dst_crs):
+        """Warp a GCP-referenced raster (e.g. raw S1 GRD) onto a real grid, then COG it."""
+        gcps, gcp_crs = src.gcps
+
+        _transform, _width, _height = calculate_default_transform(
+            gcp_crs,
+            dst_crs,
+            src.width,
+            src.height,
+            gcps=gcps,
+        )
+
+        kwargs = src.meta.copy()
+        kwargs.update(
+            driver="GTiff",
+            predictor=2,
+            crs=dst_crs,
+            transform=_transform,
+            width=_width,
+            height=_height,
+        )
+
+        with MemoryFile() as memfile:
+            with memfile.open(**kwargs) as mem:
+                for band_idx in range(1, src.count + 1):
+                    reproject(
+                        source=rio.band(src, band_idx),
+                        destination=rio.band(mem, band_idx),
+                        src_crs=gcp_crs,
+                        gcps=gcps,
+                        src_nodata=0,
+                        dst_nodata=0,
+                        dst_transform=transform,
+                        dst_crs=dst_crs,
+                        resampling=Resampling.bilinear,
+                        num_threads=os.cpu_count() or 1,
                     )
+                self._write_cog(mem, cog_filename)
+
+    @staticmethod
+    def _write_cog(mem, cog_filename):
+        """Shared COG-writing step, used by both the passthrough and warp paths."""
+        config = {"GDAL_NUM_THREADS": "ALL_CPUS", "TILED": "TRUE"}
+        dst_profile = cog_profiles.get("lerc_deflate")
+
+        cog_translate(
+            mem,
+            cog_filename,
+            dst_profile,
+            config=config,
+            forward_band_tags=True,
+            forward_ns_tags=True,
+            use_cog_driver=True,
+            in_memory=False,
+        )

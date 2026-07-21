@@ -63,7 +63,13 @@ class Harvester:
                 if self._shape_file_bbox_list:
                     for bbox in self._shape_file_bbox_list:
                         sub_item = deepcopy(item)
-                        sub_item["search_terms"]["box"] = str(bbox).strip()[1:-1]
+                        # sub_item["search_terms"]["box"] = str(bbox).strip()[1:-1]
+                        west, south, east, north = bbox
+                        sub_item["search_terms"].pop("box", None) # TODO why
+                        sub_item["search_terms"]["geometry"] = (
+                            f"POLYGON(({west} {south}, {west} {north}, "
+                            f"{east} {north}, {east} {south}, {west} {south}))"
+                        )
                         self._search_items.append(sub_item)
                         logger.debug("Appending search item: %s", sub_item)
                 else:
