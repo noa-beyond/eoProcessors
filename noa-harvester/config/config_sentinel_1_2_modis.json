@@ -1,7 +1,7 @@
 [
     {   
         "provider": "copernicus",
-        "collection": "Sentinel1",
+        "collection": "SENTINEL-1",
         "search_terms":
         {
             "top": "100",
